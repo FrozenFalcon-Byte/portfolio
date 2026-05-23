@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from '../context/ThemeContext';
 
 /* ── Rolling Digit Column ──────────────────────────────────── */
 const DigitColumn = React.forwardRef(({ style }, ref) => (
@@ -29,6 +30,8 @@ const DigitColumn = React.forwardRef(({ style }, ref) => (
 /* ── Loader Component ──────────────────────────────────────── */
 const Loader = ({ onComplete }) => {
   const [loading, setLoading] = useState(true);
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
 
   // Stroke digit refs (wireframe)
   const sH = useRef(null); // hundreds
@@ -45,6 +48,7 @@ const Loader = ({ onComplete }) => {
   const prevDigitsRef = useRef([0, 0, 0]);
   const rafRef = useRef(null);
   const completedRef = useRef(false);
+  const progressTimeoutRef = useRef(null);
 
   const onCompleteRef = useRef(onComplete);
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
@@ -71,14 +75,21 @@ const Loader = ({ onComplete }) => {
       matrixRef.current.textContent = str;
     }, 50);
 
-    // Progress target simulation
-    const progressInterval = setInterval(() => {
-      progressRef.current += Math.random() * 6 + 2;
-      if (progressRef.current >= 100) {
-        progressRef.current = 100;
-        clearInterval(progressInterval);
+    // Stop-and-start incremental loading simulation
+    const updateProgress = () => {
+      if (progressRef.current >= 100 || completedRef.current) return;
+      
+      // Randomly jump 15% to 35% chunk
+      progressRef.current += Math.floor(Math.random() * 20) + 15;
+      if (progressRef.current > 100) progressRef.current = 100;
+      
+      if (progressRef.current < 100) {
+        // Stop (pause) for a random time between 300ms and 800ms before starting again
+        const delay = Math.random() * 500 + 300;
+        progressTimeoutRef.current = setTimeout(updateProgress, delay);
       }
-    }, 120);
+    };
+    progressTimeoutRef.current = setTimeout(updateProgress, 400);
 
     // RAF loop
     let lastTime = performance.now();
@@ -115,7 +126,7 @@ const Loader = ({ onComplete }) => {
       // Progress bars
       const litCount = Math.floor(val / 5);
       barsRef.current.forEach((bar, i) => {
-        if (bar) bar.style.backgroundColor = i < litCount ? 'var(--accent-red)' : 'rgba(255,51,51,0.15)';
+        if (bar) bar.style.backgroundColor = i < litCount ? 'var(--accent-red)' : (isLight ? 'rgba(255,51,51,0.05)' : 'rgba(255,51,51,0.15)');
       });
 
       // Completion
@@ -131,10 +142,10 @@ const Loader = ({ onComplete }) => {
 
     return () => {
       clearInterval(matrixInterval);
-      clearInterval(progressInterval);
+      if (progressTimeoutRef.current) clearTimeout(progressTimeoutRef.current);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [finish]);
+  }, [finish, isLight]);
 
   /* shared font style for the counter */
   const counterFont = {
@@ -169,9 +180,10 @@ const Loader = ({ onComplete }) => {
                 exit={{ scaleY: 0 }}
                 transition={{ duration: 0.8, delay: i * 0.1, ease: [0.76, 0, 0.24, 1] }}
                 style={{
-                  width: '20%', height: '100%', background: '#050505',
+                  width: '20%', height: '100%', 
+                  background: isLight ? '#f4f4f4' : '#050505',
                   transformOrigin: 'top',
-                  borderRight: i < 4 ? '1px solid rgba(255,255,255,0.02)' : 'none'
+                  borderRight: i < 4 ? (isLight ? '1px solid rgba(0,0,0,0.05)' : '1px solid rgba(255,255,255,0.02)') : 'none'
                 }}
               />
             ))}
@@ -181,10 +193,10 @@ const Loader = ({ onComplete }) => {
           <motion.div
             exit={{ y: -100, opacity: 0, filter: 'blur(10px)' }}
             transition={{ duration: 0.6, ease: [0.76, 0, 0.24, 1] }}
-            style={{ position: 'relative', zIndex: 2, mixBlendMode: 'difference' }}
+            style={{ position: 'relative', zIndex: 2, mixBlendMode: isLight ? 'normal' : 'difference' }}
           >
             {/* Solid rolling digits */}
-            <div style={{ ...counterFont, color: 'var(--accent-red)' }}>
+            <div style={{ ...counterFont, color: 'var(--accent-red)', opacity: isLight ? 0.9 : 1 }}>
               <DigitColumn ref={sH} />
               <DigitColumn ref={sT} />
               <DigitColumn ref={sU} />
@@ -207,7 +219,7 @@ const Loader = ({ onComplete }) => {
                 <div
                   key={i}
                   ref={el => barsRef.current[i] = el}
-                  style={{ width: '4px', height: '15px', backgroundColor: 'rgba(255,51,51,0.15)', transition: 'background-color 0.3s ease' }}
+                  style={{ width: '4px', height: '15px', backgroundColor: isLight ? 'rgba(255,51,51,0.05)' : 'rgba(255,51,51,0.15)', transition: 'background-color 0.3s ease' }}
                 />
               ))}
             </div>
@@ -217,7 +229,7 @@ const Loader = ({ onComplete }) => {
           <motion.div
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
-            style={{ position: 'absolute', top: '5vh', right: '5vw', zIndex: 2, fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'right' }}
+            style={{ position: 'absolute', top: '5vh', right: '5vw', zIndex: 2, fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: isLight ? '#888888' : 'var(--text-secondary)', textAlign: 'right' }}
           >
             <div>AJINKYA.CHAVAN // 2026</div>
             <div>SECURE_CONNECTION_ESTABLISHED</div>
