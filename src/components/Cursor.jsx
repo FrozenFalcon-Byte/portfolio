@@ -141,6 +141,34 @@ const Cursor = () => {
       }
     };
     
+    let hoveredKeyId = null;
+    const handleKeycapHover = (e) => {
+      const { id, width, isHovered } = e.detail;
+      if (isHovered) {
+        hoveredKeyId = id;
+        // Map 3D key width to approximate screen pixels
+        cursor.style.width = `${Math.max(45, width * 35)}px`;
+        cursor.style.height = `45px`;
+        cursor.style.borderRadius = '6px';
+        cursor.style.backgroundColor = 'transparent';
+        cursor.style.border = '2px solid var(--accent-red)';
+        cursor.classList.remove('tooltip-active');
+        cursor.classList.add('active');
+        snapElRef.current = null;
+      } else {
+        if (hoveredKeyId === id) {
+          hoveredKeyId = null;
+          cursor.classList.remove('active');
+          cursor.style.width = '';
+          cursor.style.height = '';
+          cursor.style.borderRadius = '';
+          cursor.style.backgroundColor = '';
+          cursor.style.border = 'none';
+        }
+      }
+    };
+    window.addEventListener('keycap-hover', handleKeycapHover);
+    
     const handleLeave = () => {
       if (snapElRef.current && snapElRef.current.getAttribute('data-cursor-shape') === 'magnetic') {
         gsap.to(snapElRef.current, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.3)' });
@@ -186,6 +214,7 @@ const Cursor = () => {
         el.removeEventListener('mouseenter', handleHover);
         el.removeEventListener('mouseleave', handleLeave);
       });
+      window.removeEventListener('keycap-hover', handleKeycapHover);
     };
   }, []);
 

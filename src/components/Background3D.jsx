@@ -43,6 +43,7 @@ const KeyCap = ({ position, width, rowIdx, colIdx, theme }) => {
   const textRef = useRef(null);
   const isHovered = useRef(false);
   const hoverLiftRef = useRef(0);
+  const targetRotation = useRef(new THREE.Euler(0, 0, 0));
 
   const windLines = useMemo(() => {
     return Array.from({ length: 15 }).map(() => ({
@@ -67,6 +68,10 @@ const KeyCap = ({ position, width, rowIdx, colIdx, theme }) => {
 
   useFrame((state) => {
     if (!meshRef.current) return;
+    
+    // Apply smooth 3D tilt wiggle
+    meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, targetRotation.current.x, 0.2);
+    meshRef.current.rotation.z = THREE.MathUtils.lerp(meshRef.current.rotation.z, targetRotation.current.z, 0.2);
     
     // Pluck animation from 0 to 1 progress (Hero to Experience)
     const animProgress = Math.min(Math.max(scrollState.progress, 0), 1);
@@ -149,10 +154,25 @@ const KeyCap = ({ position, width, rowIdx, colIdx, theme }) => {
         onPointerOver={(e) => { 
           e.stopPropagation(); 
           isHovered.current = true; 
-          document.body.style.cursor = 'pointer'; 
+          window.dispatchEvent(new CustomEvent('keycap-hover', { detail: { id: mappedKey, width, isHovered: true } }));
+          document.body.style.cursor = 'none'; 
           if (navigator.vibrate) navigator.vibrate(15);
         }}
-        onPointerOut={() => { isHovered.current = false; document.body.style.cursor = 'auto'; }}
+        onPointerMove={(e) => {
+          e.stopPropagation();
+          if (meshRef.current) {
+            const local = meshRef.current.worldToLocal(e.point.clone());
+            const tx = local.x / (width / 2);
+            const tz = local.z / 0.45;
+            targetRotation.current.set(tz * 0.2, 0, -tx * 0.2);
+          }
+        }}
+        onPointerOut={() => { 
+          isHovered.current = false; 
+          targetRotation.current.set(0, 0, 0);
+          window.dispatchEvent(new CustomEvent('keycap-hover', { detail: { id: mappedKey, isHovered: false } }));
+          document.body.style.cursor = 'none'; 
+        }}
       >
         <RoundedBox 
           args={[width - 0.1, 0.4, 0.9]} 
