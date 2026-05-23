@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import AnimatedModal from './AnimatedModal';
 import { motion } from 'framer-motion';
 
+import { useTheme } from '../context/ThemeContext';
+
 const Projects = () => {
   const [selectedProject, setSelectedProject] = useState(null);
+  const { theme } = useTheme();
   
   const projects = [
     { 
@@ -59,7 +62,7 @@ const Projects = () => {
         {projects.map((proj, i) => (
           <motion.div 
             key={proj.id} 
-            className="interactive border-technical" 
+            className="interactive border-technical project-card" 
             data-cursor-shape="magnetic" 
             data-scroll 
             initial={{ opacity: 0, scale: 0.95 }}
@@ -70,12 +73,9 @@ const Projects = () => {
             style={{ 
               cursor: 'pointer',
               position: 'relative',
-              background: 'var(--bg-charcoal)',
               display: 'flex',
               flexDirection: 'column',
-              transition: 'background 0.2s',
             }}
-            whileHover={{ backgroundColor: 'var(--accent-red)', color: 'var(--text-primary)' }}
           >
             {/* Header Bar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
@@ -86,7 +86,7 @@ const Projects = () => {
             {/* Image Box */}
             <div style={{ height: '200px', width: '100%', position: 'relative', overflow: 'hidden', borderBottom: '1px solid var(--border-muted)' }}>
               <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${proj.img})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.9 }}></div>
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(17,17,17,0) 0%, rgba(17,17,17,1) 100%)' }}></div>
+              <div style={{ position: 'absolute', inset: 0, background: theme === 'light' ? 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%)' : 'linear-gradient(to bottom, rgba(17,17,17,0) 0%, rgba(17,17,17,1) 100%)' }}></div>
             </div>
             
             {/* Content Box */}

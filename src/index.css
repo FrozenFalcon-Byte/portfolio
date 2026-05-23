@@ -26,8 +26,8 @@
 }
 
 body.light-mode {
-  --bg-primary: #f4f4f4;
-  --bg-charcoal: #ffffff;
+  --bg-primary: #ffffff;
+  --bg-charcoal: #f4f4f4;
   
   --border-muted: #cccccc;
   
@@ -55,7 +55,13 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   overflow-x: hidden;
-  cursor: none; /* For custom cursor */
+  cursor: none;
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* Global transitions for theme switching */
+* {
+  transition: border-color 0.5s ease, box-shadow 0.5s ease;
 }
 
 /* Background Grids and CRT effects */
@@ -155,6 +161,17 @@ body.light-mode .cursor {
   flex-direction: column;
   justify-content: center;
   position: relative;
+}
+
+/* Project Card Hover Fix */
+.project-card {
+  background-color: var(--bg-charcoal);
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.5s ease !important;
+}
+
+.project-card:hover {
+  background-color: var(--accent-red) !important;
+  color: var(--text-primary) !important;
 }
 
 /* Interactive Elements */
@@ -451,5 +468,57 @@ a, button {
   color: var(--text-secondary);
   line-height: 1.8;
   font-size: 1.1rem;
+}
+
+/* Responsive Overrides */
+@media (max-width: 768px) {
+  .section {
+    padding: 8vh 4vw;
+  }
+  .exp-page-title {
+    font-size: 2.5rem;
+  }
+  .modal-inner {
+    padding: 1.5rem;
+  }
+  .tech-stack-row {
+    margin-bottom: 2rem;
+  }
+  .exp-meta {
+    flex-wrap: wrap;
+  }
+  .exp-hero {
+    margin-top: 10vh;
+  }
+  .mobile-hide {
+    display: none !important;
+  }
+  .nav-container {
+    padding: 1rem 1rem !important;
+  }
+  .exp-card-wrapper {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+  .responsive-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .nav-container {
+    padding: 1rem 2rem !important;
+  }
+}
+
+.exp-card-wrapper {
+  width: 50%;
+  min-width: 500px;
+}
+
+.responsive-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 2rem;
 }
 

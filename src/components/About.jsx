@@ -62,12 +62,11 @@ const About = () => {
                 key={i} 
                 className="about-char" 
                 style={{ 
-                  display: 'inline-block', 
                   color: isHighlight ? 'var(--accent-red)' : 'var(--text-primary)', 
                   opacity: 0.2 // Starts barely visible
                 }}
               >
-                {char === " " ? "\u00A0" : char}
+                {char}
               </span>
             );
           })}

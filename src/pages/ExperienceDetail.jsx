@@ -115,7 +115,7 @@ const ExperienceDetail = () => {
           </p>
         </motion.div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '2rem', marginTop: '2rem' }}>
+        <div className="responsive-grid" style={{ marginTop: '2rem' }}>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             <motion.div className="exp-architecture" variants={itemVariants}>

@@ -141,12 +141,12 @@ const Loader = ({ onComplete }) => {
     fontSize: 'clamp(7rem, 18vw, 14rem)',
     fontWeight: 900,
     lineHeight: 1,
-    fontFamily: "'Impact', 'Arial Black', 'Haettenschweiler', sans-serif",
+    fontFamily: 'var(--font-heading)',
     fontVariantNumeric: 'tabular-nums',
     display: 'flex',
     alignItems: 'center',
-    letterSpacing: '0.02em',
-    WebkitTextStroke: '1px var(--accent-red)'
+    letterSpacing: '-0.05em',
+    WebkitTextStroke: '2px var(--accent-red)'
   };
 
   return (

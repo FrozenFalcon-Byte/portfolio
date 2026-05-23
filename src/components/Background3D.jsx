@@ -229,10 +229,14 @@ const KeyboardScene = ({ theme }) => {
   useFrame((state) => {
     if (!groupRef.current) return;
     
+    const isMobile = window.innerWidth < 768;
     const p = scrollState.progress;
+    
+    // Slow down the scroll progress on mobile because the page is much longer vertically
+    const effectiveP = isMobile ? p * 0.6 : p;
 
     // Phase 1: 0 to 1 (Hero to Experience)
-    const phase1Progress = Math.min(Math.max(p, 0), 1);
+    const phase1Progress = Math.min(Math.max(effectiveP, 0), 1);
     const ease1 = 1 - Math.pow(1 - phase1Progress, 3);
     
     // Initial home page angle: upright. Transitions to side profile.
@@ -241,13 +245,15 @@ const KeyboardScene = ({ theme }) => {
     const rotZ = THREE.MathUtils.lerp(0, 0, ease1); 
     
     // Anchor point: center on home page, move to the left on the second page
-    const posX = THREE.MathUtils.lerp(0, -6, ease1); 
+    const posX = THREE.MathUtils.lerp(0, isMobile ? -3 : -6, ease1); 
     
     // Zoom in heavily on home page so it looks big (-4), zoom out on internship (-12)
-    const posZ = THREE.MathUtils.lerp(-4, -12, ease1); 
+    // On mobile, start much further away (-10) so it fits in the narrow screen
+    const posZ = THREE.MathUtils.lerp(isMobile ? -11 : -4, isMobile ? -18 : -12, ease1); 
     
     // Phase 2: > 1.2 (Scroll away completely before About section)
-    const phase3Progress = Math.max(0, p - 1.2);
+    const phase3Start = isMobile ? 0.6 : 1.2;
+    const phase3Progress = Math.max(0, effectiveP - phase3Start);
     const scrollOffsetY = phase3Progress * 20; 
     
     const baseY = -1;

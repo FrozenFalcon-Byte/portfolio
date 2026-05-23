@@ -23,7 +23,7 @@ const Hero = () => {
   return (
     <section ref={containerRef} className="hero" data-scroll-section style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', padding: '0 5vw' }}>
       
-      <div style={{ zIndex: 10, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: 'max-content' }}>
+      <div style={{ zIndex: 10, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', maxWidth: '1000px' }}>
         
         {/* Soft, feathered blur blob strictly behind the text block */}
         <div style={{
@@ -62,20 +62,20 @@ const Hero = () => {
           SYS.OP.ENGINEER // AI.ML
         </div>
         
-        <h1 data-scroll data-scroll-speed="2" style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(4rem, 10vw, 8rem)', fontWeight: 700, lineHeight: 0.9, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '-0.03em', margin: 0, width: 'max-content' }}>
+        <h1 data-scroll data-scroll-speed="2" style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(3rem, 15vw, 8rem)', fontWeight: 700, lineHeight: 0.9, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '-0.03em', margin: 0, wordBreak: 'break-word', width: '100%' }}>
           AJINKYA<br/>
           <span style={{ color: 'var(--text-secondary)' }}>CHAVAN_</span>
         </h1>
         
-        <div style={{ display: 'flex', gap: '2rem', marginTop: '3rem' }}>
-          <div style={{ width: '150px', height: '1px', background: 'var(--border-muted)', marginTop: '0.7rem' }}></div>
+        <div style={{ display: 'flex', gap: '1rem', marginTop: '3rem', flexWrap: 'wrap' }}>
+          <div style={{ width: '50px', height: '1px', background: 'var(--border-muted)', marginTop: '0.7rem' }}></div>
           <p data-scroll data-scroll-speed="1" style={{ fontFamily: 'var(--font-body)', fontSize: '1rem', color: 'var(--text-secondary)', maxWidth: '400px', lineHeight: 1.6 }}>
             AIML Engineering Student & Developer. Specializing in Generative AI, multi-agent frameworks, and full-stack system architectures.
           </p>
         </div>
       </div>
 
-      <div style={{ position: 'absolute', bottom: '5vh', right: '5vw', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+      <div className="mobile-hide" style={{ position: 'absolute', bottom: '5vh', right: '5vw', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
         <div>SCROLL_TO_INITIALIZE</div>
         <div style={{ width: '1px', height: '100px', background: 'var(--accent-red)', opacity: 0.5, animation: 'pulseHeight 2s ease-in-out infinite' }}></div>
       </div>

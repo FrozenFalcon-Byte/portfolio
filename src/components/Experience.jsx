@@ -11,7 +11,7 @@ const Experience = () => {
         so the 3D keyboard can occupy the left side.
       */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
-        <div style={{ width: '50%', minWidth: '500px', display: 'flex', flexDirection: 'column' }}>
+        <div className="exp-card-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '5vh' }}>
             <div style={{ flex: 1, height: '1px', background: 'var(--border-muted)' }}></div>

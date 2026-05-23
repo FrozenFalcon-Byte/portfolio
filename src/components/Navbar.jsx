@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 
-const Navbar = () => {
+const Navbar = ({ onOpenMutator }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [time, setTime] = useState('');
   const location = useLocation();
@@ -45,9 +45,9 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="border-technical" style={{ 
+      <nav className="border-technical nav-container" style={{ 
         zIndex: 10000, position: 'fixed', top: 0, left: 0, width: '100%', 
-        padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
         background: 'var(--bg-charcoal)', borderTop: 'none', borderLeft: 'none', borderRight: 'none',
         fontFamily: 'var(--font-mono)'
       }}>
@@ -57,14 +57,14 @@ const Navbar = () => {
             AJINKYA.CHAVAN
           </div>
           
-          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }} className="hidden lg:flex">
+          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }} className="mobile-hide">
             <span>SYS_STATUS: <span style={{ color: 'var(--accent-red)' }}>ONLINE</span></span>
             <span>UPTIME: {time}</span>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--accent-red)' }} className="hidden lg:block">
+          <div style={{ fontSize: '0.75rem', color: 'var(--accent-red)' }} className="mobile-hide">
             v1.0.5_BETA
           </div>
           
