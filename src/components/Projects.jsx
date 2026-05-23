@@ -53,10 +53,22 @@ const Projects = () => {
   return (
     <section id="projects" className="section" data-scroll-section style={{ paddingTop: '15vh', paddingBottom: '15vh' }}>
       
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '10vh' }}>
+      <motion.div 
+        initial={{ opacity: 0, x: -50 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '10vh' }}
+      >
         <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '0.8rem' }}>// MODULE_DATA_ARCHIVE</div>
-        <div style={{ flex: 1, height: '1px', background: 'var(--border-muted)' }}></div>
-      </div>
+        <motion.div 
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.2, ease: "circOut" }}
+          style={{ flex: 1, height: '1px', background: 'var(--border-muted)', transformOrigin: 'left' }}
+        ></motion.div>
+      </motion.div>
       
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
         {projects.map((proj, i) => (
@@ -65,16 +77,17 @@ const Projects = () => {
             className="interactive border-technical project-card" 
             data-cursor-shape="magnetic" 
             data-scroll 
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 80, rotateY: 15, scale: 0.9 }}
+            whileInView={{ opacity: 1, y: 0, rotateY: 0, scale: 1 }}
             viewport={{ once: true, margin: "-50px" }}
-            transition={{ duration: 0.5, delay: i * 0.15 }}
+            transition={{ duration: 0.8, type: "spring", bounce: 0.4, delay: i * 0.15 }}
             onClick={() => setSelectedProject(proj)} 
             style={{ 
               cursor: 'pointer',
               position: 'relative',
               display: 'flex',
               flexDirection: 'column',
+              transformPerspective: 1000
             }}
           >
             {/* Header Bar */}
@@ -85,8 +98,12 @@ const Projects = () => {
 
             {/* Image Box */}
             <div style={{ height: '200px', width: '100%', position: 'relative', overflow: 'hidden', borderBottom: '1px solid var(--border-muted)' }}>
-              <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${proj.img})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.9 }}></div>
-              <div style={{ position: 'absolute', inset: 0, background: theme === 'light' ? 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%)' : 'linear-gradient(to bottom, rgba(17,17,17,0) 0%, rgba(17,17,17,1) 100%)' }}></div>
+              <motion.div 
+                whileHover={{ scale: 1.1 }} 
+                transition={{ duration: 0.4 }}
+                style={{ position: 'absolute', inset: 0, backgroundImage: `url(${proj.img})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.9 }}
+              ></motion.div>
+              <div style={{ position: 'absolute', inset: 0, background: theme === 'light' ? 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%)' : 'linear-gradient(to bottom, rgba(17,17,17,0) 0%, rgba(17,17,17,1) 100%)', pointerEvents: 'none' }}></div>
             </div>
             
             {/* Content Box */}

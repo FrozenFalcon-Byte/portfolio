@@ -135,8 +135,8 @@ const KeyCap = ({ position, width, rowIdx, colIdx, theme }) => {
         matRef.current.emissiveIntensity = 1;
       } else if (!isAccent) {
         const hue = (state.clock.elapsedTime * 0.4 + position[0] * 0.05) % 1;
-        textRef.current.color = new THREE.Color().setHSL(hue, 1, theme === 'light' ? 0.4 : 0.6);
-        matRef.current.emissive = new THREE.Color(theme === 'light' ? '#ffffff' : '#000000');
+        textRef.current.color = new THREE.Color().setHSL(hue, 1, 0.6);
+        matRef.current.emissive = new THREE.Color('#000000');
         matRef.current.emissiveIntensity = 0;
       } else {
         textRef.current.color = new THREE.Color('#ffffff'); // White text on red keys
@@ -182,10 +182,10 @@ const KeyCap = ({ position, width, rowIdx, colIdx, theme }) => {
         >
           <meshStandardMaterial 
             ref={matRef}
-            color={isAccent ? '#E50914' : (theme === 'light' ? '#e5e5e5' : '#000000')} 
+            color={isAccent ? '#E50914' : '#000000'} 
             roughness={1} 
             metalness={0} 
-            emissive={isAccent ? '#E50914' : (theme === 'light' ? '#ffffff' : '#000000')}
+            emissive={isAccent ? '#E50914' : '#000000'}
             emissiveIntensity={isAccent ? 0.4 : 0}
           />
         </RoundedBox>
@@ -290,7 +290,7 @@ const KeyboardScene = ({ theme }) => {
     <group ref={groupRef} position={[0, -1, -3]}>
       {/* The Base */}
       <RoundedBox args={[16, 0.8, 6]} radius={0.05} smoothness={4} position={[0.5, -0.4, 0]}>
-        <meshStandardMaterial color={theme === 'light' ? '#d4d4d4' : '#000000'} roughness={1} metalness={0} />
+        <meshStandardMaterial color={'#000000'} roughness={1} metalness={0} />
       </RoundedBox>
       
       {/* The Keys */}
@@ -353,12 +353,12 @@ const Background3D = () => {
         <directionalLight position={[0, 10, 5]} intensity={0.4} color="#ffffff" />
         
         {/* Strong Cinematic Backlight placed right behind the top edge of the keyboard */}
-        <pointLight position={[0, 8, -12]} intensity={theme === 'light' ? 50 : 200} color="#ffffff" distance={50} castShadow />
+        <pointLight position={[0, 8, -12]} intensity={200} color="#ffffff" distance={50} castShadow />
         
         <Suspense fallback={null}>
           <KeyboardScene theme={theme} />
-          <ContactShadows position={[0, -2, -3]} opacity={theme === 'light' ? 0.2 : 0.6} scale={30} blur={2.5} far={10} color="#000000" />
-          <Environment preset={theme === 'light' ? "city" : "studio"} />
+          <ContactShadows position={[0, -2, -3]} opacity={0.6} scale={30} blur={2.5} far={10} color="#000000" />
+          <Environment preset="studio" />
         </Suspense>
       </Canvas>
     </div>

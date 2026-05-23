@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 const Experience = () => {
   const navigate = useNavigate();
@@ -13,15 +14,31 @@ const Experience = () => {
       <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
         <div className="exp-card-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '5vh' }}>
-            <div style={{ flex: 1, height: '1px', background: 'var(--border-muted)' }}></div>
+          <motion.div 
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '5vh' }}
+          >
+            <motion.div 
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.2, ease: "circOut" }}
+              style={{ flex: 1, height: '1px', background: 'var(--border-muted)', transformOrigin: 'right' }}
+            ></motion.div>
             <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '0.8rem' }}>// OPERATION_LOG</div>
-          </div>
+          </motion.div>
           
-          <div 
+          <motion.div 
             className="interactive border-technical" 
             data-cursor-shape="magnetic" 
             data-scroll 
+            initial={{ opacity: 0, y: 100, rotateX: 15 }}
+            whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, type: "spring", bounce: 0.4 }}
             onClick={() => navigate('/experience/pmo')} 
             style={{ 
               cursor: 'pointer',
@@ -30,6 +47,7 @@ const Experience = () => {
               display: 'flex',
               flexDirection: 'column',
               position: 'relative',
+              transformPerspective: 1000
             }}
           >
             {/* Header Bar */}
@@ -70,7 +88,7 @@ const Experience = () => {
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
 
         </div>
       </div>

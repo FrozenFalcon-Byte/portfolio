@@ -16,10 +16,22 @@ const Skills = () => {
   return (
     <section id="skills" className="section" data-scroll-section style={{ paddingTop: '15vh', paddingBottom: '15vh' }}>
       
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '10vh' }}>
+      <motion.div 
+        initial={{ opacity: 0, x: 50 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '10vh' }}
+      >
         <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '0.8rem' }}>// SYSTEM_CAPABILITIES</div>
-        <div style={{ flex: 1, height: '1px', background: 'var(--border-muted)' }}></div>
-      </div>
+        <motion.div 
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.2, ease: "circOut" }}
+          style={{ flex: 1, height: '1px', background: 'var(--border-muted)', transformOrigin: 'left' }}
+        ></motion.div>
+      </motion.div>
       
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
         {skills.map((skill, i) => (
@@ -28,10 +40,10 @@ const Skills = () => {
             className="interactive border-technical" 
             data-cursor-shape="magnetic" 
             data-scroll 
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 80, scale: 0.8, rotateX: 20 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
             viewport={{ once: true, margin: "-50px" }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
+            transition={{ duration: 0.7, type: "spring", bounce: 0.5, delay: i * 0.1 }}
             onClick={() => setSelectedSkill(skill)} 
             style={{ 
               cursor: 'pointer',
@@ -40,6 +52,7 @@ const Skills = () => {
               flexDirection: 'column',
               padding: '2rem',
               transition: 'background 0.2s',
+              transformPerspective: 1000
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = 'var(--accent-red)';

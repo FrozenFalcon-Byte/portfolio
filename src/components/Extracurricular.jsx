@@ -11,10 +11,22 @@ const Extracurricular = () => {
   return (
     <section id="extracurricular" className="section" data-scroll-section style={{ paddingTop: '15vh', paddingBottom: '15vh' }}>
       
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '10vh' }}>
+      <motion.div 
+        initial={{ opacity: 0, x: -50 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '10vh' }}
+      >
         <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '0.8rem' }}>// AUXILIARY_OPERATIONS</div>
-        <div style={{ flex: 1, height: '1px', background: 'var(--border-muted)' }}></div>
-      </div>
+        <motion.div 
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.2, ease: "circOut" }}
+          style={{ flex: 1, height: '1px', background: 'var(--border-muted)', transformOrigin: 'left' }}
+        ></motion.div>
+      </motion.div>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         {activities.map((act, i) => (
@@ -22,10 +34,10 @@ const Extracurricular = () => {
             key={i} 
             className="border-technical" 
             data-scroll 
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
+            initial={{ opacity: 0, x: -100, rotateY: -15 }}
+            whileInView={{ opacity: 1, x: 0, rotateY: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.8, type: "spring", bounce: 0.4, delay: i * 0.15 }}
             style={{ 
               background: 'var(--bg-charcoal)',
               display: 'flex',
@@ -33,7 +45,8 @@ const Extracurricular = () => {
               alignItems: 'center',
               padding: '3rem',
               flexWrap: 'wrap',
-              gap: '2rem'
+              gap: '2rem',
+              transformPerspective: 1000
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
