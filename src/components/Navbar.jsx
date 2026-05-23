@@ -69,6 +69,32 @@ const Navbar = ({ onOpenMutator }) => {
           </div>
           
           <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <a 
+              href="/resume.pdf" 
+              download
+              className="interactive border-technical mobile-hide"
+              data-cursor-shape="magnetic"
+              style={{ 
+                background: 'transparent', 
+                color: 'var(--accent-red)',
+                padding: '0.5rem 1rem',
+                fontFamily: 'var(--font-mono)', fontSize: '0.75rem', textTransform: 'uppercase', 
+                cursor: 'pointer', pointerEvents: 'auto', fontWeight: 600,
+                transition: 'all 0.2s',
+                textDecoration: 'none',
+                display: 'flex', alignItems: 'center'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--accent-red)';
+                e.currentTarget.style.color = 'var(--bg-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--accent-red)';
+              }}
+            >
+              [ RESUME ]
+            </a>
             <button 
               onClick={toggleTheme}
               className="interactive border-technical"
@@ -158,6 +184,7 @@ const Navbar = ({ onOpenMutator }) => {
             <div style={{ marginTop: 'auto', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <a href="https://www.linkedin.com/in/ajinkyachavan4829/" target="_blank" className="interactive" data-cursor-shape="magnetic" style={{ color: 'inherit', textDecoration: 'none', width: 'max-content' }}>{'>'} INITIATE_LINKEDIN</a>
               <a href="https://github.com/FrozenFalcon-Byte" target="_blank" className="interactive" data-cursor-shape="magnetic" style={{ color: 'inherit', textDecoration: 'none', width: 'max-content' }}>{'>'} INITIATE_GITHUB</a>
+              <a href="/resume.pdf" download className="interactive" data-cursor-shape="magnetic" style={{ color: 'var(--accent-red)', textDecoration: 'none', width: 'max-content', marginTop: '1rem', fontWeight: 'bold' }}>{'>'} DOWNLOAD_RESUME</a>
             </div>
           </motion.div>
         )}
