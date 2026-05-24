@@ -9,8 +9,22 @@ const Projects = () => {
   const { theme } = useTheme();
   
   const projects = [
+    {
+      id: "PRJ_01",
+      title: "NYC Construction Risk Predictor",
+      tech: ["React", "FastAPI", "ChromaDB", "SQLite", "LangChain", "Google Gemini", "Docker", "Hugging Face"],
+      desc: "A full-stack, dual-database Retrieval-Augmented Generation (RAG) system designed to predict construction violations, stop-work orders, and safety risks.",
+      details: [
+        "Engineered a dynamic Retrieval Confidence Filter using normalized vector distance math, triggering LOW_CONFIDENCE_MODE for unknown projects to prevent LLM hallucinations.",
+        "Architected a decoupled schema system separating the LLM's raw text generation target from the final API output model for stable JSON parsing.",
+        "Calibrated backend API query templates to perfectly mirror the structural formatting of vectorized database chunks, drastically improving historical match accuracy.",
+        "Containerized the complex Python, SQLite, and ChromaDB backend environment using Docker and deployed to Hugging Face Spaces."
+      ],
+      img: "/image.png",
+      category: "SYS.AI_RAG"
+    },
     { 
-      id: "PRJ_01", 
+      id: "PRJ_02", 
       title: "Business Billing", 
       tech: ["React", "Supabase", "PostgreSQL"], 
       desc: "Full-stack system for invoice creation, receipts, role-based access, and analytics.", 
@@ -23,7 +37,7 @@ const Projects = () => {
       category: "SYS.FULLSTACK" 
     },
     { 
-      id: "PRJ_02", 
+      id: "PRJ_03", 
       title: "Image Processor", 
       tech: ["Python", "Streamlit", "AI"], 
       desc: "App offering OCR, background removal, and AI-powered image summarization.", 
@@ -36,7 +50,7 @@ const Projects = () => {
       category: "SYS.AI_VISION" 
     },
     { 
-      id: "PRJ_03", 
+      id: "PRJ_04", 
       title: "Nature Scene Classifier", 
       tech: ["TensorFlow", "Keras", "CNN"], 
       desc: "CNN trained on augmented datasets to classify various scenes. Deployed via Streamlit.", 
@@ -47,7 +61,7 @@ const Projects = () => {
       ],
       img: "/nature.jpeg", 
       category: "SYS.ML_MODEL" 
-    },
+    }
   ];
 
   return (
@@ -131,8 +145,14 @@ const Projects = () => {
         type="project"
         content={
           <div style={{ fontFamily: 'var(--font-body)' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '0.8rem', marginBottom: '2rem' }}>
-              // EXECUTION_LOG: {selectedProject?.id}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '0.8rem' }}>
+                // EXECUTION_LOG: {selectedProject?.id}
+              </div>
+              <div style={{ width: '8px', height: '8px', backgroundColor: 'var(--accent-red)' }}></div>
+              <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                {selectedProject?.category}
+              </div>
             </div>
             <p style={{ fontSize: '1.2rem', color: 'var(--text-primary)', marginBottom: '1.5rem', lineHeight: 1.6 }}>{selectedProject?.desc}</p>
             
