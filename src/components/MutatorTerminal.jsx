@@ -126,7 +126,7 @@ const MutatorTerminal = ({ isOpen, onClose }) => {
         className="ai-mutator-terminal"
       >
         {/* Terminal Header */}
-        <div style={{ padding: '0.75rem 1rem', background: '#050505', borderBottom: '1px solid var(--border-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '0.75rem 1rem', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Code size={16} color="var(--accent-red)" />
             <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.8rem', color: 'var(--text-primary)', letterSpacing: '1px' }}>SYS.MUTATOR_TERMINAL</span>
@@ -159,7 +159,7 @@ const MutatorTerminal = ({ isOpen, onClose }) => {
                 {msg.role === 'user' ? 'USER_PROMPT' : 'SYS.RESPONSE'}
               </span>
               <div style={{
-                background: msg.role === 'user' ? 'transparent' : '#0a0a0a',
+                background: msg.role === 'user' ? 'transparent' : 'var(--bg-primary)',
                 color: msg.role === 'user' ? 'var(--text-primary)' : 'var(--text-data)',
                 padding: msg.role === 'user' ? '0' : '0.75rem',
                 border: msg.role === 'user' ? 'none' : '1px solid var(--border-muted)',
@@ -174,7 +174,7 @@ const MutatorTerminal = ({ isOpen, onClose }) => {
           {isLoading && (
              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                <span style={{ fontSize: '0.6rem', color: 'var(--accent-red)', marginBottom: '0.25rem' }}>SYS.RESPONSE</span>
-               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#0a0a0a', color: 'var(--text-data)', padding: '0.75rem', border: '1px solid var(--border-muted)', fontSize: '0.85rem' }}>
+               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: 'var(--bg-primary)', color: 'var(--text-data)', padding: '0.75rem', border: '1px solid var(--border-muted)', fontSize: '0.85rem' }}>
                  <Loader2 size={14} className="animate-spin" /> <span>COMPILING_MUTATION...</span>
                </div>
              </div>

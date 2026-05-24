@@ -142,28 +142,32 @@ const Cursor = () => {
     };
     
     let hoveredKeyId = null;
+    let hideTimeout = null;
     const handleKeycapHover = (e) => {
       const { id, width, isHovered } = e.detail;
       if (isHovered) {
         hoveredKeyId = id;
-        // Map 3D key width to approximate screen pixels
-        cursor.style.width = `${Math.max(45, width * 35)}px`;
-        cursor.style.height = `45px`;
-        cursor.style.borderRadius = '6px';
-        cursor.style.backgroundColor = 'transparent';
-        cursor.style.border = '2px solid var(--accent-red)';
+        if (hideTimeout) clearTimeout(hideTimeout);
+        cursor.style.opacity = '0'; // Completely hide the 2D cursor
+        cursor.style.border = 'none';
         cursor.classList.remove('tooltip-active');
         cursor.classList.add('active');
         snapElRef.current = null;
       } else {
         if (hoveredKeyId === id) {
           hoveredKeyId = null;
-          cursor.classList.remove('active');
-          cursor.style.width = '';
-          cursor.style.height = '';
-          cursor.style.borderRadius = '';
-          cursor.style.backgroundColor = '';
-          cursor.style.border = 'none';
+          if (hideTimeout) clearTimeout(hideTimeout);
+          hideTimeout = setTimeout(() => {
+            if (!hoveredKeyId) {
+              cursor.classList.remove('active');
+              cursor.style.opacity = '1';
+              cursor.style.width = '';
+              cursor.style.height = '';
+              cursor.style.borderRadius = '';
+              cursor.style.backgroundColor = '';
+              cursor.style.border = 'none';
+            }
+          }, 50);
         }
       }
     };

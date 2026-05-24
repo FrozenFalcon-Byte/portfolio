@@ -41,6 +41,7 @@ const KeyCap = ({ position, width, rowIdx, colIdx, theme }) => {
 
   const matRef = useRef(null);
   const textRef = useRef(null);
+  const edgesRef = useRef(null);
   const isHovered = useRef(false);
   const hoverLiftRef = useRef(0);
   const targetRotation = useRef(new THREE.Euler(0, 0, 0));
@@ -127,6 +128,10 @@ const KeyCap = ({ position, width, rowIdx, colIdx, theme }) => {
     const isKeyPressed = activeKeys.has(mappedKey);
     const isActive = isHovered.current || isKeyPressed;
 
+    if (edgesRef.current) {
+      edgesRef.current.visible = isActive;
+    }
+
     // RGB Breathing Effect for ALL keys
     if (textRef.current && matRef.current) {
       if (isActive) {
@@ -180,6 +185,11 @@ const KeyCap = ({ position, width, rowIdx, colIdx, theme }) => {
           smoothness={2}
           position={[0, 0, 0]}
         >
+          {/* BackSide trick for perfect solid red outline */}
+          <mesh ref={edgesRef} visible={false}>
+            <boxGeometry args={[width - 0.06, 0.44, 0.94]} />
+            <meshBasicMaterial color="#E50914" side={THREE.BackSide} />
+          </mesh>
           <meshStandardMaterial 
             ref={matRef}
             color={isAccent ? '#E50914' : '#000000'} 
@@ -357,7 +367,7 @@ const Background3D = () => {
         
         <Suspense fallback={null}>
           <KeyboardScene theme={theme} />
-          <ContactShadows position={[0, -2, -3]} opacity={0.6} scale={30} blur={2.5} far={10} color="#000000" />
+          <ContactShadows position={[0, -2, -3]} opacity={theme === 'light' ? 0.15 : 0.6} scale={30} blur={2.5} far={10} color="#000000" />
           <Environment preset="studio" />
         </Suspense>
       </Canvas>
