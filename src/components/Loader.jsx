@@ -60,7 +60,9 @@ const Loader = ({ onComplete }) => {
     setTimeout(() => {
       document.body.style.overflow = '';
       if (onCompleteRef.current) onCompleteRef.current();
-    }, 1500);
+      window.loaderIsDone = true;
+      window.dispatchEvent(new Event('loader-complete'));
+    }, 1200);
   }, []);
 
   useEffect(() => {

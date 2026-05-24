@@ -2,6 +2,60 @@ import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { useTheme } from '../context/ThemeContext';
 
+const ScrambleText = ({ text }) => {
+  const [displayText, setDisplayText] = useState(text);
+  
+  useEffect(() => {
+    let iteration = 0;
+    let interval = null;
+    let loopTimeout = null;
+    
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    
+    const startScramble = () => {
+      iteration = 0;
+      
+      interval = setInterval(() => {
+        setDisplayText(prev => {
+          return text.split('').map((letter, index) => {
+            if (index < iteration) {
+              return text[index];
+            }
+            return chars[Math.floor(Math.random() * chars.length)];
+          }).join('');
+        });
+        
+        if (iteration >= text.length) {
+          clearInterval(interval);
+          // After it finishes decrypting, wait 8 seconds and do it again (loop)
+          loopTimeout = setTimeout(startScramble, 8000); 
+        }
+        
+        iteration += 1 / 3; 
+      }, 40);
+    };
+
+    if (window.loaderIsDone) {
+      startScramble();
+    } else {
+      const handleLoaderDone = () => startScramble();
+      window.addEventListener('loader-complete', handleLoaderDone);
+      return () => {
+        window.removeEventListener('loader-complete', handleLoaderDone);
+        clearTimeout(loopTimeout);
+        clearInterval(interval);
+      };
+    }
+    
+    return () => {
+      clearTimeout(loopTimeout);
+      clearInterval(interval);
+    };
+  }, [text]);
+
+  return <>{displayText}</>;
+};
+
 const Hero = () => {
   const containerRef = useRef(null);
   const [bootText, setBootText] = useState('');
@@ -63,8 +117,8 @@ const Hero = () => {
         </div>
         
         <h1 data-scroll data-scroll-speed="2" style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(3rem, 15vw, 8rem)', fontWeight: 700, lineHeight: 0.9, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '-0.03em', margin: 0, wordBreak: 'break-word', width: '100%' }}>
-          AJINKYA<br/>
-          <span style={{ color: 'var(--text-secondary)' }}>CHAVAN_</span>
+          <ScrambleText text="AJINKYA" /><br/>
+          <span style={{ color: 'var(--text-secondary)' }}><ScrambleText text="CHAVAN_" /></span>
         </h1>
         
         <div style={{ display: 'flex', gap: '1rem', marginTop: '3rem', flexWrap: 'wrap' }}>
