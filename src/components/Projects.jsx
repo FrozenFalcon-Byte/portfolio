@@ -11,7 +11,7 @@ const Projects = () => {
   const projects = [
     {
       id: "PRJ_01",
-      title: "NYC Construction Risk Predictor",
+      title: "Construction Risk Predictor",
       tech: ["React", "FastAPI", "ChromaDB", "SQLite", "LangChain", "Google Gemini", "Docker", "Hugging Face"],
       desc: "A full-stack, dual-database Retrieval-Augmented Generation (RAG) system designed to predict construction violations, stop-work orders, and safety risks.",
       details: [
@@ -20,7 +20,7 @@ const Projects = () => {
         "Calibrated backend API query templates to perfectly mirror the structural formatting of vectorized database chunks, drastically improving historical match accuracy.",
         "Containerized the complex Python, SQLite, and ChromaDB backend environment using Docker and deployed to Hugging Face Spaces."
       ],
-      img: "/image.png",
+      img: "/Risk.png",
       category: "SYS.AI_RAG"
     },
     { 
