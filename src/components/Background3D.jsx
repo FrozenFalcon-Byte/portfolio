@@ -180,14 +180,14 @@ const KeyCap = ({ position, width, rowIdx, colIdx, theme }) => {
         }}
       >
         <RoundedBox 
-          args={[width - 0.1, 0.4, 0.9]} 
-          radius={0.02} // Brutalist sharp edges
+          args={[width - 0.1, 0.8, 0.9]} 
+          radius={0.03} // Slightly softer edges for taller keys
           smoothness={2}
           position={[0, 0, 0]}
         >
           {/* BackSide trick for perfect solid red outline */}
           <mesh ref={edgesRef} visible={false}>
-            <boxGeometry args={[width - 0.06, 0.44, 0.94]} />
+            <boxGeometry args={[width - 0.04, 0.84, 0.94]} />
             <meshBasicMaterial color="#E50914" side={THREE.BackSide} />
           </mesh>
           <meshStandardMaterial 
@@ -202,7 +202,7 @@ const KeyCap = ({ position, width, rowIdx, colIdx, theme }) => {
         
         <Text
           ref={textRef}
-          position={width > 2 ? [0, 0.201, 0] : [-(width - 0.1)/2 + 0.15, 0.201, -0.2]} // Center spacebar, others top-left
+          position={width > 2 ? [0, 0.401, 0] : [-(width - 0.1)/2 + 0.15, 0.401, -0.2]} // Center spacebar, others top-left
           rotation={[-Math.PI / 2, 0, 0]} // Face upwards
           fontSize={0.2}
           anchorX={width > 2 ? "center" : "left"}
@@ -222,6 +222,122 @@ const KeyCap = ({ position, width, rowIdx, colIdx, theme }) => {
           ))}
         </group>
       )}
+    </group>
+  );
+};
+
+const CustomChassis = () => {
+  // Shape for the outer brutalist frame (with chamfered corners)
+  const frameShape = useMemo(() => {
+    const w = 16.8;
+    const d = 6.6;
+    const c = 0.8; // Chamfer size
+    
+    const shape = new THREE.Shape();
+    shape.moveTo(-w/2 + c, -d/2);
+    shape.lineTo(w/2 - c, -d/2);
+    shape.lineTo(w/2, -d/2 + c);
+    shape.lineTo(w/2, d/2 - c);
+    shape.lineTo(w/2 - c, d/2);
+    shape.lineTo(-w/2 + c, d/2);
+    shape.lineTo(-w/2, d/2 - c);
+    shape.lineTo(-w/2, -d/2 + c);
+    shape.lineTo(-w/2 + c, -d/2);
+    
+    // Hole for the keys
+    const hw = 15.8;
+    const hd = 5.6;
+    const hc = 0.3; // Hole chamfer
+    const hole = new THREE.Path();
+    hole.moveTo(-hw/2 + hc, -hd/2);
+    hole.lineTo(-hw/2 + hc, hd/2 - hc);
+    hole.lineTo(-hw/2 + hc, hd/2);
+    hole.lineTo(hw/2 - hc, hd/2);
+    hole.lineTo(hw/2, hd/2 - hc);
+    hole.lineTo(hw/2, -hd/2 + hc);
+    hole.lineTo(hw/2 - hc, -hd/2);
+    hole.lineTo(-hw/2 + hc, -hd/2);
+    shape.holes.push(hole);
+    
+    return shape;
+  }, []);
+
+  const baseShape = useMemo(() => {
+    const w = 16.8;
+    const d = 6.6;
+    const c = 0.8;
+    const shape = new THREE.Shape();
+    shape.moveTo(-w/2 + c, -d/2);
+    shape.lineTo(w/2 - c, -d/2);
+    shape.lineTo(w/2, -d/2 + c);
+    shape.lineTo(w/2, d/2 - c);
+    shape.lineTo(w/2 - c, d/2);
+    shape.lineTo(-w/2 + c, d/2);
+    shape.lineTo(-w/2, d/2 - c);
+    shape.lineTo(-w/2, -d/2 + c);
+    shape.lineTo(-w/2 + c, -d/2);
+    return shape;
+  }, []);
+
+  const extrudeSettings = useMemo(() => ({
+    depth: 0.5,
+    bevelEnabled: true,
+    bevelSegments: 2,
+    steps: 1,
+    bevelSize: 0.04,
+    bevelThickness: 0.04
+  }), []);
+
+  const baseExtrudeSettings = useMemo(() => ({
+    depth: 0.4,
+    bevelEnabled: true,
+    bevelSegments: 2,
+    steps: 1,
+    bevelSize: 0.04,
+    bevelThickness: 0.04
+  }), []);
+
+  return (
+    <group position={[0.5, 0, 0]}>
+      {/* Top Frame (creates the inset for the keys) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.3, 0]}>
+        <extrudeGeometry args={[frameShape, extrudeSettings]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.8} metalness={0.2} />
+      </mesh>
+
+      {/* Bottom Plate */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.7, 0]}>
+        <extrudeGeometry args={[baseShape, baseExtrudeSettings]} />
+        <meshStandardMaterial color="#111111" roughness={0.9} metalness={0.1} />
+      </mesh>
+
+      {/* Red Glowing Side Cutouts */}
+      <group position={[0, -0.35, 0]}>
+        {/* Front glowing strip */}
+        <mesh position={[0, 0, 3.25]}>
+          <boxGeometry args={[12, 0.15, 0.1]} />
+          <meshBasicMaterial color="#ff1111" />
+        </mesh>
+        <rectAreaLight width={12} height={0.5} color="#ff1111" intensity={5} position={[0, 0, 3.3]} rotation={[Math.PI / 2, 0, 0]} />
+
+        {/* Back glowing strip */}
+        <mesh position={[0, 0, -3.25]}>
+          <boxGeometry args={[12, 0.15, 0.1]} />
+          <meshBasicMaterial color="#ff1111" />
+        </mesh>
+
+        {/* Left glowing strip */}
+        <mesh position={[-8.35, 0, 0]}>
+          <boxGeometry args={[0.1, 0.15, 4]} />
+          <meshBasicMaterial color="#ff1111" />
+        </mesh>
+
+        {/* Right glowing strip */}
+        <mesh position={[8.35, 0, 0]}>
+          <boxGeometry args={[0.1, 0.15, 4]} />
+          <meshBasicMaterial color="#ff1111" />
+        </mesh>
+      </group>
     </group>
   );
 };
@@ -298,10 +414,7 @@ const KeyboardScene = ({ theme }) => {
 
   return (
     <group ref={groupRef} position={[0, -1, -3]}>
-      {/* The Base */}
-      <RoundedBox args={[16, 0.8, 6]} radius={0.05} smoothness={4} position={[0.5, -0.4, 0]}>
-        <meshStandardMaterial color={'#000000'} roughness={1} metalness={0} />
-      </RoundedBox>
+      <CustomChassis />
       
       {/* The Keys */}
       <group>
