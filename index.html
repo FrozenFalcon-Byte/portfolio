@@ -13,6 +13,10 @@
     <script>
       /* Applied before first paint so a returning dark-mode visitor never
          sees the light palette flash past. */
+      /* The browser restores the previous scroll offset on reload, which
+         lands the visitor mid-page — and with pinned sections, often in
+         a section they never asked for. We decide where the page opens. */
+      if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
       try {
         var t = localStorage.getItem('ac-theme');
         document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light';

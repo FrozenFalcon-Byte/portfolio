@@ -16,6 +16,10 @@ export const applyTheme = (theme) => {
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')
     ?.setAttribute('content', theme === 'dark' ? '#0C0C10' : '#F4F1E8');
+
+  // Anything that read a token into a tween is now holding a colour from
+  // the old theme. Give it a chance to rebuild.
+  window.dispatchEvent(new CustomEvent('themechange', { detail: theme }));
 };
 
 export function useTheme() {

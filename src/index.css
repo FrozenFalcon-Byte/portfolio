@@ -222,6 +222,11 @@ html.lenis, html.lenis body { height: auto; }
   line-height: 0.84;
   letter-spacing: -0.045em;
   text-transform: uppercase;
+  /* The loader hands this name over by flying its own copy onto it. That
+     copy is split into per-character boxes, which disables kerning pairs
+     — so kerning is off on both, or the name changes width on landing. */
+  font-kerning: none;
+  font-variant-ligatures: none;
 }
 .display--xl { font-size: var(--step-4); }
 .display--l  { font-size: var(--step-3); }

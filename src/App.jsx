@@ -5,6 +5,7 @@ import { gsap, ScrollTrigger, reduced } from './lib/motion';
 import Home from './pages/Home';
 import ExperienceDetail from './pages/ExperienceDetail';
 import Nav from './components/Nav';
+import { RouteCurtain } from './components/RouteCurtain';
 import Cursor from './components/Cursor';
 import Loader from './components/Loader';
 
@@ -27,6 +28,12 @@ const useSmoothScroll = () => {
 
     window.lenis = lenis;
     lenis.on('scroll', ScrollTrigger.update);
+
+    // A reload starts at the top unless the URL actually asks otherwise.
+    if (!window.location.hash) {
+      window.scrollTo(0, 0);
+      lenis.scrollTo(0, { immediate: true });
+    }
 
     // Pinning inserts spacers, which changes the document height. Lenis
     // caches that height, so without this the last pinned section can
@@ -90,12 +97,14 @@ const RouteEffects = () => {
     requestAnimationFrame(() => {
       ScrollTrigger.refresh();
       if (target) {
-        if (window.lenis) window.lenis.scrollTo(target, { offset: -20, immediate: true });
+        if (window.lenis) window.lenis.scrollTo(target, { offset: -20, immediate: true, force: true });
         else target.scrollIntoView();
-      } else if (window.lenis) {
-        window.lenis.scrollTo(0, { immediate: true });
+        // Drop the hash once it has been honoured, so a later reload opens
+        // the top of the page rather than wherever the last link pointed.
+        window.history.replaceState(null, '', pathname);
       } else {
         window.scrollTo(0, 0);
+        window.lenis?.scrollTo(0, { immediate: true, force: true });
       }
     });
   }, [pathname, hash]);
@@ -113,13 +122,15 @@ const Shell = () => {
       <Nav />
       <RouteEffects />
 
-      <main>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/experience/pmo" element={<ExperienceDetail />} />
-          <Route path="*" element={<Home />} />
-        </Routes>
-      </main>
+      <RouteCurtain>
+        <main>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/experience/pmo" element={<ExperienceDetail />} />
+            <Route path="*" element={<Home />} />
+          </Routes>
+        </main>
+      </RouteCurtain>
     </>
   );
 };

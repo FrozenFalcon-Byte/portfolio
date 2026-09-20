@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { maskLines, riseIn, drawRule, countTo, cleanup } from '../lib/motion';
+import { TransitionLink } from '../components/RouteCurtain';
+import { maskLines, riseIn, drawRule, cleanup } from '../lib/motion';
 
 const STACK = [
   'LangGraph', 'LangChain', 'Azure OpenAI', 'FastAPI', 'Azure PostgreSQL',
@@ -42,25 +42,11 @@ const DOMAIN = [
   },
 ];
 
-const METRICS = [
-  { v: 9, k: 'Pipeline nodes' },
-  { v: 12, suffix: 'K', k: 'Lines in the core modules' },
-  { v: 2, k: 'Engineers on it' },
+const ASKS = [
+  'What is FTE utilisation for PSS Pune next quarter?',
+  'Show demand against supply by CoE for FY26 P04–P06.',
+  'Which projects moved most on recovery this fiscal year?',
 ];
-
-const Metric = ({ m }) => {
-  const ref = useRef(null);
-  useEffect(() => cleanup([
-    countTo(ref.current, m.v, { suffix: m.suffix, prefix: m.prefix, decimals: m.decimals || 0 }),
-  ]), [m]);
-
-  return (
-    <div className="metric">
-      <span className="display metric-v" ref={ref} />
-      <span className="mono metric-k">{m.k}</span>
-    </div>
-  );
-};
 
 const ExperienceDetail = () => {
   const rootRef = useRef(null);
@@ -71,7 +57,7 @@ const ExperienceDetail = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    window.lenis?.scrollTo(0, { immediate: true });
+    window.lenis?.scrollTo(0, { immediate: true, force: true });
 
     const fns = [
       maskLines(titleRef.current, { trigger: false, stagger: 0.09 }),
@@ -85,9 +71,9 @@ const ExperienceDetail = () => {
   return (
     <article ref={rootRef} className="case block block--flat" data-tone="paper">
       <div className="shell case-shell">
-        <Link to="/#experience" className="case-back">
+        <TransitionLink to="/#experience" className="case-back">
           <ArrowLeft size={16} strokeWidth={2.4} /> Back to portfolio
-        </Link>
+        </TransitionLink>
 
         <header className="case-head">
           <span className="eyebrow">Case study — Emerson</span>
@@ -155,10 +141,19 @@ const ExperienceDetail = () => {
 
           <aside className="case-aside">
             <div className="case-panel">
-              <span className="mono panel-label">at a glance</span>
-              <div className="case-metrics">
-                {METRICS.map((m) => <Metric key={m.k} m={m} />)}
-              </div>
+              <span className="mono panel-label">things it gets asked</span>
+              <ul className="case-asks">
+                {ASKS.map((q) => (
+                  <li key={q}>
+                    <span className="ask-caret" aria-hidden="true">&rsaquo;</span>
+                    {q}
+                  </li>
+                ))}
+              </ul>
+              <p className="mono panel-note">
+                Each answer comes back with the table, a chart, and the
+                methodology behind the query that produced it.
+              </p>
             </div>
 
             <div className="case-panel case-code" data-tone="ink">
@@ -192,9 +187,9 @@ const ExperienceDetail = () => {
           </aside>
         </div>
 
-        <Link to="/#experience" className="btn case-foot-cta">
+        <TransitionLink to="/#experience" className="btn case-foot-cta">
           Back to portfolio <span className="arrow" aria-hidden="true">→</span>
-        </Link>
+        </TransitionLink>
       </div>
 
       <style>{`
@@ -321,11 +316,16 @@ const ExperienceDetail = () => {
           font-size: 0.68rem;
           line-height: 1.6;
         }
-        .case-metrics { display: flex; flex-direction: column; gap: 1.1rem; }
-        .metric { display: flex; flex-direction: column; gap: 0.2rem; }
-        .metric + .metric { padding-top: 1.1rem; border-top: 1px solid var(--line); }
-        .metric-v { font-size: clamp(1.7rem, 3.2vw, 2.4rem); letter-spacing: -0.04em; }
-        .metric-k { color: var(--mark); font-size: var(--step--2); text-transform: uppercase; letter-spacing: 0.08em; }
+        .case-asks { display: flex; flex-direction: column; gap: 0.7rem; }
+        .case-asks li {
+          display: flex;
+          gap: 0.6rem;
+          font-size: var(--step--1);
+          line-height: 1.55;
+          color: var(--ink);
+        }
+        .case-asks li + li { padding-top: 0.7rem; border-top: 1px solid var(--line); }
+        .ask-caret { color: var(--mark); flex: none; font-weight: 600; }
 
         .case-code { overflow-x: auto; }
         .case-code pre { font-size: 0.72rem; line-height: 1.75; color: var(--ink-2); }

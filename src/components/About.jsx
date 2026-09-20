@@ -21,11 +21,30 @@ const About = () => {
 
   useEffect(() => {
     const fns = [
-      splitChars(textRef.current, { start: 'top 76%', end: 'bottom 60%', each: 0.5 }),
       drawRule(ruleRef.current, { trigger: rootRef.current, start: 'top 80%' }),
       riseIn(gridRef.current?.children, { trigger: gridRef.current, stagger: 0.09, y: 26 }),
     ];
     return cleanup(fns);
+  }, []);
+
+  /* The scrub reveal tweens between three token colours, which GSAP
+     resolves to hex when the tween is built. After a theme switch those
+     are the old theme's colours, so the statement has to be rebuilt
+     rather than left holding them. */
+  useEffect(() => {
+    const opts = { start: 'top 76%', end: 'bottom 60%', each: 0.5 };
+    let kill = splitChars(textRef.current, opts);
+
+    const rebuild = () => {
+      kill?.();
+      kill = splitChars(textRef.current, opts);
+    };
+
+    window.addEventListener('themechange', rebuild);
+    return () => {
+      window.removeEventListener('themechange', rebuild);
+      kill?.();
+    };
   }, []);
 
   return (

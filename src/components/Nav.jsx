@@ -26,6 +26,12 @@ const Nav = () => {
     const bar = barRef.current;
     if (!bar) return undefined;
 
+    // While the sheet is up it is the only thing behind the bar.
+    if (open) {
+      bar.dataset.tone = 'ink';
+      return undefined;
+    }
+
     const blocks = Array.from(document.querySelectorAll('.block[data-tone]'));
     const triggers = blocks.map((block) =>
       ScrollTrigger.create({
@@ -38,7 +44,7 @@ const Nav = () => {
 
     if (blocks[0]) bar.dataset.tone = blocks[0].dataset.tone;
     return () => triggers.forEach((t) => t.kill());
-  }, []);
+  }, [open]);
 
   /* Read-position hairline. */
   useEffect(() => {
@@ -245,16 +251,18 @@ const Nav = () => {
           inset: 0;
           z-index: 8900;
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           clip-path: inset(0% 0% 100% 0%);
           pointer-events: none;
           overflow-y: auto;
+          overscroll-behavior: contain;
         }
         .sheet-inner {
           display: flex;
           flex-direction: column;
-          gap: clamp(2rem, 6vh, 4rem);
-          padding-block: clamp(6rem, 14vh, 9rem) clamp(2.5rem, 8vh, 5rem);
+          gap: clamp(1.5rem, 5vh, 3rem);
+          margin-block: auto;
+          padding-block: clamp(5.5rem, 12vh, 7.5rem) clamp(2rem, 6vh, 3.5rem);
         }
         .sheet-list { display: flex; flex-direction: column; }
         .sheet-link a { display: block; overflow: hidden; }
@@ -262,12 +270,12 @@ const Nav = () => {
           display: flex;
           align-items: baseline;
           gap: clamp(0.8rem, 2vw, 1.8rem);
-          padding-block: clamp(0.15rem, 0.6vh, 0.4rem);
+          padding-block: clamp(0.1rem, 0.4vh, 0.3rem);
         }
         .sheet-n { font-size: 0.72rem; color: var(--ink-2); flex: none; }
         .sheet-word {
-          font-size: clamp(2.6rem, 10vw, 6.5rem);
-          line-height: 1;
+          font-size: clamp(1.9rem, 6.4vw, 4.4rem);
+          line-height: 1.04;
           color: var(--ink);
           transition: color 0.35s var(--ease-out), transform 0.45s var(--ease-out);
         }

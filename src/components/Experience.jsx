@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
+import { TransitionLink } from './RouteCurtain';
 import { maskLines, riseIn, drawRule, magnetic, cleanup } from '../lib/motion';
 
 const LOG = [
@@ -76,10 +76,10 @@ const Experience = () => {
             {STACK.map((s) => <li key={s} className="tag">{s}</li>)}
           </ul>
 
-          <Link ref={ctaRef} to="/experience/pmo" className="btn exp-cta">
+          <TransitionLink ref={ctaRef} to="/experience/pmo" className="btn exp-cta">
             Read the case study
             <ArrowUpRight size={17} strokeWidth={2.4} />
-          </Link>
+          </TransitionLink>
         </article>
       </div>
 

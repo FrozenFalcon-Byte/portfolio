@@ -69,35 +69,41 @@ const Loader = () => {
       }, 1.25)
 
       .add(() => {
-        const hero = document.querySelector('.hero-line > span');
+        const hero = document.querySelector('.hero-lockup .hero-line > span');
         const from = lineRef.current?.getBoundingClientRect();
 
-        if (!hero || !from || !from.height) {
+        if (!hero || !from || !from.width) {
           gsap.to(nameRef.current, { opacity: 0, duration: 0.4 });
           return;
         }
 
         const to = hero.getBoundingClientRect();
-        const heroColor = getComputedStyle(hero).color;
+        const heroStyle = getComputedStyle(hero);
 
-        // Same glyphs in the same face, so the height ratio is the font
-        // scale — no need to animate font-size and reflow every frame.
+        // Scale from the font sizes themselves, not from measured boxes:
+        // the loader's line is built from per-character spans and the
+        // hero's is one text run, so their box heights need not agree
+        // even when the glyphs are identical.
+        const scale =
+          parseFloat(heroStyle.fontSize) /
+          parseFloat(getComputedStyle(nameRef.current).fontSize);
+
         gsap.to(nameRef.current, {
           x: to.left - from.left,
           y: to.top - from.top,
-          scale: to.height / from.height,
-          color: heroColor,
+          scale,
+          color: heroStyle.color,
           transformOrigin: 'left top',
-          duration: 1.05,
+          duration: 1.1,
           ease: EASE.swift,
         });
       }, 1.5)
 
       .to(veilRef.current, {
         clipPath: 'inset(0% 0% 100% 0%)',
-        duration: 0.95,
-        ease: EASE.glide,
-      }, 1.62)
+        duration: 1,
+        ease: EASE.swift,
+      }, 1.55)
 
       // Swap the flying copy for the hero's own in a single frame, at the
       // instant they are the same size in the same place.
@@ -155,8 +161,8 @@ const Loader = () => {
           font-size: clamp(2.2rem, 9.5vw, 7.5rem);
           will-change: transform;
         }
-        .loader-line { display: flex; overflow: hidden; }
-        .loader-char-box { display: block; overflow: hidden; }
+        .loader-line { display: block; white-space: nowrap; }
+        .loader-char-box { display: inline-block; overflow: hidden; vertical-align: top; }
         .loader-char { display: block; will-change: transform; }
 
         .loader-furniture {
