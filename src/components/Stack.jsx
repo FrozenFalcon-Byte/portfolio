@@ -64,6 +64,8 @@ const Stack = () => {
         end: () => `+=${LAYERS.length * 62}%`,
         pin: stageRef.current,
         scrub: 0.4,
+        invalidateOnRefresh: true,
+        anticipatePin: 1,
         onUpdate: (self) => {
           const i = Math.min(LAYERS.length - 1, Math.floor(self.progress * LAYERS.length));
           setActive(i);
@@ -77,7 +79,7 @@ const Stack = () => {
   }, []);
 
   return (
-    <section ref={rootRef} id="stack" className={`block stack ${pinned ? 'is-pinned' : ''}`} data-tone="ink">
+    <section ref={rootRef} id="stack" className={`block stack ${pinned ? 'is-pinned' : ''}`} data-tone="lilac">
       <div ref={stageRef} className="stack-stage">
         <div className="shell stack-inner">
           <div className="sec-head">
@@ -103,10 +105,12 @@ const Stack = () => {
                     {l.title}
                   </h3>
                   <div className="layer-detail">
-                    <p className="body layer-blurb">{l.blurb}</p>
-                    <ul className="layer-items">
-                      {l.items.map((it) => <li key={it} className="tag">{it}</li>)}
-                    </ul>
+                    <div className="layer-detail-in">
+                      <p className="body layer-blurb">{l.blurb}</p>
+                      <ul className="layer-items">
+                        {l.items.map((it) => <li key={it} className="tag">{it}</li>)}
+                      </ul>
+                    </div>
                   </div>
                 </li>
               ))}
@@ -116,6 +120,7 @@ const Stack = () => {
       </div>
 
       <style>{`
+        .stack.is-pinned { padding-block: 0; }
         .stack-stage { display: flex; align-items: center; min-height: 100svh; }
         .stack:not(.is-pinned) .stack-stage { min-height: 0; display: block; }
         .stack-inner { width: 100%; }
@@ -159,13 +164,17 @@ const Stack = () => {
         .layer.is-active .layer-num,
         .layer:not(.is-stacked) .layer-num { color: var(--mark); }
 
+        /* One child, one explicit row. With two children the second landed
+           in an implicit auto row, so every collapsed layer still reserved
+           the full height of its tag list — five of those overflowed the
+           pinned viewport and the last layers were unreachable. */
         .layer-detail {
           display: grid;
           grid-template-rows: 0fr;
           opacity: 0;
           transition: grid-template-rows 0.6s var(--ease-out), opacity 0.45s var(--ease-out);
         }
-        .layer-detail > * { overflow: hidden; }
+        .layer-detail-in { overflow: hidden; min-height: 0; }
         .layer.is-active .layer-detail { grid-template-rows: 1fr; opacity: 1; }
 
         .layer-blurb { padding-block: 0.9rem 0.1rem; max-width: 50ch; }

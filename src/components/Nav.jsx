@@ -5,11 +5,12 @@ import { useTheme } from '../lib/theme';
 
 const LINKS = [
   { id: 'about',      n: '01', label: 'About' },
-  { id: 'work',       n: '02', label: 'Work' },
-  { id: 'assistant',  n: '03', label: 'Ask me' },
-  { id: 'experience', n: '04', label: 'Experience' },
+  { id: 'experience', n: '02', label: 'Experience' },
+  { id: 'work',       n: '03', label: 'Work' },
+  { id: 'assistant',  n: '04', label: 'Ask me' },
   { id: 'stack',      n: '05', label: 'Stack' },
-  { id: 'contact',    n: '06', label: 'Contact' },
+  { id: 'leadership', n: '06', label: 'Leadership' },
+  { id: 'contact',    n: '07', label: 'Contact' },
 ];
 
 const Nav = () => {

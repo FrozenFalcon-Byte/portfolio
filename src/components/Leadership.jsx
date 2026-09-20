@@ -35,7 +35,7 @@ const Leadership = () => {
     <section ref={rootRef} id="leadership" className="block leadership" data-tone="paper">
       <div className="shell">
         <div className="sec-head">
-          <span className="eyebrow eyebrow--open">Alongside that — Leadership</span>
+          <span className="eyebrow">06 — Leadership</span>
           <span className="rule" ref={ruleRef} />
         </div>
 

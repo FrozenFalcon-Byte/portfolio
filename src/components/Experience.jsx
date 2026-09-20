@@ -4,13 +4,16 @@ import { ArrowUpRight } from 'lucide-react';
 import { maskLines, riseIn, drawRule, magnetic, cleanup } from '../lib/motion';
 
 const LOG = [
-  'Designed a multi-agent AI framework with LangGraph.',
-  'Deployed autonomous SQL and extraction agents.',
-  'Integrated a self-correcting retry loop.',
-  'Automated complex PMO data workflows end to end.',
+  'Built a nine-node LangGraph pipeline that turns a plain-English business question into validated SQL.',
+  'Encoded the fiscal calendar and business glossary into the planner, so generated SQL is correct rather than merely plausible.',
+  'Added AST-level validation with sqlglot — join fan-out and malformed filters are caught before anything touches the database.',
+  'Shipped to Azure behind FastAPI with SSE streaming, generated charts, and a persisted reasoning trace per session.',
 ];
 
-const STACK = ['LangGraph', 'Python', 'LLMs', 'SQL', 'Prompt engineering', 'Agentic AI', 'Data analytics'];
+const STACK = [
+  'LangGraph', 'LangChain', 'Azure OpenAI', 'FastAPI', 'Azure PostgreSQL',
+  'sqlglot', 'React', 'TypeScript',
+];
 
 const Experience = () => {
   const rootRef = useRef(null);
@@ -33,9 +36,9 @@ const Experience = () => {
     <section ref={rootRef} id="experience" className="block experience" data-tone="cyan">
       <div className="shell">
         <div className="sec-head">
-          <span className="eyebrow">04 — Experience</span>
+          <span className="eyebrow">02 — Experience</span>
           <span className="rule" ref={ruleRef} />
-          <span className="mono exp-count">1 role · current</span>
+          <span className="mono exp-count">1 role · in production</span>
         </div>
 
         <article className="exp-card">
@@ -52,8 +55,16 @@ const Experience = () => {
           </header>
 
           <h3 ref={titleRef} className="exp-title display display--m">
-            Architected a multi-agent<br />system framework
+            SNOP GenAI Pipeline —<br />business questions into SQL
           </h3>
+
+          <p className="body exp-lead">
+            Sales &amp; Operations Planning teams were hand-writing SQL for the same
+            recurring questions. This answers them conversationally instead —
+            across workforce utilisation, demand and supply forecasting, financial
+            recovery and operational effectiveness — with the query, the numbers and
+            the reasoning behind them.
+          </p>
 
           <ul className="exp-log" ref={listRef}>
             {LOG.map((l) => (
@@ -117,6 +128,7 @@ const Experience = () => {
         .exp-status { color: var(--mark); }
 
         .exp-title { margin: 0; letter-spacing: -0.035em; }
+        .exp-lead { max-width: 64ch; margin-top: -0.5rem; }
 
         .exp-log { display: flex; flex-direction: column; gap: 0.75rem; }
         .exp-log li {

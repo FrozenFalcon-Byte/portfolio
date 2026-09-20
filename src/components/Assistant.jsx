@@ -140,7 +140,7 @@ const Assistant = () => {
       <div className="shell assistant-grid">
         <div className="assistant-copy">
           <div className="sec-head">
-            <span className="eyebrow">03 — Ask my portfolio</span>
+            <span className="eyebrow">04 — Ask my portfolio</span>
           </div>
 
           <h2 ref={headRef} className="assistant-head display display--l">
@@ -194,6 +194,11 @@ const Assistant = () => {
           <div className="phone" ref={phoneRef}>
             <span className="phone-glow" aria-hidden="true" />
             <div className="phone-body">
+              <span className="phone-btn phone-btn--action" aria-hidden="true" />
+              <span className="phone-btn phone-btn--vol-up" aria-hidden="true" />
+              <span className="phone-btn phone-btn--vol-dn" aria-hidden="true" />
+              <span className="phone-btn phone-btn--power" aria-hidden="true" />
+
               <div className="phone-screen" data-tone="paper">
                 <div className="phone-island" aria-hidden="true" />
 
@@ -203,7 +208,15 @@ const Assistant = () => {
                   <span className="screen-state mono">{busy ? 'thinking' : 'online'}</span>
                 </header>
 
-                <div className="screen-feed" ref={feedRef} aria-live="polite">
+                <div
+                  className="screen-feed"
+                  ref={feedRef}
+                  aria-live="polite"
+                  data-lenis-prevent
+                  tabIndex={0}
+                  role="log"
+                  aria-label="Conversation"
+                >
                   {thread.map((m, i) => (
                     <div key={i} className={`bubble bubble--${m.role}`}>
                       {m.error ? (
@@ -232,6 +245,8 @@ const Assistant = () => {
                 <footer className="screen-foot mono">
                   Grounded in {thread.length > 1 ? 'this site' : 'this site only'} · no training on you
                 </footer>
+
+                <span className="phone-home" aria-hidden="true" />
               </div>
             </div>
           </div>
@@ -306,7 +321,7 @@ const Assistant = () => {
 
         /* ---- device ---- */
         .assistant-stage { display: grid; place-items: center; perspective: 1400px; }
-        .phone { position: relative; width: min(310px, 78vw); will-change: transform; }
+        .phone { position: relative; width: min(324px, 80vw); will-change: transform; }
         .phone-glow {
           position: absolute;
           inset: -18% -22%;
@@ -315,38 +330,94 @@ const Assistant = () => {
           filter: blur(14px);
           pointer-events: none;
         }
+        /* Proportioned off the real thing: 9:19.5 display, a band that
+           reads as brushed metal, and the corner radius the hardware
+           actually has — at 52px on this width it was reading as a box. */
         .phone-body {
           position: relative;
-          padding: 9px;
-          border-radius: 46px;
-          background: linear-gradient(150deg, #3A3A42 0%, #14141A 42%, #2C2C34 100%);
+          padding: 11px;
+          border-radius: 18.5%/8.8%;
+          background:
+            linear-gradient(105deg,
+              #9A9AA4 0%, #FCFCFE 6%, #D2D2DA 14%,
+              #B4B4BE 50%,
+              #D8D8E0 86%, #FCFCFE 94%, #9A9AA4 100%);
           box-shadow:
-            0 28px 60px rgba(0, 0, 0, 0.5),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+            0 34px 80px rgba(0, 0, 0, 0.45),
+            0 4px 14px rgba(0, 0, 0, 0.25),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.55);
         }
+        [data-theme="dark"] .phone-body {
+          background:
+            linear-gradient(105deg,
+              #26262E 0%, #6E6E7A 6%, #3A3A44 14%,
+              #23232B 50%,
+              #3E3E48 86%, #74747E 94%, #24242C 100%);
+          box-shadow:
+            0 34px 80px rgba(0, 0, 0, 0.65),
+            0 4px 14px rgba(0, 0, 0, 0.4),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+        }
+
         .phone-screen {
           position: relative;
           display: flex;
           flex-direction: column;
-          height: 560px;
-          border-radius: 38px;
+          aspect-ratio: 9 / 19.5;
+          border-radius: 15.5%/7.2%;
           overflow: hidden;
+          box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
         }
+
         .phone-island {
           position: absolute;
-          top: 9px; left: 50%;
+          top: 10px; left: 50%;
           translate: -50% 0;
-          width: 86px; height: 24px;
+          width: 27%; height: 26px;
           border-radius: 999px;
-          background: #0A0A0D;
+          background: #08080A;
           z-index: 3;
         }
+        .phone-island::after {
+          content: "";
+          position: absolute;
+          right: 18%; top: 50%;
+          translate: 0 -50%;
+          width: 8px; height: 8px;
+          border-radius: 999px;
+          background: radial-gradient(circle at 35% 35%, #2B3550 0%, #101018 60%, #08080A 100%);
+        }
+
+        .phone-home {
+          position: absolute;
+          bottom: 7px; left: 50%;
+          translate: -50% 0;
+          width: 36%; height: 4px;
+          border-radius: 999px;
+          background: var(--ink);
+          opacity: 0.28;
+          z-index: 3;
+        }
+
+        /* Side hardware. Small, but their absence is what makes a
+           rounded rectangle stay a rounded rectangle. */
+        .phone-btn {
+          position: absolute;
+          width: 3px;
+          border-radius: 2px;
+          background: linear-gradient(180deg, #C8C8D0, #8E8E98);
+        }
+        [data-theme="dark"] .phone-btn { background: linear-gradient(180deg, #43434D, #1E1E26); }
+        .phone-btn--action { left: -2px; top: 16%; height: 4.2%; }
+        .phone-btn--vol-up { left: -2px; top: 24%; height: 7%; }
+        .phone-btn--vol-dn { left: -2px; top: 33%; height: 7%; }
+        .phone-btn--power  { right: -2px; top: 26%; height: 11%; }
 
         .screen-bar {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          padding: 2.6rem 1rem 0.7rem;
+          gap: 0.55rem;
+          padding: 3.1rem 1.15rem 0.8rem;
           border-bottom: 1px solid var(--line-2);
           flex: none;
         }
@@ -358,7 +429,7 @@ const Assistant = () => {
           color: #101403;
           flex: none;
         }
-        .screen-name { font-size: 0.8rem; font-weight: 600; flex: 1; }
+        .screen-name { font-size: 0.88rem; font-weight: 600; flex: 1; }
         .screen-state { font-size: 0.62rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.1em; }
 
         .screen-feed {
@@ -366,21 +437,23 @@ const Assistant = () => {
           min-height: 0;
           overflow-y: auto;
           overscroll-behavior: contain;
-          padding: 0.9rem 0.85rem 1rem;
+          padding: 1rem 0.95rem 1.1rem;
           display: flex;
           flex-direction: column;
-          gap: 0.6rem;
+          gap: 0.65rem;
           scrollbar-width: thin;
+          -webkit-overflow-scrolling: touch;
         }
+        .screen-feed:focus-visible { outline-offset: -3px; }
         .screen-feed::-webkit-scrollbar { width: 4px; }
         .screen-feed::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
 
         .bubble {
-          max-width: 88%;
-          padding: 0.6rem 0.8rem 0.66rem;
-          border-radius: 16px;
-          font-size: 0.79rem;
-          line-height: 1.55;
+          max-width: 90%;
+          padding: 0.7rem 0.9rem 0.76rem;
+          border-radius: 18px;
+          font-size: 0.86rem;
+          line-height: 1.6;
         }
         .bubble--assistant { align-self: flex-start; background: var(--paper-2); border-bottom-left-radius: 6px; }
         .bubble--user {
@@ -397,7 +470,7 @@ const Assistant = () => {
           margin-top: 0.55rem;
           padding-top: 0.5rem;
           border-top: 1px solid var(--line);
-          font-size: 0.6rem;
+          font-size: 0.67rem;
           color: var(--ink-3);
           overflow: hidden;
         }
@@ -416,9 +489,9 @@ const Assistant = () => {
 
         .screen-foot {
           flex: none;
-          padding: 0.6rem 1rem 0.9rem;
+          padding: 0.6rem 1rem 1.25rem;
           border-top: 1px solid var(--line-2);
-          font-size: 0.58rem;
+          font-size: 0.62rem;
           color: var(--ink-3);
           text-align: center;
           letter-spacing: 0.06em;
@@ -427,7 +500,7 @@ const Assistant = () => {
         @media (max-width: 960px) {
           .assistant-grid { grid-template-columns: 1fr; gap: clamp(2.5rem, 7vh, 4rem); }
           .assistant-how li { grid-template-columns: 1.8rem 5.5rem 1fr; }
-          .phone-screen { height: 500px; }
+          .phone { width: min(306px, 78vw); }
         }
         @media (max-width: 420px) {
           .assistant-how li { grid-template-columns: 1.6rem 1fr; }

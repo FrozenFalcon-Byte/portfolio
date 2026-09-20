@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { ArrowDownRight, Asterisk } from 'lucide-react';
+import { ArrowDownRight, Asterisk, Download } from 'lucide-react';
 import { gsap, ScrollTrigger, EASE, reduced, fine } from '../lib/motion';
 
 const TICKER = [
@@ -53,13 +53,13 @@ const Hero = () => {
     return () => window.removeEventListener('loader-complete', play);
   }, []);
 
-  /* The name drifts up a touch slower than the page, so the block
-     below it appears to slide over the lockup rather than past it. */
+  /* The name drifts up a touch slower than the page, so the block below
+     it slides over the lockup rather than past it. No fade: it was
+     washing the name out within the first few pixels of scroll. */
   useEffect(() => {
     if (reduced()) return undefined;
     const tween = gsap.to('.hero-lockup', {
-      yPercent: -12,
-      opacity: 0.35,
+      yPercent: -10,
       ease: 'none',
       scrollTrigger: { trigger: rootRef.current, start: 'top top', end: 'bottom top', scrub: 0.6 },
     });
@@ -144,8 +144,9 @@ const Hero = () => {
           </p>
 
           <div className="hero-acts" ref={asideRef}>
-            <a href="#work" className="btn">
-              See the work <span className="arrow" aria-hidden="true">→</span>
+            <a href="/resume.pdf" download className="btn">
+              Download résumé
+              <Download size={16} strokeWidth={2.4} />
             </a>
             <a href="#assistant" className="btn btn--ghost">
               Ask my portfolio
@@ -177,7 +178,9 @@ const Hero = () => {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          padding-block: clamp(6.5rem, 15vh, 9rem) 0;
+          /* The bottom padding is the landing strip for the next block's
+             rounded shoulder, which otherwise covers the ticker. */
+          padding-block: clamp(6.5rem, 15vh, 9rem) var(--round);
           overflow: hidden;
         }
         .hero-shell { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: clamp(1.6rem, 5vh, 3rem); }

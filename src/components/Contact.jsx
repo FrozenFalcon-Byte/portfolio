@@ -28,7 +28,7 @@ const Contact = () => {
   return (
     <footer ref={rootRef} id="contact" className="block contact" data-tone="acid">
       <div className="shell">
-        <span className="eyebrow">06 — Contact</span>
+        <span className="eyebrow">07 — Contact</span>
 
         <h2 ref={headRef} className="contact-head display display--xl">
           Let&rsquo;s build<br />something that ships.

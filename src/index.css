@@ -83,6 +83,19 @@
    ============================================================ */
 [data-tone] { background: var(--paper); color: var(--ink); }
 
+/* "paper" is the page's own surface, but it still has to be stated: a
+   paper block nested inside a dark one (the phone screen inside the
+   assistant section) would otherwise inherit that block's tokens
+   instead of resetting to the theme's. */
+[data-tone="paper"] {
+  --paper: #F4F1E8; --paper-2: #ECE8DC; --paper-3: #E0DACA;
+  --ink: #16151A; --ink-2: #57545F; --ink-3: #908C99;
+  --line: rgba(22, 21, 26, 0.14); --line-2: rgba(22, 21, 26, 0.07);
+  --shadow: rgba(22, 21, 26, 0.10);
+  --mark: var(--violet);
+  color-scheme: light;
+}
+
 [data-tone="ink"] {
   --paper: #0C0C10; --paper-2: #16161C; --paper-3: #21212A;
   --ink: #F3F1EB; --ink-2: #9C98A6; --ink-3: #635F6D;
@@ -120,6 +133,11 @@
    each tone survives as a tint, with its hue moved into the type. */
 [data-theme="dark"] [data-tone="paper"] {
   --paper: #0C0C10; --paper-2: #14141A; --paper-3: #1E1E26;
+  --ink: #F3F1EB; --ink-2: #9C98A6; --ink-3: #635F6D;
+  --line: rgba(243, 241, 235, 0.16); --line-2: rgba(243, 241, 235, 0.07);
+  --shadow: rgba(0, 0, 0, 0.5);
+  --mark: var(--acid);
+  color-scheme: dark;
 }
 [data-theme="dark"] [data-tone="ink"] {
   --paper: #15151B; --paper-2: #1D1D25; --paper-3: #26262F;

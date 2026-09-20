@@ -180,7 +180,7 @@ const Work = () => {
       <div className="work-stage" ref={stageRef}>
         <div className="shell">
           <div className="sec-head">
-            <span className="eyebrow">02 — Selected work</span>
+            <span className="eyebrow">03 — Selected work</span>
             <span className="rule" ref={ruleRef} />
             {/* Nothing advances when the cards are stacked, so a live
                 position counter would be a number that never moves. */}

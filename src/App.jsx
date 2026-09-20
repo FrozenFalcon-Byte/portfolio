@@ -28,6 +28,12 @@ const useSmoothScroll = () => {
     window.lenis = lenis;
     lenis.on('scroll', ScrollTrigger.update);
 
+    // Pinning inserts spacers, which changes the document height. Lenis
+    // caches that height, so without this the last pinned section can
+    // refuse to scroll past itself.
+    const onRefresh = () => lenis.resize();
+    ScrollTrigger.addEventListener('refresh', onRefresh);
+
     const tick = (time) => lenis.raf(time * 1000);
     gsap.ticker.add(tick);
     gsap.ticker.lagSmoothing(0);
@@ -63,6 +69,7 @@ const useSmoothScroll = () => {
         img.removeEventListener('load', onImage);
         img.removeEventListener('error', onImage);
       });
+      ScrollTrigger.removeEventListener('refresh', onRefresh);
       gsap.ticker.remove(tick);
       lenis.destroy();
       delete window.lenis;
