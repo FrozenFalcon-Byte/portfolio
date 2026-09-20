@@ -53,6 +53,12 @@ export const CHUNKS = [
     text: `Ajinkya has been Class Representative at VIIT from 2023 to 2026. He acts as the primary liaison between students and faculty to keep academic operations running smoothly. This is a college leadership role, distinct from both his Emerson internship and his AIMSS technical lead position.`,
   },
   {
+    id: 'finmcp',
+    title: 'FinMCP — a multi-client finance platform built on MCP',
+    section: 'Work',
+    text: `FinMCP is a personal finance platform whose business logic is an MCP server rather than a web backend with AI bolted on. Every feature — transactions, budgets, recurring-payment detection, statement and receipt imports, goals, text-to-SQL, the audit log — is exposed as one of 27 MCP tools, alongside 13 resources and 4 prompts, so the React web app, Claude Desktop, Claude Code and the in-app assistant are all clients of the same ledger with identical rules. Ajinkya used the protocol's two-way channel deliberately: sampling hands a weak category guess to the client's model for refinement, elicitation pauses a risky call so the app can ask the user, and subscriptions stream a write from any client into every open view in real time. Tenant isolation lives in Postgres row-level security — each request opens a transaction as the caller's account — so a leaked token still reads nothing. Categorisation, text-to-SQL and receipt parsing all have deterministic fallbacks, so the app works with no model key set. Built with the MCP SDK, React 19, Vite, TypeScript, FastAPI, PostgreSQL, Supabase and the Claude API, and hosted at finmcp.app.`,
+  },
+  {
     id: 'risk',
     title: 'Construction Risk Predictor',
     section: 'Work',

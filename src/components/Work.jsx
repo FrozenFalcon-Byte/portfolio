@@ -14,6 +14,20 @@ const wantsRail = () =>
 const PROJECTS = [
   {
     id: '01',
+    title: 'FinMCP',
+    kind: 'Model Context Protocol platform',
+    desc: 'A personal finance platform whose business logic is an MCP server. The web app, Claude Desktop and the in-app agent are all clients of the same ledger.',
+    tech: ['MCP', 'React 19', 'FastAPI', 'PostgreSQL', 'Supabase', 'TypeScript', 'Claude API'],
+    img: '/finmcp.webp',
+    details: [
+      'Shipped the entire feature set as 27 MCP tools, 13 resources and 4 prompts, so every client — browser, Claude Desktop, Claude Code — gets identical capability with no duplicated logic.',
+      'Used the protocol’s two-way channel properly: sampling hands a weak category guess to the client’s model, elicitation pauses a risky call for a dialog, and subscriptions stream writes from any client into the open web app.',
+      'Pushed tenant isolation down into Postgres row-level security — every request runs in a transaction opened as the caller’s account, so a leaked token still reads nothing.',
+      'Wrote deterministic fallbacks for categorisation, text-to-SQL and receipt parsing, so the whole app still works with no model key set.',
+    ],
+  },
+  {
+    id: '02',
     title: 'Construction Risk Predictor',
     kind: 'Retrieval-augmented generation',
     desc: 'A dual-database RAG system that predicts construction violations, stop-work orders, and safety risks before they land.',
@@ -27,7 +41,7 @@ const PROJECTS = [
     ],
   },
   {
-    id: '02',
+    id: '03',
     title: 'Business Billing',
     kind: 'Full-stack platform',
     desc: 'Invoicing, receipts, role-based access and analytics for small businesses, running on a single Postgres tenant model.',
@@ -40,7 +54,7 @@ const PROJECTS = [
     ],
   },
   {
-    id: '03',
+    id: '04',
     title: 'Image Processor',
     kind: 'Computer vision + multimodal',
     desc: 'OCR, background removal, and AI summarization of visual data, wrapped in one tool.',
@@ -53,7 +67,7 @@ const PROJECTS = [
     ],
   },
   {
-    id: '04',
+    id: '05',
     title: 'Nature Scene Classifier',
     kind: 'Deep learning',
     desc: 'A convolutional network trained on augmented landscape data, deployed as a live inference app.',
