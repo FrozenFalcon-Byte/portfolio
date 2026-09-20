@@ -1,278 +1,291 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { gsap, ScrollTrigger, EASE, reduced, magnetic, cleanup } from '../lib/motion';
+import { gsap, ScrollTrigger, EASE, reduced } from '../lib/motion';
+import ThemeToggle from './ThemeToggle';
+import { useTheme } from '../lib/theme';
 
 const LINKS = [
-  { id: 'about', label: 'About' },
-  { id: 'work', label: 'Work' },
-  { id: 'experience', label: 'Experience' },
-  { id: 'stack', label: 'Stack' },
+  { id: 'about',      n: '01', label: 'About' },
+  { id: 'work',       n: '02', label: 'Work' },
+  { id: 'assistant',  n: '03', label: 'Ask me' },
+  { id: 'experience', n: '04', label: 'Experience' },
+  { id: 'stack',      n: '05', label: 'Stack' },
+  { id: 'contact',    n: '06', label: 'Contact' },
 ];
 
-/* The active pill slides between items rather than cutting — the nav
-   is the one element on screen the whole way down, so it carries the
-   reader's position instead of just listing destinations. */
 const Nav = () => {
-  const [active, setActive] = useState('intro');
+  const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
-  const railRef = useRef(null);
-  const markerRef = useRef(null);
-  const ctaRef = useRef(null);
-  const menuRef = useRef(null);
+  const barRef = useRef(null);
+  const sheetRef = useRef(null);
+  const progressRef = useRef(null);
 
-  /* ---- scroll spy ---- */
+  /* The bar adopts the tone of whatever block is passing under it, so a
+     dark section gets light chrome without a second set of styles. */
   useEffect(() => {
-    const triggers = ['intro', ...LINKS.map((l) => l.id)]
-      .map((id) => {
-        const el = document.getElementById(id);
-        if (!el) return null;
-        return ScrollTrigger.create({
-          trigger: el,
-          start: 'top 45%',
-          end: 'bottom 45%',
-          onToggle: (self) => self.isActive && setActive(id),
-        });
-      })
-      .filter(Boolean);
+    const bar = barRef.current;
+    if (!bar) return undefined;
 
+    const blocks = Array.from(document.querySelectorAll('.block[data-tone]'));
+    const triggers = blocks.map((block) =>
+      ScrollTrigger.create({
+        trigger: block,
+        start: 'top 64px',
+        end: 'bottom 64px',
+        onToggle: (self) => { if (self.isActive) bar.dataset.tone = block.dataset.tone; },
+      })
+    );
+
+    if (blocks[0]) bar.dataset.tone = blocks[0].dataset.tone;
     return () => triggers.forEach((t) => t.kill());
   }, []);
 
-  /* ---- slide the marker under the active item ---- */
+  /* Read-position hairline. */
   useEffect(() => {
-    const rail = railRef.current;
-    const marker = markerRef.current;
-    if (!rail || !marker) return;
-
-    const target = rail.querySelector(`[data-nav="${active}"]`);
-    if (!target) {
-      gsap.to(marker, { opacity: 0, duration: 0.25 });
-      return;
-    }
-
-    const r = target.getBoundingClientRect();
-    const rr = rail.getBoundingClientRect();
-
-    gsap.to(marker, {
-      x: r.left - rr.left,
-      width: r.width,
-      opacity: 1,
-      duration: reduced() ? 0 : 0.55,
-      ease: EASE.swift,
+    const el = progressRef.current;
+    if (!el) return undefined;
+    const st = ScrollTrigger.create({
+      trigger: document.body,
+      start: 'top top',
+      end: 'bottom bottom',
+      onUpdate: (self) => gsap.set(el, { scaleX: self.progress }),
     });
-  }, [active]);
-
-  /* ---- entrance ---- */
-  useEffect(() => {
-    if (reduced()) return;
-    gsap.fromTo(
-      '.nav',
-      { y: -70, opacity: 0 },
-      { y: 0, opacity: 1, duration: 1.1, delay: 1.1, ease: EASE.swift }
-    );
+    return () => st.kill();
   }, []);
 
-  useEffect(() => cleanup([magnetic(ctaRef.current, 0.3)]), []);
-
-  /* ---- mobile sheet ---- */
+  /* Sheet: a colour block wipes down, then the links come up behind it. */
   useEffect(() => {
-    const sheet = menuRef.current;
-    if (!sheet) return;
+    const sheet = sheetRef.current;
+    if (!sheet) return undefined;
+
+    const links = sheet.querySelectorAll('.sheet-link-inner');
+    const meta = sheet.querySelectorAll('.sheet-meta > *');
 
     if (open) {
       window.lenis?.stop();
-      gsap.set(sheet, { display: 'flex' });
-      gsap.fromTo(sheet, { clipPath: 'inset(0 0 100% 0)' }, { clipPath: 'inset(0 0 0% 0)', duration: 0.65, ease: EASE.glide });
-      gsap.fromTo(sheet.querySelectorAll('a'), { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, stagger: 0.06, delay: 0.15, ease: EASE.swift });
+      if (reduced()) {
+        gsap.set(sheet, { clipPath: 'inset(0% 0% 0% 0%)', pointerEvents: 'auto' });
+        gsap.set([links, meta], { y: 0, opacity: 1 });
+      } else {
+        gsap.set(sheet, { pointerEvents: 'auto' });
+        gsap.timeline()
+          .fromTo(sheet,
+            { clipPath: 'inset(0% 0% 100% 0%)' },
+            { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.75, ease: EASE.glide })
+          .fromTo(links,
+            { yPercent: 115 },
+            { yPercent: 0, duration: 0.85, stagger: 0.06, ease: EASE.swift }, 0.25)
+          .fromTo(meta,
+            { y: 18, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.6, stagger: 0.06, ease: EASE.swift }, 0.5);
+      }
     } else {
       window.lenis?.start();
-      gsap.to(sheet, {
-        clipPath: 'inset(0 0 100% 0)',
-        duration: 0.45,
-        ease: EASE.glide,
-        onComplete: () => gsap.set(sheet, { display: 'none' }),
-      });
+      if (reduced()) {
+        gsap.set(sheet, { clipPath: 'inset(0% 0% 100% 0%)', pointerEvents: 'none' });
+      } else {
+        gsap.to(sheet, {
+          clipPath: 'inset(0% 0% 100% 0%)',
+          duration: 0.55,
+          ease: EASE.glide,
+          onComplete: () => gsap.set(sheet, { pointerEvents: 'none' }),
+        });
+      }
     }
+    return undefined;
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
   const go = (e, id) => {
     e.preventDefault();
     setOpen(false);
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (window.lenis) window.lenis.scrollTo(el, { offset: -60, duration: 1.4 });
-    else el.scrollIntoView({ behavior: 'smooth' });
+    const target = document.getElementById(id);
+    if (!target) return;
+    // Let the sheet start closing before the page moves underneath it.
+    setTimeout(() => {
+      if (window.lenis) window.lenis.scrollTo(target, { offset: -20, duration: 1.4 });
+      else target.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth' });
+    }, 120);
   };
 
   return (
     <>
-      <header className="nav">
-        <a href="#intro" onClick={(e) => go(e, 'intro')} className="nav-mark" aria-label="Back to top">
-          <span className="nav-mark-glyph">AC</span>
+      <span className="nav-progress" ref={progressRef} aria-hidden="true" />
+
+      <header className="nav" ref={barRef}>
+        <a className="nav-mark" href="#top" onClick={(e) => go(e, 'top')}>
+          <span className="nav-mark-initials">AC</span>
+          <span className="nav-mark-name">Ajinkya Chavan</span>
         </a>
 
-        <nav className="nav-rail" ref={railRef} aria-label="Sections">
-          <span className="nav-marker" ref={markerRef} aria-hidden="true" />
-          {LINKS.map((l) => (
-            <a
-              key={l.id}
-              href={`#${l.id}`}
-              data-nav={l.id}
-              onClick={(e) => go(e, l.id)}
-              className={`nav-link mono ${active === l.id ? 'is-active' : ''}`}
-            >
-              {l.label}
-            </a>
-          ))}
-        </nav>
-
-        <a ref={ctaRef} href="#contact" onClick={(e) => go(e, 'contact')} className="nav-cta btn btn--solid">
-          Contact
-        </a>
-
-        <button
-          className="nav-burger"
-          onClick={() => setOpen((o) => !o)}
-          aria-label={open ? 'Close menu' : 'Open menu'}
-          aria-expanded={open}
-        >
-          <span className={open ? 'is-x' : ''} />
-          <span className={open ? 'is-x' : ''} />
-        </button>
+        <div className="nav-cluster">
+          <ThemeToggle theme={theme} onToggle={toggle} />
+          <button
+            className={`nav-menu ${open ? 'is-open' : ''}`}
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-controls="nav-sheet"
+          >
+            <span className="nav-menu-word">{open ? 'Close' : 'Menu'}</span>
+            <span className="nav-menu-bars" aria-hidden="true"><i /><i /></span>
+          </button>
+        </div>
       </header>
 
-      <div className="nav-sheet" ref={menuRef}>
-        {[...LINKS, { id: 'contact', label: 'Contact' }].map((l, i) => (
-          <a key={l.id} href={`#${l.id}`} onClick={(e) => go(e, l.id)} className="display display--m">
-            <span className="num nav-sheet-num">0{i + 1}</span>
-            {l.label}
-          </a>
-        ))}
-      </div>
+      <nav id="nav-sheet" className="sheet" ref={sheetRef} data-tone="ink" aria-label="Sections">
+        <div className="shell sheet-inner">
+          <ul className="sheet-list">
+            {LINKS.map((l) => (
+              <li key={l.id} className="sheet-link">
+                <a href={`#${l.id}`} onClick={(e) => go(e, l.id)}>
+                  <span className="sheet-link-inner">
+                    <span className="num sheet-n">{l.n}</span>
+                    <span className="display sheet-word">{l.label}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          <div className="sheet-meta">
+            <a href="mailto:frozenfalcon8494@gmail.com" className="mono">frozenfalcon8494@gmail.com</a>
+            <a href="https://www.linkedin.com/in/ajinkyachavan4829/" target="_blank" rel="noreferrer" className="mono">LinkedIn</a>
+            <a href="https://github.com/FrozenFalcon-Byte" target="_blank" rel="noreferrer" className="mono">GitHub</a>
+          </div>
+        </div>
+      </nav>
 
       <style>{`
+        .nav-progress {
+          position: fixed;
+          top: 0; left: 0;
+          z-index: 9001;
+          width: 100%;
+          height: 2px;
+          background: var(--violet);
+          transform: scaleX(0);
+          transform-origin: left;
+        }
+        [data-theme="dark"] .nav-progress { background: var(--acid); }
+
         .nav {
           position: fixed;
-          top: calc(env(safe-area-inset-top, 0px) + clamp(0.75rem, 2vh, 1.4rem));
-          left: 50%;
-          transform: translateX(-50%);
+          top: 0; left: 0; right: 0;
           z-index: 9000;
-          width: min(calc(100% - 2 * var(--gutter)), var(--shell));
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 0.75rem;
+          gap: 1rem;
+          padding: clamp(0.7rem, 1.6vh, 1.1rem) var(--gutter);
           pointer-events: none;
         }
+        .nav[data-tone] { background: transparent; }
         .nav > * { pointer-events: auto; }
 
         .nav-mark {
-          display: grid;
-          place-items: center;
-          width: 44px; height: 44px;
-          flex: none;
+          display: inline-flex;
+          align-items: baseline;
+          gap: 0.6rem;
+          padding: 0.5rem 0.95rem 0.55rem;
           border-radius: 999px;
+          background: var(--paper);
           border: 1px solid var(--line);
-          background: rgba(18, 16, 16, 0.72);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
           font-family: var(--font-display);
-          font-weight: 900;
-          font-stretch: 70%;
-          font-size: 0.88rem;
-          letter-spacing: 0.02em;
-          color: var(--fg);
-          transition: color 0.35s var(--ease-out), border-color 0.35s var(--ease-out);
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          transition: background 0.4s var(--ease-out), border-color 0.4s var(--ease-out);
         }
-        .nav-mark:hover { color: var(--amber); border-color: var(--amber); }
+        .nav-mark-initials { font-size: 1rem; }
+        .nav-mark-name { font-size: 0.78rem; font-weight: 600; color: var(--ink-2); letter-spacing: 0; }
+        .nav-mark:hover { border-color: var(--ink-3); }
 
-        .nav-rail {
-          position: relative;
+        .nav-cluster {
           display: flex;
           align-items: center;
-          gap: 0.15rem;
-          padding: 5px;
+          gap: 0.5rem;
+          padding: 0.28rem;
           border-radius: 999px;
+          background: var(--paper);
           border: 1px solid var(--line);
-          background: rgba(18, 16, 16, 0.72);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
+          transition: background 0.4s var(--ease-out), border-color 0.4s var(--ease-out);
         }
-        .nav-marker {
-          position: absolute;
-          top: 5px; left: 0;
-          height: calc(100% - 10px);
-          border-radius: 999px;
-          background: var(--amber);
-          opacity: 0;
-          will-change: transform, width;
-        }
-        .nav-link {
-          position: relative;
-          z-index: 1;
-          padding: 0.58em 1.05em;
-          border-radius: 999px;
-          font-size: 0.72rem;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          font-weight: 500;
-          color: var(--fg-dim);
-          transition: color 0.35s var(--ease-out);
-          white-space: nowrap;
-        }
-        .nav-link:hover { color: var(--fg); }
-        .nav-link.is-active { color: var(--on-accent); }
 
-        .nav-cta { padding: 0.72em 1.25em; font-size: 0.7rem; flex: none; }
-
-        .nav-burger {
-          display: none;
-          width: 44px; height: 44px;
-          flex: none;
+        .nav-menu {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.6rem;
+          height: 30px;
+          padding: 0 0.85rem 0 1rem;
           border-radius: 999px;
-          border: 1px solid var(--line);
-          background: rgba(18, 16, 16, 0.72);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
+          background: var(--ink);
+          color: var(--paper);
+          font-size: 0.82rem;
+          font-weight: 600;
           cursor: pointer;
-          position: relative;
         }
-        .nav-burger span {
-          position: absolute;
-          left: 13px;
-          width: 18px; height: 1.5px;
-          background: var(--fg);
-          transition: transform 0.4s var(--ease-out), opacity 0.3s;
+        .nav-menu-word { min-width: 3.1em; text-align: left; }
+        .nav-menu-bars { display: grid; gap: 4px; width: 15px; }
+        .nav-menu-bars i {
+          display: block; height: 1.8px; width: 100%;
+          background: currentColor; border-radius: 2px;
+          transition: transform 0.4s var(--ease-out);
         }
-        .nav-burger span:first-child { top: 19px; }
-        .nav-burger span:last-child { top: 25px; }
-        .nav-burger span.is-x:first-child { transform: translateY(3px) rotate(45deg); }
-        .nav-burger span.is-x:last-child { transform: translateY(-3px) rotate(-45deg); }
+        .nav-menu.is-open .nav-menu-bars i:first-child { transform: translateY(2.9px) rotate(45deg); }
+        .nav-menu.is-open .nav-menu-bars i:last-child  { transform: translateY(-2.9px) rotate(-45deg); }
 
-        .nav-sheet {
+        /* ---- sheet ---- */
+        .sheet {
           position: fixed;
           inset: 0;
-          z-index: 8999;
-          display: none;
-          flex-direction: column;
-          justify-content: center;
-          gap: clamp(0.5rem, 2vh, 1rem);
-          padding: var(--gutter);
-          background: var(--ink);
-          clip-path: inset(0 0 100% 0);
+          z-index: 8900;
+          display: flex;
+          align-items: center;
+          clip-path: inset(0% 0% 100% 0%);
+          pointer-events: none;
+          overflow-y: auto;
         }
-        .nav-sheet a {
+        .sheet-inner {
+          display: flex;
+          flex-direction: column;
+          gap: clamp(2rem, 6vh, 4rem);
+          padding-block: clamp(6rem, 14vh, 9rem) clamp(2.5rem, 8vh, 5rem);
+        }
+        .sheet-list { display: flex; flex-direction: column; }
+        .sheet-link a { display: block; overflow: hidden; }
+        .sheet-link-inner {
           display: flex;
           align-items: baseline;
-          gap: 1rem;
-          color: var(--fg);
-          transition: color 0.3s var(--ease-out);
+          gap: clamp(0.8rem, 2vw, 1.8rem);
+          padding-block: clamp(0.15rem, 0.6vh, 0.4rem);
         }
-        .nav-sheet a:hover { color: var(--amber); }
-        .nav-sheet-num { font-size: 0.75rem; color: var(--amber); }
+        .sheet-n { font-size: 0.72rem; color: var(--ink-2); flex: none; }
+        .sheet-word {
+          font-size: clamp(2.6rem, 10vw, 6.5rem);
+          line-height: 1;
+          color: var(--ink);
+          transition: color 0.35s var(--ease-out), transform 0.45s var(--ease-out);
+        }
+        .sheet-link a:hover .sheet-word { color: var(--mark); transform: translateX(0.18em); }
 
-        @media (max-width: 900px) {
-          .nav-rail, .nav-cta { display: none; }
-          .nav-burger { display: block; }
+        .sheet-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.6rem 1.6rem;
+          padding-top: clamp(1.2rem, 4vh, 2rem);
+          border-top: 1px solid var(--line);
+        }
+        .sheet-meta a { color: var(--ink-2); transition: color 0.3s var(--ease-out); }
+        .sheet-meta a:hover { color: var(--mark); }
+
+        @media (max-width: 520px) {
+          .nav-mark-name { display: none; }
+          .nav-menu-word { display: none; }
+          .nav-menu { padding-inline: 0.72rem; }
         }
       `}</style>
     </>

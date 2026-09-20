@@ -1,104 +1,174 @@
-@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource-variable/gabarito";
+@import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 
 /* ============================================================
-   TOKENS
-   Warm near-black ground, amber→ember heat, one cool accent.
+   1. PALETTE
+   Fixed hues. These never change between themes — only which
+   surface they sit on does.
    ============================================================ */
 :root {
-  /* --- surfaces (dark, the default) --- */
-  --ink:        #0A0908;
-  --ink-raise:  #121010;
-  --ink-high:   #1A1614;
-  --line:       #262019;
-  --line-soft:  #191412;
-
-  /* --- ink on surface --- */
-  --fg:         #EFEDE9;
-  --fg-dim:     #8E857A;
-  --fg-faint:   #574F47;
-
-  /* --- heat --- */
-  --amber:      #FFB800;
-  --ember:      #FF5C00;
-  --violet:     #A67EFF;
-  --heat:       linear-gradient(135deg, var(--amber) 0%, var(--ember) 100%);
-
-  /* --- accent aliases, so components never name a hue --- */
-  --accent:     var(--amber);
-  --accent-2:   var(--ember);
-  --on-accent:  #140E02;
+  --acid:    #DDF247;
+  --acid-hi: #EDFF6B;
+  --violet:  #5B3DF5;
+  --lilac:   #CFC4FF;
+  --cyan:    #8FE3E0;
+  --coral:   #FF5A36;
+  --butter:  #FFE27A;
 
   /* --- type --- */
-  --font-display: 'Archivo Variable', 'Archivo', 'Helvetica Neue', Arial, sans-serif;
-  --font-body:    'Archivo Variable', 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Gabarito Variable', 'Gabarito', 'Helvetica Neue', Arial, sans-serif;
+  --font-body:    'Geist Variable', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono:    'Geist Mono Variable', 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* --- scale --- */
-  --step--1: clamp(0.75rem, 0.72rem + 0.15vw, 0.82rem);
-  --step-0:  clamp(0.95rem, 0.91rem + 0.2vw, 1.06rem);
-  --step-1:  clamp(1.15rem, 1.05rem + 0.5vw, 1.45rem);
-  --step-2:  clamp(1.5rem, 1.25rem + 1.2vw, 2.4rem);
-  --step-3:  clamp(2rem, 1.4rem + 3vw, 4rem);
-  --step-4:  clamp(2.8rem, 1.2rem + 7.2vw, 8rem);
-  --step-5:  clamp(3.4rem, 0.5rem + 12vw, 13rem);
+  --step--2: clamp(0.66rem, 0.64rem + 0.1vw, 0.72rem);
+  --step--1: clamp(0.78rem, 0.75rem + 0.15vw, 0.86rem);
+  --step-0:  clamp(0.98rem, 0.94rem + 0.2vw, 1.1rem);
+  --step-1:  clamp(1.18rem, 1.08rem + 0.5vw, 1.5rem);
+  --step-2:  clamp(1.5rem, 1.2rem + 1.4vw, 2.5rem);
+  --step-3:  clamp(2.1rem, 1.4rem + 3.2vw, 4.2rem);
+  --step-4:  clamp(2.9rem, 1.2rem + 7.4vw, 8rem);
 
   /* --- rhythm --- */
-  --gutter:  clamp(1.25rem, 4vw, 4.5rem);
-  --bay:     clamp(5rem, 11vh, 11rem);
-  --shell:   1440px;
+  --gutter: clamp(1.15rem, 4vw, 4rem);
+  --bay:    clamp(5rem, 12vh, 10rem);
+  --shell:  1400px;
+  --round:  clamp(22px, 3.4vw, 44px);
 
   /* --- motion --- */
-  --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft:   cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
-
-  --cursor-size: 18px;
-
-  color-scheme: dark;
-}
-
-/* Inverted surface — the light panel that scrolls over the dark page.
-   Only tokens change; no component restates a color. */
-[data-surface="bone"] {
-  --ink:        #EDEBE6;
-  --ink-raise:  #E3E0D9;
-  --ink-high:   #D8D4CB;
-  --line:       #C9C4B9;
-  --line-soft:  #DCD8D0;
-
-  --fg:         #14110F;
-  --fg-dim:     #5E574E;
-  --fg-faint:   #98907F;
-
-  --ember:      #E84E00;
-  --on-accent:  #140E02;
-  color-scheme: light;
 }
 
 /* ============================================================
-   RESET
+   2. THEME
+   Light is the site. Dark is a toggle, not a second design.
+   ============================================================ */
+:root,
+[data-theme="light"] {
+  --paper:   #F4F1E8;
+  --paper-2: #ECE8DC;
+  --paper-3: #E0DACA;
+  --ink:     #16151A;
+  --ink-2:   #57545F;
+  --ink-3:   #908C99;
+  --line:    rgba(22, 21, 26, 0.14);
+  --line-2:  rgba(22, 21, 26, 0.07);
+  --shadow:  rgba(22, 21, 26, 0.10);
+  --mark:    var(--violet);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --paper:   #0C0C10;
+  --paper-2: #14141A;
+  --paper-3: #1E1E26;
+  --ink:     #F3F1EB;
+  --ink-2:   #9C98A6;
+  --ink-3:   #635F6D;
+  --line:    rgba(243, 241, 235, 0.16);
+  --line-2:  rgba(243, 241, 235, 0.07);
+  --shadow:  rgba(0, 0, 0, 0.5);
+  --mark:    var(--acid);
+  color-scheme: dark;
+}
+
+/* ============================================================
+   3. TONES
+   A tone is a full token swap, so no component ever names a
+   colour — it just asks for --ink on --paper and gets the
+   right pair for whatever block it is sitting in.
+   ============================================================ */
+[data-tone] { background: var(--paper); color: var(--ink); }
+
+[data-tone="ink"] {
+  --paper: #0C0C10; --paper-2: #16161C; --paper-3: #21212A;
+  --ink: #F3F1EB; --ink-2: #9C98A6; --ink-3: #635F6D;
+  --line: rgba(243, 241, 235, 0.16); --line-2: rgba(243, 241, 235, 0.07);
+  --shadow: rgba(0, 0, 0, 0.6);
+  --mark: var(--acid);
+  color-scheme: dark;
+}
+[data-tone="acid"] {
+  --paper: #DDF247; --paper-2: #D3E938; --paper-3: #C6DC29;
+  --ink: #101403; --ink-2: #3E4715; --ink-3: #6E7833;
+  --line: rgba(16, 20, 3, 0.20); --line-2: rgba(16, 20, 3, 0.09);
+  --shadow: rgba(16, 20, 3, 0.18);
+  --mark: #2E1BB0;
+  color-scheme: light;
+}
+[data-tone="lilac"] {
+  --paper: #CFC4FF; --paper-2: #C3B6FF; --paper-3: #B4A5FB;
+  --ink: #14103A; --ink-2: #453C7C; --ink-3: #6F66A8;
+  --line: rgba(20, 16, 58, 0.18); --line-2: rgba(20, 16, 58, 0.08);
+  --shadow: rgba(20, 16, 58, 0.16);
+  --mark: #2E1BB0;
+  color-scheme: light;
+}
+[data-tone="cyan"] {
+  --paper: #8FE3E0; --paper-2: #7FDAD7; --paper-3: #6BCDCA;
+  --ink: #04211F; --ink-2: #21524F; --ink-3: #4C817E;
+  --line: rgba(4, 33, 31, 0.18); --line-2: rgba(4, 33, 31, 0.08);
+  --shadow: rgba(4, 33, 31, 0.16);
+  --mark: #2E1BB0;
+  color-scheme: light;
+}
+
+/* Dark theme keeps the block rhythm but drops the brightness —
+   each tone survives as a tint, with its hue moved into the type. */
+[data-theme="dark"] [data-tone="paper"] {
+  --paper: #0C0C10; --paper-2: #14141A; --paper-3: #1E1E26;
+}
+[data-theme="dark"] [data-tone="ink"] {
+  --paper: #15151B; --paper-2: #1D1D25; --paper-3: #26262F;
+}
+[data-theme="dark"] [data-tone="acid"] {
+  --paper: #181D04; --paper-2: #202708; --paper-3: #2B330D;
+  --ink: #E4F75B; --ink-2: #93A63C; --ink-3: #5F6B2A;
+  --line: rgba(228, 247, 91, 0.20); --line-2: rgba(228, 247, 91, 0.08);
+  --mark: #E4F75B;
+  color-scheme: dark;
+}
+[data-theme="dark"] [data-tone="lilac"] {
+  --paper: #14103A; --paper-2: #1A1547; --paper-3: #241D5C;
+  --ink: #D5CCFF; --ink-2: #897EC9; --ink-3: #5A5190;
+  --line: rgba(213, 204, 255, 0.18); --line-2: rgba(213, 204, 255, 0.07);
+  --mark: #A491FF;
+  color-scheme: dark;
+}
+[data-theme="dark"] [data-tone="cyan"] {
+  --paper: #04211F; --paper-2: #062C29; --paper-3: #0A3936;
+  --ink: #9AECE9; --ink-2: #4F918E; --ink-3: #35625F;
+  --line: rgba(154, 236, 233, 0.18); --line-2: rgba(154, 236, 233, 0.07);
+  --mark: #6FE0DC;
+  color-scheme: dark;
+}
+
+/* ============================================================
+   4. RESET
    ============================================================ */
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; padding: 0; }
 
 html {
   -webkit-text-size-adjust: 100%;
-  scroll-behavior: auto; /* Lenis owns scrolling */
+  scroll-behavior: auto;              /* Lenis owns scrolling */
+  background: var(--paper);
 }
 
 body {
   font-family: var(--font-body);
   font-size: var(--step-0);
   line-height: 1.55;
-  font-weight: 400;
-  background: var(--ink);
-  color: var(--fg);
+  background: var(--paper);
+  color: var(--ink);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
   font-synthesis-weight: none;
+  transition: background-color 0.5s var(--ease-out), color 0.5s var(--ease-out);
 }
 
 img, video, canvas, svg { display: block; max-width: 100%; }
@@ -106,12 +176,13 @@ button, input, textarea, select { font: inherit; color: inherit; background: non
 a { color: inherit; text-decoration: none; }
 ul, ol { list-style: none; }
 
-::selection { background: var(--amber); color: #140E02; }
+::selection { background: var(--violet); color: #FFF; }
+[data-theme="dark"] ::selection { background: var(--acid); color: #101403; }
 
 :focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--mark);
   outline-offset: 3px;
-  border-radius: 1px;
+  border-radius: 3px;
 }
 
 /* Lenis */
@@ -119,74 +190,62 @@ html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
 .lenis.lenis-stopped { overflow: hidden; }
 
-::-webkit-scrollbar { width: 0; height: 0; }
-
-.animate-spin { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
 /* ============================================================
-   TYPE PRIMITIVES
-   Display is Archivo at the condensed end of its width axis —
-   the heavy-condensed voice, set against a mono utility face.
+   5. TYPE
    ============================================================ */
 .display {
   font-family: var(--font-display);
-  font-weight: 900;
-  font-stretch: 68%;
-  text-transform: uppercase;
-  line-height: 0.82;
-  letter-spacing: -0.012em;
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
-.display--wide { font-stretch: 88%; letter-spacing: -0.02em; }
-.display--xl { font-size: var(--step-5); }
-.display--l  { font-size: var(--step-4); }
-.display--m  { font-size: var(--step-3); }
-.display--s  { font-size: var(--step-2); line-height: 0.9; }
-
-.lede {
-  font-size: var(--step-1);
-  line-height: 1.45;
-  color: var(--fg-dim);
-  font-weight: 400;
-  max-width: 46ch;
-  text-wrap: pretty;
+.display--hero {
+  line-height: 0.84;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
 }
+.display--xl { font-size: var(--step-4); }
+.display--l  { font-size: var(--step-3); }
+.display--m  { font-size: var(--step-2); }
 
-.body { color: var(--fg-dim); max-width: 62ch; text-wrap: pretty; }
+.body { color: var(--ink-2); font-size: var(--step-0); line-height: 1.65; text-wrap: pretty; }
+.lead { color: var(--ink-2); font-size: var(--step-1); line-height: 1.5; }
 
 .mono {
   font-family: var(--font-mono);
   font-size: var(--step--1);
+  font-weight: 450;
   letter-spacing: 0.02em;
-  font-weight: 400;
 }
 
-/* Bracketed section label — dkton's `[ über mich ]` device, which is
-   how each section announces itself without a heading. */
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Section label — a filled chip, the way aardvark stamps a section. */
 .eyebrow {
-  font-family: var(--font-mono);
-  font-size: clamp(0.66rem, 0.62rem + 0.18vw, 0.78rem);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--fg-faint);
   display: inline-flex;
   align-items: center;
-  gap: 0.6em;
+  gap: 0.5em;
+  padding: 0.42em 0.9em 0.46em;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
   white-space: nowrap;
 }
-.eyebrow::before { content: "["; color: var(--accent); }
-.eyebrow::after  { content: "]"; color: var(--accent); }
-.eyebrow--plain::before, .eyebrow--plain::after { content: none; }
-
-.num {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
+.eyebrow--open {
+  background: none;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  padding-inline: 0.85em;
 }
 
 /* ============================================================
-   LAYOUT
+   6. LAYOUT
    ============================================================ */
 .shell {
   width: 100%;
@@ -195,179 +254,159 @@ html.lenis, html.lenis body { height: auto; }
   padding-inline: var(--gutter);
 }
 
-.section {
+/* Blocks stack with rounded shoulders, each lifting over the last. */
+.block {
   position: relative;
   padding-block: var(--bay);
-  background: var(--ink);
-  color: var(--fg);
+  border-radius: var(--round) var(--round) 0 0;
+  margin-top: calc(var(--round) * -1);
+  z-index: 1;
 }
+.block:first-child { margin-top: 0; }
+.block--flat { border-radius: 0; margin-top: 0; }
+.block--tail { border-radius: var(--round) var(--round) 0 0; }
 
-/* Section head: label left, hairline running to the edge. */
 .sec-head {
   display: flex;
   align-items: center;
-  gap: clamp(1rem, 3vw, 2.5rem);
+  gap: clamp(0.75rem, 2vw, 1.5rem);
   margin-bottom: clamp(2.5rem, 7vh, 5rem);
 }
-.sec-head .rule { flex: 1; height: 1px; background: var(--line); transform-origin: left; }
+.rule {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+  transform: scaleX(0);
+  transform-origin: left;
+}
 
 /* ============================================================
-   COMPONENTS
+   7. CONTROLS
    ============================================================ */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55em;
-  padding: 0.6em 1.05em;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--ink-raise);
-  font-family: var(--font-mono);
-  font-size: var(--step--1);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
-  white-space: nowrap;
-}
-
-.tag {
-  display: inline-block;
-  padding: 0.34em 0.7em;
-  border: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: clamp(0.62rem, 0.6rem + 0.14vw, 0.72rem);
-  letter-spacing: 0.06em;
-  color: var(--fg-dim);
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-/* Primary action. The fill wipes up from the bottom on hover — one
-   gesture, reused everywhere, so hover reads as a single language. */
 .btn {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.7em;
-  padding: 0.95em 1.6em;
+  padding: 0.95em 1.5em;
   border-radius: 999px;
-  border: 1px solid var(--accent);
-  background: transparent;
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: var(--step--1);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-weight: 500;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  font-size: var(--step-0);
+  letter-spacing: -0.01em;
   cursor: pointer;
   overflow: hidden;
   isolation: isolate;
+  transition: color 0.4s var(--ease-out);
 }
 .btn::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: var(--heat);
+  background: var(--mark);
   transform: translateY(101%);
-  transition: transform 0.5s var(--ease-out);
+  transition: transform 0.55s var(--ease-out);
 }
-.btn:hover::before, .btn:focus-visible::before { transform: translateY(0); }
-.btn:hover, .btn:focus-visible { color: var(--on-accent); }
-.btn--solid { background: var(--accent); color: var(--on-accent); }
-.btn--solid::before { background: var(--fg); }
-.btn--solid:hover { color: var(--ink); }
-.btn--ghost { border-color: var(--line); color: var(--fg); }
-
+.btn:hover::before { transform: translateY(0); }
+.btn:hover { color: #FFF; }
+[data-theme="dark"] .btn:hover,
+[data-tone="ink"] .btn:hover { color: #101403; }
 .btn .arrow { transition: transform 0.45s var(--ease-out); }
 .btn:hover .arrow { transform: translateX(4px); }
 
-/* Hairline that draws itself in. */
-.rule { height: 1px; background: var(--line); width: 100%; }
+.btn--ghost {
+  background: none;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.btn--mark { background: var(--mark); color: #FFF; }
+[data-theme="dark"] .btn--mark { color: #101403; }
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.36em 0.78em 0.4em;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.tag--solid { background: var(--ink); color: var(--paper); border-color: transparent; }
 
 /* ============================================================
-   MOTION PRIMITIVES
-   Every animated element has a visible resting state; GSAP sets the
-   "from" at runtime only when motion is allowed, so nothing is ever
-   parked invisible for a reader who never scrolls.
+   8. MOTION PRIMITIVES
    ============================================================ */
-.split-line { display: block; overflow: hidden; }
-.split-char, .split-word { display: inline-block; will-change: transform, opacity; }
+/* A line of text inside a clipping window — used by maskLines(). */
+.split-line { display: block; overflow: hidden; padding-bottom: 0.08em; }
 
-/* Pill mask — dkton's showreel reveal. A rounded aperture that widens
-   into a full-bleed frame as it passes through the viewport. */
-.pillmask {
+/* A media frame that opens from a pill into a rectangle on scroll. */
+.aperture {
   position: relative;
   overflow: hidden;
-  border-radius: 12px;
-  background: var(--ink-raise);
-  clip-path: inset(0% 0% round 12px);
-  will-change: clip-path;
+  border-radius: 14px;
+  background: var(--paper-3);
 }
-.pillmask > img, .pillmask > video {
-  width: 100%; height: 100%;
+.aperture img, .aperture video {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  transform: scale(1.18);
   will-change: transform;
 }
 
-.grain {
-  position: fixed;
-  inset: -100%;
-  z-index: 9996;
-  pointer-events: none;
-  opacity: 0.032;
-  mix-blend-mode: overlay;
-}
-
-/* Warm ambient bloom behind the hero. */
-.bloom {
-  position: absolute;
-  pointer-events: none;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-}
-
-.cursor-dot, .cursor-ring { display: none; }
+/* ============================================================
+   9. CURSOR (fine pointers only)
+   ============================================================ */
 @media (hover: hover) and (pointer: fine) {
-  body.has-cursor { cursor: none; }
-  body.has-cursor a, body.has-cursor button { cursor: none; }
+  body { cursor: none; }
+  a, button, input, textarea, [role="button"] { cursor: none; }
   .cursor-dot, .cursor-ring {
-    display: block;
     position: fixed;
     top: 0; left: 0;
-    z-index: 9999;
+    z-index: 10000;
     pointer-events: none;
-    border-radius: 50%;
+    border-radius: 999px;
+    translate: -50% -50%;
+    will-change: transform;
+  }
+  .cursor-dot { width: 7px; height: 7px; background: var(--mark); }
+  /* Difference blend so one ring reads on every block, light or dark,
+     without a per-tone override. */
+  .cursor-ring {
+    width: 34px; height: 34px;
+    border: 1.5px solid #FFF;
     mix-blend-mode: difference;
   }
-  .cursor-dot {
-    width: 6px; height: 6px;
-    background: #fff;
-    margin: -3px 0 0 -3px;
-  }
-  .cursor-ring {
-    width: var(--cursor-size); height: var(--cursor-size);
-    border: 1px solid rgba(255, 255, 255, 0.55);
-    margin: calc(var(--cursor-size) / -2) 0 0 calc(var(--cursor-size) / -2);
-  }
+}
+@media not all and (hover: hover) {
+  .cursor-dot, .cursor-ring { display: none; }
 }
 
 /* ============================================================
-   RESPONSIVE + PREFERENCES
+   10. UTILITY
    ============================================================ */
-@media (max-width: 720px) {
-  :root { --bay: clamp(3.5rem, 8vh, 6rem); }
-  .display { font-stretch: 74%; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   11. REDUCED MOTION
+   ============================================================ */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .grain { display: none; }
-  .pillmask > img, .pillmask > video { transform: none; }
+  .rule { transform: none; }
+  .spin { animation: spin 1.4s linear infinite !important; }
 }

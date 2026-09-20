@@ -1,17 +1,21 @@
 import React from 'react';
-import SignalHero from '../components/SignalHero';
+import Hero from '../components/Hero';
 import About from '../components/About';
 import Work from '../components/Work';
+import Assistant from '../components/Assistant';
 import Experience from '../components/Experience';
+import Leadership from '../components/Leadership';
 import Stack from '../components/Stack';
 import Contact from '../components/Contact';
 
 const Home = () => (
   <>
-    <SignalHero />
+    <Hero />
     <About />
     <Work />
+    <Assistant />
     <Experience />
+    <Leadership />
     <Stack />
     <Contact />
   </>

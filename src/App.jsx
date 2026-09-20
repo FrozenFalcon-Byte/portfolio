@@ -1,19 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import Lenis from 'lenis';
-import { gsap, ScrollTrigger, EASE, reduced } from './lib/motion';
+import { gsap, ScrollTrigger, reduced } from './lib/motion';
 import Home from './pages/Home';
+import ExperienceDetail from './pages/ExperienceDetail';
 import Nav from './components/Nav';
 import Cursor from './components/Cursor';
-import Grain from './components/Grain';
 import Loader from './components/Loader';
-import MutatorTerminal from './components/MutatorTerminal';
 
-const App = () => {
-  const [terminalOpen, setTerminalOpen] = useState(false);
-  const triggerRef = useRef(null);
-
-  /* Lenis drives scroll and ScrollTrigger reads from it — one clock,
-     so pinned sections and scrubbed timelines never drift apart. */
+/* Lenis drives scroll and ScrollTrigger reads from it — one clock, so
+   pinned sections and scrubbed timelines never drift apart. */
+const useSmoothScroll = () => {
   useEffect(() => {
     if (reduced()) {
       ScrollTrigger.refresh();
@@ -24,12 +21,11 @@ const App = () => {
       duration: 1.15,
       easing: (t) => Math.min(1, 1.001 - 2 ** (-10 * t)),
       smoothWheel: true,
-      syncTouch: false,     // native momentum on touch stays native
+      syncTouch: false,          // native momentum on touch stays native
       touchMultiplier: 1.6,
     });
 
     window.lenis = lenis;
-
     lenis.on('scroll', ScrollTrigger.update);
 
     const tick = (time) => lenis.raf(time * 1000);
@@ -41,15 +37,15 @@ const App = () => {
         value !== undefined ? lenis.scrollTo(value, { immediate: true }) : lenis.scroll,
     });
 
-    // Anything that lands after first paint changes measured heights, and
-    // a scrubbed trigger measured against the old layout stays stuck
+    // Anything landing after first paint changes measured heights, and a
+    // scrubbed trigger measured against the old layout stays stuck
     // part-way through its tween. Re-measure on each of them.
     document.fonts?.ready.then(() => ScrollTrigger.refresh());
     const onLoad = () => ScrollTrigger.refresh();
     window.addEventListener('load', onLoad);
+    window.addEventListener('loader-complete', onLoad);
 
-    const images = Array.from(document.images);
-    const pending = images.filter((img) => !img.complete);
+    const pending = Array.from(document.images).filter((img) => !img.complete);
     let settled = pending.length;
     const onImage = () => {
       settled -= 1;
@@ -62,6 +58,7 @@ const App = () => {
 
     return () => {
       window.removeEventListener('load', onLoad);
+      window.removeEventListener('loader-complete', onLoad);
       pending.forEach((img) => {
         img.removeEventListener('load', onImage);
         img.removeEventListener('error', onImage);
@@ -72,86 +69,58 @@ const App = () => {
       ScrollTrigger.getAll().forEach((t) => t.kill());
     };
   }, []);
+};
 
-  /* The terminal trigger stays out of the way until the hero is behind
-     you, then fades in — it is a side dish, not the entrance. */
+/* A route change replaces every measured element on the page, so the
+   triggers that survived it are measuring a layout that no longer
+   exists. Land at the top (or the requested section) and re-measure. */
+const RouteEffects = () => {
+  const { pathname, hash } = useLocation();
+
   useEffect(() => {
-    const el = triggerRef.current;
-    if (!el || reduced()) return undefined;
+    const target = hash ? document.querySelector(hash) : null;
 
-    const st = ScrollTrigger.create({
-      trigger: '#about',
-      start: 'top 70%',
-      onEnter: () => gsap.to(el, { opacity: 1, y: 0, duration: 0.7, ease: EASE.swift, pointerEvents: 'auto' }),
-      onLeaveBack: () => gsap.to(el, { opacity: 0, y: 20, duration: 0.4, pointerEvents: 'none' }),
+    requestAnimationFrame(() => {
+      ScrollTrigger.refresh();
+      if (target) {
+        if (window.lenis) window.lenis.scrollTo(target, { offset: -20, immediate: true });
+        else target.scrollIntoView();
+      } else if (window.lenis) {
+        window.lenis.scrollTo(0, { immediate: true });
+      } else {
+        window.scrollTo(0, 0);
+      }
     });
+  }, [pathname, hash]);
 
-    return () => st.kill();
-  }, []);
+  return null;
+};
+
+const Shell = () => {
+  useSmoothScroll();
 
   return (
     <>
-      <Grain />
       <Cursor />
       <Loader />
       <Nav />
+      <RouteEffects />
 
       <main>
-        <Home />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/experience/pmo" element={<ExperienceDetail />} />
+          <Route path="*" element={<Home />} />
+        </Routes>
       </main>
-
-      <button
-        ref={triggerRef}
-        className="mutator-trigger mono"
-        onClick={() => setTerminalOpen(true)}
-      >
-        <span className="mutator-dot" aria-hidden="true" />
-        Restyle this site
-      </button>
-
-      <MutatorTerminal isOpen={terminalOpen} onClose={() => setTerminalOpen(false)} />
-
-      <style>{`
-        .mutator-trigger {
-          position: fixed;
-          right: clamp(1rem, 3vw, 2rem);
-          bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(1rem, 3vh, 2rem));
-          z-index: 8000;
-          display: inline-flex;
-          align-items: center;
-          gap: 0.6em;
-          padding: 0.75em 1.15em;
-          border-radius: 999px;
-          border: 1px solid var(--line);
-          background: rgba(18, 16, 16, 0.86);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
-          color: var(--fg-dim);
-          font-size: 0.68rem;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          cursor: pointer;
-          opacity: 0;
-          transform: translateY(20px);
-          pointer-events: none;
-          transition: color 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
-        }
-        .mutator-trigger:hover { color: var(--fg); border-color: var(--amber); }
-        .mutator-dot {
-          width: 6px; height: 6px;
-          border-radius: 999px;
-          background: var(--amber);
-          box-shadow: 0 0 10px var(--amber);
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .mutator-trigger { opacity: 1; transform: none; pointer-events: auto; }
-        }
-        @media (max-width: 560px) {
-          .mutator-trigger { font-size: 0.62rem; padding: 0.7em 0.95em; }
-        }
-      `}</style>
     </>
   );
 };
+
+const App = () => (
+  <BrowserRouter>
+    <Shell />
+  </BrowserRouter>
+);
 
 export default App;

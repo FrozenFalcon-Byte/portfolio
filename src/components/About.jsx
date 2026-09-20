@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { splitChars, drawRule, riseIn, cleanup } from '../lib/motion';
 
-/* The statement lights up character by character under the scrollbar —
+/* The statement lights up character by character under the scroll line —
    the reader sets the pace of their own introduction. */
 const STATEMENT =
   'I build generative AI systems — multi-agent frameworks, retrieval pipelines, and the full-stack architecture that carries them into production.';
@@ -9,7 +9,7 @@ const STATEMENT =
 const MARKERS = [
   { k: 'Discipline', v: 'AI & Machine Learning' },
   { k: 'Based in', v: 'Pune, India' },
-  { k: 'Working on', v: 'Autonomous agent systems' },
+  { k: 'Currently', v: 'AI/ML Intern at Emerson' },
   { k: 'Open to', v: 'Internships & collaboration' },
 ];
 
@@ -21,7 +21,7 @@ const About = () => {
 
   useEffect(() => {
     const fns = [
-      splitChars(textRef.current, { start: 'top 78%', end: 'bottom 58%', each: 0.5 }),
+      splitChars(textRef.current, { start: 'top 76%', end: 'bottom 60%', each: 0.5 }),
       drawRule(ruleRef.current, { trigger: rootRef.current, start: 'top 80%' }),
       riseIn(gridRef.current?.children, { trigger: gridRef.current, stagger: 0.09, y: 26 }),
     ];
@@ -29,21 +29,21 @@ const About = () => {
   }, []);
 
   return (
-    <section ref={rootRef} id="about" className="section about">
+    <section ref={rootRef} id="about" className="block about" data-tone="lilac">
       <div className="shell">
         <div className="sec-head">
-          <span className="eyebrow">About</span>
+          <span className="eyebrow">01 — About</span>
           <span className="rule" ref={ruleRef} />
         </div>
 
-        <p ref={textRef} className="about-statement display display--wide">
+        <p ref={textRef} className="about-statement display">
           {STATEMENT}
         </p>
 
         <div className="about-grid" ref={gridRef}>
           {MARKERS.map((m) => (
             <div key={m.k} className="about-marker">
-              <span className="eyebrow eyebrow--plain">{m.k}</span>
+              <span className="mono about-marker-k">{m.k}</span>
               <span className="about-marker-v">{m.v}</span>
             </div>
           ))}
@@ -52,34 +52,33 @@ const About = () => {
 
       <style>{`
         .about-statement {
-          font-size: clamp(1.6rem, 4.6vw, 3.9rem);
-          line-height: 1.08;
-          font-stretch: 84%;
-          font-weight: 800;
-          letter-spacing: -0.015em;
-          max-width: 21ch;
-          margin: 0;
-          /* Resting colour: readable on its own, before any scrub runs. */
-          color: var(--fg);
+          font-size: clamp(1.7rem, 4.8vw, 4rem);
+          line-height: 1.05;
+          letter-spacing: -0.03em;
+          max-width: 22ch;
         }
+
         .about-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-          gap: clamp(1.5rem, 3vw, 2.5rem);
-          margin-top: clamp(3.5rem, 9vh, 6.5rem);
-          padding-top: clamp(1.75rem, 4vh, 2.5rem);
-          border-top: 1px solid var(--line);
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 1px;
+          margin-top: clamp(3rem, 9vh, 5.5rem);
+          background: var(--line);
+          border: 1px solid var(--line);
+          border-radius: 18px;
+          overflow: hidden;
         }
-        .about-marker { display: flex; flex-direction: column; gap: 0.55rem; }
-        .about-marker-v {
-          font-size: var(--step-0);
-          color: var(--fg);
-          font-weight: 500;
-          text-wrap: balance;
+        .about-marker {
+          display: flex;
+          flex-direction: column;
+          gap: 0.55rem;
+          padding: 1.4rem 1.5rem 1.6rem;
+          background: var(--paper);
+          transition: background 0.4s var(--ease-out);
         }
-        @media (max-width: 720px) {
-          .about-statement { max-width: none; font-stretch: 78%; }
-        }
+        .about-marker:hover { background: var(--paper-2); }
+        .about-marker-k { color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.12em; font-size: var(--step--2); }
+        .about-marker-v { font-size: var(--step-0); font-weight: 500; }
       `}</style>
     </section>
   );

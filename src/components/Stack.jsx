@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { gsap, ScrollTrigger, EASE, reduced, riseIn, cleanup } from '../lib/motion';
+import { gsap, ScrollTrigger, reduced, riseIn, cleanup } from '../lib/motion';
 
 const LAYERS = [
   {
@@ -47,13 +47,14 @@ const Stack = () => {
     setPinned(canPin);
 
     if (!canPin) {
-      const fn = riseIn(listRef.current?.querySelectorAll('.layer'), {
-        trigger: listRef.current,
-        start: 'top 85%',
-        stagger: 0.1,
-        y: 32,
-      });
-      return cleanup([fn]);
+      return cleanup([
+        riseIn(listRef.current?.querySelectorAll('.layer'), {
+          trigger: listRef.current,
+          start: 'top 85%',
+          stagger: 0.1,
+          y: 32,
+        }),
+      ]);
     }
 
     const ctx = gsap.context(() => {
@@ -76,12 +77,12 @@ const Stack = () => {
   }, []);
 
   return (
-    <section ref={rootRef} id="stack" className={`section stack ${pinned ? 'is-pinned' : ''}`}>
+    <section ref={rootRef} id="stack" className={`block stack ${pinned ? 'is-pinned' : ''}`} data-tone="ink">
       <div ref={stageRef} className="stack-stage">
         <div className="shell stack-inner">
           <div className="sec-head">
-            <span className="eyebrow">The stack</span>
-            <span className="rule" />
+            <span className="eyebrow">05 — The stack</span>
+            <span className="rule stack-rule" />
           </div>
 
           <div className="stack-body">
@@ -97,7 +98,7 @@ const Stack = () => {
                   key={l.n}
                   className={`layer ${pinned ? 'is-stacked' : ''} ${i === active ? 'is-active' : ''}`}
                 >
-                  <h3 className="layer-title display display--m">
+                  <h3 className="layer-title display">
                     <span className="num layer-num">{l.n}</span>
                     {l.title}
                   </h3>
@@ -118,6 +119,7 @@ const Stack = () => {
         .stack-stage { display: flex; align-items: center; min-height: 100svh; }
         .stack:not(.is-pinned) .stack-stage { min-height: 0; display: block; }
         .stack-inner { width: 100%; }
+        .stack.is-pinned .stack-rule { transform: scaleX(1); }
 
         .stack-body {
           display: grid;
@@ -126,39 +128,36 @@ const Stack = () => {
         }
 
         .stack-rail { display: grid; }
-        .stack-rail-track {
-          width: 1px;
-          background: var(--line);
-          position: relative;
-        }
+        .stack-rail-track { position: relative; width: 2px; border-radius: 2px; background: var(--line); }
         .stack-rail-fill {
           position: absolute;
           inset: 0;
-          background: var(--heat);
+          border-radius: 2px;
+          background: var(--mark);
           transform: scaleY(0);
           transform-origin: top;
         }
-        .layer-num {
-          font-size: clamp(0.66rem, 1.2vw, 0.8rem);
-          color: var(--fg-faint);
-          margin-right: 0.85em;
-          vertical-align: 0.9em;
-          font-weight: 500;
-          transition: color 0.45s var(--ease-out);
-        }
-        .layer.is-active .layer-num,
-        .layer:not(.is-stacked) .layer-num { color: var(--amber); }
 
         .stack-list { display: flex; flex-direction: column; gap: 0.1rem; }
 
         .layer-title {
           margin: 0;
-          font-size: clamp(2rem, 6.2vw, 4.6rem);
-          font-stretch: 70%;
-          color: var(--fg-faint);
+          font-size: clamp(2rem, 6vw, 4.4rem);
+          letter-spacing: -0.04em;
+          color: var(--ink-3);
           transition: color 0.5s var(--ease-out);
         }
-        .layer.is-active .layer-title { color: var(--fg); }
+        .layer.is-active .layer-title { color: var(--ink); }
+        .layer-num {
+          font-size: clamp(0.66rem, 1.2vw, 0.8rem);
+          color: var(--ink-3);
+          margin-right: 0.9em;
+          vertical-align: 0.95em;
+          font-weight: 500;
+          transition: color 0.45s var(--ease-out);
+        }
+        .layer.is-active .layer-num,
+        .layer:not(.is-stacked) .layer-num { color: var(--mark); }
 
         .layer-detail {
           display: grid;
@@ -169,18 +168,13 @@ const Stack = () => {
         .layer-detail > * { overflow: hidden; }
         .layer.is-active .layer-detail { grid-template-rows: 1fr; opacity: 1; }
 
-        .layer-blurb { padding-block: 0.9rem 0.1rem; max-width: 48ch; }
-        .layer-items {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.4rem;
-          padding-block: 0.9rem 1.4rem;
-        }
+        .layer-blurb { padding-block: 0.9rem 0.1rem; max-width: 50ch; }
+        .layer-items { display: flex; flex-wrap: wrap; gap: 0.4rem; padding-block: 0.9rem 1.4rem; }
 
         /* Un-pinned (phone / reduced motion): every layer reads open. */
-        .layer:not(.is-stacked) .layer-title { color: var(--fg); }
+        .layer:not(.is-stacked) .layer-title { color: var(--ink); }
         .layer:not(.is-stacked) .layer-detail { grid-template-rows: 1fr; opacity: 1; }
-        .layer:not(.is-stacked) { padding-block: 1.1rem; border-bottom: 1px solid var(--line-soft); }
+        .layer:not(.is-stacked) { padding-block: 1.1rem; border-bottom: 1px solid var(--line-2); }
         .layer:not(.is-stacked):last-child { border-bottom: 0; }
 
         @media (max-width: 860px) {

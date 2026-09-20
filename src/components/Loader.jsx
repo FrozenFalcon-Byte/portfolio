@@ -1,110 +1,191 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap, EASE, reduced } from '../lib/motion';
 
-/* A short count-in, then the curtain wipes up and hands over to the
-   hero. No click gate: the first thing a visitor does should not be
-   asking permission to see the site. */
+const NAME = [['A', 'j', 'i', 'n', 'k', 'y', 'a'], ['C', 'h', 'a', 'v', 'a', 'n']];
+
+/* No click gate. The first thing a visitor does should not be asking
+   permission to see the site.
+ *
+ * The handoff is the point of this component: the name is set in the
+ * same face the hero uses, and when the count finishes it flies to the
+ * exact box the hero's name already occupies while the dark panel wipes
+ * off it. The name never disappears and never re-enters — the ground
+ * changes underneath it. */
 const Loader = () => {
   const rootRef = useRef(null);
-  const barRef = useRef(null);
-  const markRef = useRef(null);
-  const [n, setN] = useState(0);
-  const [gone, setGone] = useState(false);
+  const veilRef = useRef(null);
+  const nameRef = useRef(null);
+  const lineRef = useRef(null);
+  const furnitureRef = useRef(null);
+  const fillRef = useRef(null);
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
     const done = () => {
       window.loaderIsDone = true;
       window.dispatchEvent(new Event('loader-complete'));
-      setGone(true);
+      window.lenis?.start();
+      document.documentElement.classList.remove('is-loading');
+      gsap.set(rootRef.current, { autoAlpha: 0, pointerEvents: 'none' });
     };
 
     if (reduced()) {
-      setN(100);
-      gsap.set(rootRef.current, { display: 'none' });
+      setCount(100);
       done();
-      return;
+      return undefined;
     }
 
     window.lenis?.stop();
+    document.documentElement.classList.add('is-loading');
 
-    const counter = { v: 0 };
-    const tl = gsap.timeline({
-      onComplete: () => {
-        window.lenis?.start();
-        window.lenis?.scrollTo(0, { immediate: true });
-        done();
-      },
-    });
+    const chars = nameRef.current.querySelectorAll('.loader-char');
+    const box = { v: 0 };
+    const tl = gsap.timeline();
 
-    tl.to(counter, {
-      v: 100,
-      duration: 1.5,
-      ease: 'power2.inOut',
-      onUpdate: () => setN(Math.round(counter.v)),
-    })
-      .fromTo(barRef.current, { scaleX: 0 }, { scaleX: 1, duration: 1.5, ease: 'power2.inOut' }, 0)
-      .to(markRef.current, { yPercent: -110, opacity: 0, duration: 0.6, ease: EASE.swift }, '-=0.15')
-      .to(
-        rootRef.current,
-        {
-          clipPath: 'inset(0 0 100% 0)',
-          duration: 0.95,
-          ease: EASE.glide,
-          onComplete: () => gsap.set(rootRef.current, { display: 'none' }),
-        },
-        '-=0.3'
-      );
+    gsap.set(chars, { yPercent: 118, opacity: 0 });
 
-    return () => {
-      tl.kill();
-      window.lenis?.start();
-    };
+    tl.to(chars, {
+      yPercent: 0,
+      opacity: 1,
+      duration: 0.9,
+      stagger: { each: 0.035, from: 'start' },
+      ease: EASE.swift,
+    }, 0)
+      .to(box, {
+        v: 100,
+        duration: 1.2,
+        ease: 'power2.inOut',
+        onUpdate: () => setCount(Math.round(box.v)),
+      }, 0)
+      .to(fillRef.current, { scaleX: 1, duration: 1.2, ease: 'power2.inOut' }, 0)
+
+      // Clear the furniture first so only the name is left to hand over.
+      .to(furnitureRef.current.children, {
+        y: -14,
+        opacity: 0,
+        duration: 0.35,
+        stagger: 0.05,
+        ease: EASE.swift,
+      }, 1.25)
+
+      .add(() => {
+        const hero = document.querySelector('.hero-line > span');
+        const from = lineRef.current?.getBoundingClientRect();
+
+        if (!hero || !from || !from.height) {
+          gsap.to(nameRef.current, { opacity: 0, duration: 0.4 });
+          return;
+        }
+
+        const to = hero.getBoundingClientRect();
+        const heroColor = getComputedStyle(hero).color;
+
+        // Same glyphs in the same face, so the height ratio is the font
+        // scale — no need to animate font-size and reflow every frame.
+        gsap.to(nameRef.current, {
+          x: to.left - from.left,
+          y: to.top - from.top,
+          scale: to.height / from.height,
+          color: heroColor,
+          transformOrigin: 'left top',
+          duration: 1.05,
+          ease: EASE.swift,
+        });
+      }, 1.5)
+
+      .to(veilRef.current, {
+        clipPath: 'inset(0% 0% 100% 0%)',
+        duration: 0.95,
+        ease: EASE.glide,
+      }, 1.62)
+
+      // Swap the flying copy for the hero's own in a single frame, at the
+      // instant they are the same size in the same place.
+      .set('.hero-lockup', { opacity: 1 })
+      .set(nameRef.current, { opacity: 0 })
+      .add(done);
+
+    return () => tl.kill();
   }, []);
 
   return (
-    <div ref={rootRef} className="loader" aria-hidden={gone} role="status" aria-label="Loading">
-      <div className="loader-inner shell" ref={markRef}>
-        <span className="loader-name display display--m">Ajinkya Chavan</span>
-        <span className="loader-n num">{String(n).padStart(3, '0')}</span>
+    <div ref={rootRef} className="loader" aria-hidden="true">
+      <div className="loader-veil" ref={veilRef} data-tone="ink" />
+
+      <div className="shell loader-shell">
+        <h2 className="loader-name display display--hero" ref={nameRef}>
+          {NAME.map((word, w) => (
+            <span className="loader-line" key={w} ref={w === 0 ? lineRef : undefined}>
+              {word.map((c, i) => (
+                <span className="loader-char-box" key={`${w}-${i}`}>
+                  <span className="loader-char">{c}</span>
+                </span>
+              ))}
+            </span>
+          ))}
+        </h2>
+
+        <div className="loader-furniture" ref={furnitureRef}>
+          <span className="mono loader-label">Loading portfolio</span>
+          <span className="num loader-count">{String(count).padStart(3, '0')}</span>
+          <span className="loader-track">
+            <span className="loader-fill" ref={fillRef} />
+          </span>
+        </div>
       </div>
-      <span className="loader-bar" ref={barRef} />
 
       <style>{`
-        .loader {
-          position: fixed;
-          inset: 0;
-          z-index: 9998;
-          background: var(--ink);
+        .loader { position: fixed; inset: 0; z-index: 9999; }
+        .loader-veil { position: absolute; inset: 0; clip-path: inset(0% 0% 0% 0%); }
+
+        .loader-shell {
+          position: relative;
+          height: 100%;
           display: flex;
           flex-direction: column;
-          justify-content: flex-end;
-          padding-bottom: clamp(2rem, 7vh, 4rem);
-          clip-path: inset(0 0 0% 0);
+          justify-content: center;
+          gap: clamp(1.5rem, 5vh, 2.5rem);
+          padding-block: clamp(6.5rem, 15vh, 9rem) 0;
         }
-        .loader-inner {
-          display: flex;
-          align-items: baseline;
-          justify-content: space-between;
-          gap: 1rem;
-          width: 100%;
-        }
+
         .loader-name {
-          font-size: clamp(1.4rem, 5vw, 3rem);
-          font-stretch: 70%;
-          color: var(--fg);
+          margin: 0;
+          width: max-content;
+          color: #F3F1EB;
+          font-size: clamp(2.2rem, 9.5vw, 7.5rem);
+          will-change: transform;
         }
-        .loader-n {
-          font-size: clamp(1.4rem, 5vw, 3rem);
-          color: var(--amber);
-          font-weight: 500;
+        .loader-line { display: flex; overflow: hidden; }
+        .loader-char-box { display: block; overflow: hidden; }
+        .loader-char { display: block; will-change: transform; }
+
+        .loader-furniture {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          max-width: 520px;
         }
-        .loader-bar {
-          margin-top: clamp(1rem, 3vh, 1.75rem);
-          height: 1px;
-          width: 100%;
-          background: var(--heat);
+        .loader-label {
+          color: #635F6D;
+          text-transform: uppercase;
+          letter-spacing: 0.14em;
+          font-size: var(--step--2);
+          white-space: nowrap;
+        }
+        .loader-count { color: var(--acid); font-size: 0.95rem; font-weight: 500; }
+        .loader-track { flex: 1; height: 2px; border-radius: 2px; background: rgba(243, 241, 235, 0.16); overflow: hidden; }
+        .loader-fill {
+          display: block;
+          height: 100%;
+          background: var(--acid);
           transform: scaleX(0);
           transform-origin: left;
+        }
+
+        html.is-loading { overflow: hidden; }
+
+        @media (prefers-reduced-motion: reduce) {
+          .loader { display: none; }
         }
       `}</style>
     </div>

@@ -21,6 +21,11 @@ export const reduced = () =>
 export const token = (name, el = document.documentElement) =>
   getComputedStyle(el).getPropertyValue(name).trim();
 
+/** Does this pointer hover? Used to gate anything with no touch equivalent. */
+export const fine = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
 /* ------------------------------------------------------------------
    splitChars — the signature reveal.
 
@@ -35,7 +40,7 @@ export function splitChars(el, opts = {}) {
   const { start = 'top 82%', end = 'bottom 62%', each = 0.55 } = opts;
 
   if (reduced()) {
-    gsap.set(el, { opacity: 1, color: token('--fg') });
+    gsap.set(el, { opacity: 1, color: token('--ink') });
     return null;
   }
 
@@ -45,9 +50,10 @@ export function splitChars(el, opts = {}) {
     charsClass: 'split-char',
   });
 
-  const dim = token('--fg-faint') || '#574F47';
-  const hot = token('--amber') || '#FFB800';
-  const lit = token('--fg') || '#EFEDE9';
+  const scope = el.closest('[data-tone]') || el;
+  const dim = token('--ink-3', scope) || '#908C99';
+  const hot = token('--mark', scope) || '#5B3DF5';
+  const lit = token('--ink', scope) || '#16151A';
 
   const tween = gsap.fromTo(
     split.chars,
@@ -246,6 +252,28 @@ export function magnetic(el, strength = 0.32) {
     el.removeEventListener('pointerleave', leave);
     gsap.set(el, { x: 0, y: 0 });
   };
+}
+
+/* ------------------------------------------------------------------
+   countTo — a number that counts up when it comes into view.
+   ------------------------------------------------------------------ */
+export function countTo(el, value, opts = {}) {
+  if (!el) return null;
+  const { suffix = '', prefix = '', decimals = 0 } = opts;
+  const write = (v) => { el.textContent = prefix + v.toFixed(decimals) + suffix; };
+
+  if (reduced()) { write(value); return null; }
+
+  const box = { v: 0 };
+  write(0);
+  const tween = gsap.to(box, {
+    v: value,
+    duration: 1.6,
+    ease: EASE.glide,
+    onUpdate: () => write(box.v),
+    scrollTrigger: { trigger: opts.trigger || el, start: opts.start || 'top 90%', once: true },
+  });
+  return () => { tween.scrollTrigger?.kill(); tween.kill(); };
 }
 
 /** Run a batch of teardown functions, skipping the nulls. */

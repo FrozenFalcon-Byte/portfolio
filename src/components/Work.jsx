@@ -1,5 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { gsap, EASE, maskLines, drawRule, pillReveal, riseIn, reduced, cleanup } from '../lib/motion';
+import { gsap, ScrollTrigger, maskLines, riseIn, drawRule, cleanup } from '../lib/motion';
+
+const TONES = ['lilac', 'cyan', 'acid', 'ink'];
+
+/* Decided before the first paint, not after: a card that mounts thinking
+   it is stacked gets riseIn's opacity:0 written onto it, and the rail
+   never puts it back. */
+const wantsRail = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(min-width: 901px)').matches &&
+  !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const PROJECTS = [
   {
@@ -57,205 +67,240 @@ const PROJECTS = [
   },
 ];
 
-const Plate = ({ p, index }) => {
-  const [open, setOpen] = useState(false);
+const Card = ({ p, tone, index, stacked }) => {
   const rootRef = useRef(null);
-  const maskRef = useRef(null);
   const titleRef = useRef(null);
-  const bodyRef = useRef(null);
-  const detailRef = useRef(null);
 
   useEffect(() => {
-    const fns = [
-      pillReveal(maskRef.current, { trigger: rootRef.current, start: 'top 92%', end: 'top 30%' }),
-      maskLines(titleRef.current, { trigger: rootRef.current, start: 'top 82%', stagger: 0.08 }),
-      riseIn(bodyRef.current?.children, { trigger: rootRef.current, start: 'top 78%', stagger: 0.07, y: 24 }),
-    ];
-    return cleanup(fns);
-  }, []);
+    if (!stacked) return undefined;
+    return cleanup([
+      riseIn(rootRef.current, { trigger: rootRef.current, start: 'top 88%', y: 34 }),
+    ]);
+  }, [stacked]);
 
   useEffect(() => {
-    const el = detailRef.current;
-    if (!el) return;
-
-    if (reduced()) {
-      gsap.set(el, { height: open ? 'auto' : 0, opacity: open ? 1 : 0 });
-      return;
-    }
-
-    if (open) {
-      gsap.set(el, { height: 'auto', opacity: 1 });
-      gsap.from(el, { height: 0, opacity: 0, duration: 0.7, ease: EASE.glide });
-      gsap.from(el.querySelectorAll('li'), { y: 18, opacity: 0, duration: 0.6, stagger: 0.07, delay: 0.12, ease: EASE.swift });
-    } else {
-      gsap.to(el, { height: 0, opacity: 0, duration: 0.45, ease: EASE.glide });
-    }
-  }, [open]);
+    if (stacked) return undefined;
+    // Inside a pinned horizontal track the card never crosses a vertical
+    // trigger line, so the title reveal runs off the section instead.
+    return cleanup([
+      maskLines(titleRef.current, {
+        trigger: rootRef.current.closest('.work'),
+        start: 'top 70%',
+        stagger: 0.07,
+        delay: index * 0.05,
+      }),
+    ]);
+  }, [stacked, index]);
 
   return (
-    <article ref={rootRef} className={`plate ${index % 2 ? 'plate--flip' : ''}`}>
-      <div className="plate-media">
-        <div className="pillmask" ref={maskRef}>
-          <img src={p.img} alt={`${p.title} interface`} loading="lazy" />
-        </div>
+    <article ref={rootRef} className="wcard" data-tone={tone}>
+      <div className="wcard-media">
+        <span className="wcard-frame">
+          <img className="wcard-img" src={p.img} alt={`${p.title} interface`} loading="lazy" />
+        </span>
       </div>
 
-      <div className="plate-text">
-        <div className="plate-meta">
-          <span className="num plate-index">{p.id}</span>
-          <span className="tag">{p.kind}</span>
+      <div className="wcard-text">
+        <div className="wcard-top">
+          <span className="num wcard-n">{p.id}</span>
+          <span className="tag wcard-kind">{p.kind}</span>
         </div>
 
-        <h3 ref={titleRef} className="plate-title display display--m">{p.title}</h3>
+        <h3 ref={titleRef} className="wcard-title display">{p.title}</h3>
+        <p className="wcard-desc">{p.desc}</p>
 
-        <div ref={bodyRef} className="plate-body">
-          <p className="body">{p.desc}</p>
+        <ul className="wcard-points">
+          {p.details.slice(0, 3).map((d) => (
+            <li key={d}><span className="wcard-bar" aria-hidden="true" />{d}</li>
+          ))}
+        </ul>
 
-          <ul className="plate-tech">
-            {p.tech.map((t) => <li key={t} className="tag">{t}</li>)}
-          </ul>
-
-          <button
-            className="plate-toggle mono"
-            onClick={() => setOpen((o) => !o)}
-            aria-expanded={open}
-            aria-controls={`detail-${p.id}`}
-          >
-            <span className="plate-toggle-mark" aria-hidden="true">{open ? '–' : '+'}</span>
-            {open ? 'Close breakdown' : 'Read the breakdown'}
-          </button>
-        </div>
-
-        <div className="plate-detail" ref={detailRef} id={`detail-${p.id}`}>
-          <ul>
-            {p.details.map((d) => (
-              <li key={d}><span className="plate-detail-bar" aria-hidden="true" />{d}</li>
-            ))}
-          </ul>
-        </div>
+        <ul className="wcard-tech">
+          {p.tech.map((t) => <li key={t} className="tag">{t}</li>)}
+        </ul>
       </div>
     </article>
   );
 };
 
 const Work = () => {
-  const ruleRef = useRef(null);
   const rootRef = useRef(null);
+  const stageRef = useRef(null);
+  const trackRef = useRef(null);
+  const ruleRef = useRef(null);
+  const fillRef = useRef(null);
+  const [stacked, setStacked] = useState(() => !wantsRail());
+  const [active, setActive] = useState(0);
 
   useEffect(() => cleanup([drawRule(ruleRef.current, { trigger: rootRef.current, start: 'top 82%' })]), []);
 
+  /* The gallery runs sideways while the page runs down: the section pins
+     and the scroll distance is exactly the track's overflow, so a turn of
+     the wheel moves the cards the same distance it would move the page. */
+  useEffect(() => {
+    const canRun = wantsRail();
+    setStacked(!canRun);
+    if (!canRun) return undefined;
+
+    const ctx = gsap.context(() => {
+      const track = trackRef.current;
+      const cards = Array.from(track.querySelectorAll('.wcard'));
+      const overflow = () => Math.max(1, track.scrollWidth - track.parentElement.clientWidth);
+
+      const st = ScrollTrigger.create({
+        trigger: rootRef.current,
+        start: 'top top',
+        end: () => `+=${overflow()}`,
+        pin: stageRef.current,
+        scrub: 0.6,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          gsap.set(track, { x: -overflow() * self.progress });
+          gsap.set(fillRef.current, { scaleX: self.progress });
+          setActive(Math.min(cards.length - 1, Math.round(self.progress * (cards.length - 1))));
+
+          // Each image drifts against its card as the card crosses the
+          // screen, which gives the sideways travel some depth.
+          const w = window.innerWidth;
+          cards.forEach((card) => {
+            const r = card.getBoundingClientRect();
+            const off = gsap.utils.clamp(-1, 1, ((r.left + r.width / 2) / w - 0.5) * 2);
+            gsap.set(card.querySelector('.wcard-img'), { xPercent: off * -5, scale: 1.1 });
+          });
+        },
+      });
+      return () => st.kill();
+    }, rootRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section ref={rootRef} id="work" className="section work">
-      <div className="shell">
-        <div className="sec-head">
-          <span className="eyebrow">Selected work</span>
-          <span className="rule" ref={ruleRef} />
-          <span className="mono work-count">{PROJECTS.length} projects</span>
+    <section ref={rootRef} id="work" className={`block work ${stacked ? 'is-stacked' : 'is-rail'}`} data-tone="paper">
+      <div className="work-stage" ref={stageRef}>
+        <div className="shell">
+          <div className="sec-head">
+            <span className="eyebrow">02 — Selected work</span>
+            <span className="rule" ref={ruleRef} />
+            {/* Nothing advances when the cards are stacked, so a live
+                position counter would be a number that never moves. */}
+            <span className="mono work-count">
+              {stacked ? (
+                `${PROJECTS.length} projects`
+              ) : (
+                <>
+                  <span className="work-count-n">{String(active + 1).padStart(2, '0')}</span>
+                  {` / ${String(PROJECTS.length).padStart(2, '0')}`}
+                </>
+              )}
+            </span>
+          </div>
         </div>
 
-        <div className="work-list">
-          {PROJECTS.map((p, i) => <Plate key={p.id} p={p} index={i} />)}
+        <div className="work-viewport">
+          <div className="work-track" ref={trackRef}>
+            {PROJECTS.map((p, i) => (
+              <Card key={p.id} p={p} index={i} tone={TONES[i % TONES.length]} stacked={stacked} />
+            ))}
+          </div>
+        </div>
+
+        <div className="shell work-rail" aria-hidden="true">
+          <span className="work-rail-track"><span className="work-rail-fill" ref={fillRef} /></span>
+          <span className="mono work-hint">Scroll →</span>
         </div>
       </div>
 
       <style>{`
-        .work-count { color: var(--fg-faint); white-space: nowrap; }
+        .work { padding-block: var(--bay); }
+        /* The pinned stage is already a full viewport tall; the block's own
+           bay would just add dead cream above the first card. */
+        .work.is-rail { padding-block: 0; }
+        .work-stage { display: flex; flex-direction: column; justify-content: center; gap: clamp(1.25rem, 3vh, 2rem); }
+        .work.is-rail .work-stage { min-height: 100svh; }
 
-        .work-list {
+        .work-count { color: var(--ink-3); white-space: nowrap; }
+        .work-count-n { color: var(--ink); font-weight: 500; }
+
+        .work-viewport { overflow: hidden; }
+        .work-track {
           display: flex;
-          flex-direction: column;
-          gap: clamp(5rem, 14vh, 11rem);
+          gap: clamp(1rem, 2.5vw, 2rem);
+          padding-inline: var(--gutter);
+          width: max-content;
+          will-change: transform;
         }
 
-        .plate {
+        .wcard {
           display: grid;
-          grid-template-columns: 1.05fr 1fr;
-          gap: clamp(1.75rem, 5vw, 5rem);
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          gap: clamp(1.25rem, 3vw, 2.5rem);
           align-items: center;
+          width: min(1080px, 84vw);
+          padding: clamp(1.25rem, 2.6vw, 2.25rem);
+          border-radius: clamp(20px, 2.6vw, 34px);
+          border: 1px solid var(--line);
         }
-        .plate--flip .plate-media { order: 2; }
 
-        .plate-media { min-width: 0; }
-        .plate .pillmask {
+        .wcard-media { min-width: 0; }
+        .wcard-frame {
+          display: block;
+          overflow: hidden;
           aspect-ratio: 4 / 3;
-          border: 1px solid var(--line);
+          border-radius: clamp(14px, 1.6vw, 22px);
+          background: var(--paper-3);
         }
-        .plate .pillmask img { height: 100%; }
+        .wcard-img { width: 100%; height: 100%; object-fit: cover; will-change: transform; }
 
-        .plate-text { display: flex; flex-direction: column; gap: 1.1rem; min-width: 0; }
+        .wcard-text { display: flex; flex-direction: column; gap: 0.85rem; min-width: 0; }
+        .wcard-top { display: flex; align-items: center; gap: 0.8rem; }
+        .wcard-n { font-size: clamp(1.1rem, 2vw, 1.5rem); font-weight: 600; }
+        .wcard-kind { background: color-mix(in srgb, var(--ink) 7%, transparent); border-color: transparent; }
 
-        .plate-meta { display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap; }
-        .plate-index {
-          font-size: clamp(0.78rem, 1.6vw, 0.95rem);
-          color: var(--amber);
-          font-weight: 600;
-        }
-
-        .plate-title {
+        .wcard-title {
           margin: 0;
-          font-size: clamp(1.75rem, 4.4vw, 3.4rem);
-          font-stretch: 72%;
-          color: var(--fg);
+          font-size: clamp(1.6rem, 3.2vw, 2.7rem);
+          letter-spacing: -0.04em;
         }
+        .wcard-desc { color: var(--ink-2); font-size: var(--step--1); line-height: 1.6; max-width: 46ch; }
 
-        .plate-body { display: flex; flex-direction: column; gap: 1.2rem; }
-
-        .plate-tech { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-
-        .plate-toggle {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.65em;
-          align-self: flex-start;
-          padding: 0;
-          color: var(--fg);
-          cursor: pointer;
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
-          font-size: 0.7rem;
-          font-weight: 500;
-          transition: color 0.3s var(--ease-out);
-        }
-        .plate-toggle:hover { color: var(--amber); }
-        .plate-toggle-mark {
-          display: grid;
-          place-items: center;
-          width: 26px; height: 26px;
-          flex: none;
-          border: 1px solid var(--line);
-          border-radius: 999px;
-          font-size: 0.9rem;
-          line-height: 1;
-          transition: border-color 0.3s var(--ease-out), background 0.3s var(--ease-out), color 0.3s;
-        }
-        .plate-toggle:hover .plate-toggle-mark {
-          border-color: var(--amber);
-          background: var(--amber);
-          color: var(--on-accent);
-        }
-
-        .plate-detail { height: 0; opacity: 0; overflow: hidden; }
-        .plate-detail ul { display: flex; flex-direction: column; gap: 0.9rem; padding-top: 1.4rem; }
-        .plate-detail li {
+        .wcard-points { display: flex; flex-direction: column; gap: 0.6rem; }
+        .wcard-points li {
           display: flex;
-          gap: 0.9rem;
-          color: var(--fg-dim);
-          font-size: var(--step--1);
-          line-height: 1.65;
-          max-width: 58ch;
+          gap: 0.75rem;
+          color: var(--ink-2);
+          font-size: var(--step--2);
+          line-height: 1.6;
         }
-        .plate-detail-bar {
-          flex: none;
-          width: 14px; height: 1px;
-          margin-top: 0.75em;
-          background: var(--amber);
-        }
+        .wcard-bar { flex: none; width: 12px; height: 2px; margin-top: 0.75em; border-radius: 2px; background: var(--mark); }
 
-        @media (max-width: 860px) {
-          .plate { grid-template-columns: 1fr; gap: 1.5rem; }
-          .plate--flip .plate-media { order: 0; }
-          .plate .pillmask { aspect-ratio: 16 / 11; }
+        .wcard-tech { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.2rem; }
+        .wcard-tech .tag { border-color: color-mix(in srgb, var(--ink) 22%, transparent); }
+
+        /* ---- progress rail ---- */
+        .work-rail { display: flex; align-items: center; gap: 1rem; }
+        .work-rail-track { flex: 1; height: 2px; border-radius: 2px; background: var(--line); overflow: hidden; }
+        .work-rail-fill {
+          display: block;
+          height: 100%;
+          background: var(--mark);
+          transform: scaleX(0);
+          transform-origin: left;
         }
+        .work-hint { color: var(--ink-3); white-space: nowrap; }
+
+        /* ---- stacked: phones and reduced motion ---- */
+        .work.is-stacked .work-viewport { overflow: visible; }
+        .work.is-stacked .work-track {
+          flex-direction: column;
+          width: auto;
+          max-width: var(--shell);
+          margin-inline: auto;
+          gap: clamp(1.25rem, 4vh, 2rem);
+        }
+        .work.is-stacked .wcard { width: auto; grid-template-columns: 1fr; }
+        .work.is-stacked .wcard-frame { aspect-ratio: 16 / 10; }
+        .work.is-stacked .work-rail { display: none; }
       `}</style>
     </section>
   );

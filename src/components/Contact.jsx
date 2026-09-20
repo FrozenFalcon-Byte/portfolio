@@ -18,7 +18,7 @@ const Contact = () => {
     const fns = [
       maskLines(headRef.current, { trigger: rootRef.current, start: 'top 78%', stagger: 0.1 }),
       riseIn(listRef.current?.children, { trigger: listRef.current, start: 'top 88%', stagger: 0.08, y: 26 }),
-      magnetic(ctaRef.current, 0.28),
+      magnetic(ctaRef.current, 0.26),
     ];
     return cleanup(fns);
   }, []);
@@ -26,12 +26,9 @@ const Contact = () => {
   const year = new Date().getFullYear();
 
   return (
-    <footer ref={rootRef} id="contact" className="section contact">
+    <footer ref={rootRef} id="contact" className="block contact" data-tone="acid">
       <div className="shell">
-        <div className="sec-head">
-          <span className="eyebrow">Contact</span>
-          <span className="rule" />
-        </div>
+        <span className="eyebrow">06 — Contact</span>
 
         <h2 ref={headRef} className="contact-head display display--xl">
           Let&rsquo;s build<br />something that ships.
@@ -52,7 +49,7 @@ const Contact = () => {
                 download={l.download || undefined}
                 className="contact-row"
               >
-                <span className="eyebrow eyebrow--plain contact-row-k">{l.label}</span>
+                <span className="mono contact-row-k">{l.label}</span>
                 <span className="contact-row-v">{l.v}</span>
                 <span className="contact-row-arrow" aria-hidden="true">↗</span>
               </a>
@@ -60,33 +57,25 @@ const Contact = () => {
           ))}
         </ul>
 
-        <div className="contact-foot">
-          <span className="mono">© {year} Ajinkya Chavan</span>
-          <span className="mono">AI / ML Engineering · Pune, India</span>
+        <div className="contact-foot mono">
+          <span>© {year} Ajinkya Chavan</span>
+          <span>AI / ML engineering · Pune, India</span>
         </div>
       </div>
 
       <style>{`
-        .contact {
-          border-radius: clamp(20px, 3vw, 40px) clamp(20px, 3vw, 40px) 0 0;
-          background:
-            radial-gradient(ellipse 120% 80% at 50% 100%, rgba(255, 92, 0, 0.12), transparent 65%),
-            var(--ink);
-          border-top: 1px solid var(--line);
-        }
+        .contact { padding-bottom: clamp(2.5rem, 7vh, 4rem); }
         .contact-head {
-          margin: 0;
-          font-size: clamp(2.4rem, 9vw, 7.5rem);
-          font-stretch: 70%;
-          color: var(--fg);
+          margin: clamp(1.5rem, 4vh, 2.5rem) 0 0;
+          font-size: clamp(2.5rem, 9.5vw, 8rem);
+          letter-spacing: -0.045em;
           max-width: 16ch;
         }
-        .contact-cta { margin-top: clamp(2rem, 5vh, 3.25rem); }
+        .contact-cta { margin-top: clamp(2rem, 5vh, 3rem); }
 
         .contact-list {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-          gap: 0;
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
           margin-top: clamp(3.5rem, 10vh, 6rem);
           border-top: 1px solid var(--line);
         }
@@ -94,35 +83,31 @@ const Contact = () => {
           display: flex;
           align-items: baseline;
           gap: 0.9rem;
-          padding: 1.15rem 1.5rem 1.15rem 0.25rem;
+          padding: 1.15rem 1.25rem 1.2rem 0.25rem;
           border-bottom: 1px solid var(--line);
           transition: color 0.35s var(--ease-out), padding-left 0.4s var(--ease-out);
         }
-        .contact-row:hover { color: var(--amber); padding-left: 0.9rem; }
-        .contact-row-k { flex: none; width: 5.5rem; }
-        .contact-row-v {
-          flex: 1;
-          min-width: 0;
-          font-size: var(--step-0);
-          overflow-wrap: anywhere;
-        }
+        .contact-row:hover { color: var(--mark); padding-left: 0.9rem; }
+        .contact-row-k { flex: none; width: 5.5rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.1em; font-size: var(--step--2); }
+        .contact-row-v { flex: 1; min-width: 0; font-size: var(--step-0); font-weight: 500; overflow-wrap: anywhere; }
         .contact-row-arrow {
           flex: none;
           opacity: 0;
-          transform: translate(-6px, 4px);
-          transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out);
+          translate: -6px 4px;
+          transition: opacity 0.35s var(--ease-out), translate 0.35s var(--ease-out);
         }
-        .contact-row:hover .contact-row-arrow { opacity: 1; transform: none; }
+        .contact-row:hover .contact-row-arrow { opacity: 1; translate: 0 0; }
 
         .contact-foot {
           display: flex;
           justify-content: space-between;
           gap: 1rem;
           flex-wrap: wrap;
-          margin-top: clamp(3rem, 8vh, 5rem);
-          color: var(--fg-faint);
+          margin-top: clamp(2.5rem, 7vh, 4rem);
+          color: var(--ink-2);
           text-transform: uppercase;
-          letter-spacing: 0.1em;
+          letter-spacing: 0.08em;
+          font-size: var(--step--2);
         }
       `}</style>
     </footer>
