@@ -1,97 +1,211 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import React, { useEffect, useRef } from 'react';
+import { gsap, EASE, maskLines, riseIn, reduced, cleanup } from '../lib/motion';
 
+const ROLES = [
+  {
+    org: 'Emerson',
+    role: 'PMO AI/ML Intern',
+    span: 'Dec 2025 — Present',
+    current: true,
+    headline: 'Architected a multi-agent system framework',
+    lines: [
+      'Designed a multi-agent AI framework on LangGraph.',
+      'Deployed autonomous SQL and extraction agents.',
+      'Built a self-correcting retry loop so failed agent steps recover instead of stalling.',
+      'Automated complex PMO data workflows end to end.',
+    ],
+  },
+  {
+    org: 'AIMSS, VIIT',
+    role: 'Technical Lead',
+    span: '2024 — 2026',
+    headline: 'Leading the technical wing',
+    lines: [
+      'Run AI/ML workshops for the student body.',
+      'Guide teams building their first intelligent systems.',
+    ],
+  },
+  {
+    org: 'VIIT',
+    role: 'Class Representative',
+    span: '2023 — 2026',
+    headline: 'Liaison between students and faculty',
+    lines: ['Kept academic operations running across three cohorts.'],
+  },
+];
+
+/* A light panel that rises over the dark page — the surface inversion
+   brilean uses to mark a change of register. Only tokens flip; no rule
+   in here names a colour. */
 const Experience = () => {
-  const navigate = useNavigate();
+  const rootRef = useRef(null);
+  const headRef = useRef(null);
+  const listRef = useRef(null);
+  const railRef = useRef(null);
+
+  useEffect(() => {
+    const fns = [
+      maskLines(headRef.current, { trigger: rootRef.current, start: 'top 80%' }),
+      riseIn(listRef.current?.querySelectorAll('.role'), { trigger: listRef.current, start: 'top 85%', stagger: 0.12, y: 40 }),
+    ];
+
+    if (!reduced() && railRef.current) {
+      const t = gsap.fromTo(
+        railRef.current,
+        { scaleY: 0 },
+        {
+          scaleY: 1,
+          ease: 'none',
+          scrollTrigger: { trigger: listRef.current, start: 'top 72%', end: 'bottom 78%', scrub: 0.5 },
+        }
+      );
+      fns.push(() => { t.scrollTrigger?.kill(); t.kill(); });
+    }
+
+    return cleanup(fns);
+  }, []);
+
   return (
-    <section id="experience" className="section" data-scroll-section style={{ paddingTop: '10vh', paddingBottom: '10vh' }}>
-      
-      {/* 
-        This wrapper pushes the content to the right side of the screen 
-        so the 3D keyboard can occupy the left side.
-      */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
-        <div className="exp-card-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
-          
-          <motion.div 
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '5vh' }}
-          >
-            <motion.div 
-              initial={{ scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.2, ease: "circOut" }}
-              style={{ flex: 1, height: '1px', background: 'var(--border-muted)', transformOrigin: 'right' }}
-            ></motion.div>
-            <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '0.8rem' }}>// OPERATION_LOG</div>
-          </motion.div>
-          
-          <motion.div 
-            className="interactive border-technical" 
-            data-cursor-shape="magnetic" 
-            data-scroll 
-            initial={{ opacity: 0, y: 100, rotateX: 15 }}
-            whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8, type: "spring", bounce: 0.4 }}
-            onClick={() => navigate('/experience/pmo')} 
-            style={{ 
-              cursor: 'pointer',
-              width: '100%', 
-              background: 'var(--bg-charcoal)',
-              display: 'flex',
-              flexDirection: 'column',
-              position: 'relative',
-              transformPerspective: 1000
-            }}
-          >
-            {/* Header Bar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', background: 'var(--bg-primary)' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>ID: EXP_01</span>
-              <span style={{ color: 'var(--accent-red)' }}>STATUS: ACTIVE_DUTY</span>
-            </div>
+    <section ref={rootRef} id="experience" className="section experience" data-surface="bone">
+      <div className="shell">
+        <div className="sec-head">
+          <span className="eyebrow">Track record</span>
+          <span className="rule" />
+        </div>
 
-            <div style={{ padding: '3rem 2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-              
-              {/* Metadata */}
-              <div style={{ display: 'flex', gap: '3rem', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                <div>
-                  <span style={{ color: 'var(--text-primary)' }}>ORG:</span><br/>
-                  EMERSON
+        <h2 ref={headRef} className="exp-head display display--l">
+          Shipping in production, not in slides.
+        </h2>
+
+        <div className="exp-list" ref={listRef}>
+          <span className="exp-rail-track" aria-hidden="true">
+            <span className="exp-rail" ref={railRef} />
+          </span>
+
+          {ROLES.map((r) => (
+            <article key={r.org + r.role} className="role">
+              <span className="role-node" aria-hidden="true" />
+
+              <div className="role-head">
+                <div className="role-id">
+                  <h3 className="role-org display display--s">{r.org}</h3>
+                  <span className="role-title mono">{r.role}</span>
                 </div>
-                <div>
-                  <span style={{ color: 'var(--text-primary)' }}>TIMEFRAME:</span><br/>
-                  DEC_2025 - PRESENT
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-primary)' }}>ROLE_CLASS:</span><br/>
-                  PMO_AI/ML_INTERN
-                </div>
+                <span className={`role-span mono ${r.current ? 'is-current' : ''}`}>
+                  {r.current && <span className="role-live" aria-hidden="true" />}
+                  {r.span}
+                </span>
               </div>
 
-              {/* Details Column */}
-              <div>
-                <h3 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontFamily: 'var(--font-heading)', fontWeight: 600, margin: '0 0 1.5rem 0', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                  Architected Multi-Agent System Framework
-                </h3>
-                <p style={{ color: 'var(--text-data)', fontSize: '1rem', lineHeight: 1.6, fontFamily: 'var(--font-body)' }}>
-                  {'>'} INITIALIZING LOG...<br/>
-                  {'>'} Designed multi-agent AI framework via LangGraph.<br/>
-                  {'>'} Deployed SQL & Extraction autonomous agents.<br/>
-                  {'>'} Integrated self-correcting retry loop algorithm.<br/>
-                  {'>'} Result: Complex PMO data workflows successfully automated.
-                </p>
-              </div>
-            </div>
-          </motion.div>
+              <p className="role-headline">{r.headline}</p>
 
+              <ul className="role-lines">
+                {r.lines.map((l) => <li key={l}>{l}</li>)}
+              </ul>
+            </article>
+          ))}
         </div>
       </div>
+
+      <style>{`
+        .experience {
+          border-radius: clamp(20px, 3vw, 40px) clamp(20px, 3vw, 40px) 0 0;
+          margin-top: clamp(2rem, 6vh, 5rem);
+        }
+        .exp-head {
+          font-size: clamp(2rem, 6.4vw, 5.2rem);
+          font-stretch: 76%;
+          max-width: 15ch;
+          margin: 0 0 clamp(3rem, 8vh, 5.5rem);
+          color: var(--fg);
+        }
+
+        .exp-list { position: relative; display: flex; flex-direction: column; gap: clamp(2.5rem, 7vh, 4.5rem); }
+
+        .exp-rail-track {
+          position: absolute;
+          left: 5px; top: 8px; bottom: 8px;
+          width: 1px;
+          background: var(--line);
+        }
+        .exp-rail {
+          display: block;
+          width: 100%; height: 100%;
+          background: var(--ember);
+          transform-origin: top;
+        }
+
+        .role { position: relative; padding-left: clamp(1.75rem, 4vw, 2.75rem); }
+        .role-node {
+          position: absolute;
+          left: 0; top: 7px;
+          width: 11px; height: 11px;
+          border-radius: 999px;
+          border: 1px solid var(--fg-faint);
+          background: var(--ink);
+        }
+        .role:first-child .role-node { border-color: var(--ember); background: var(--ember); }
+
+        .role-head {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 1rem;
+          flex-wrap: wrap;
+          padding-bottom: 0.9rem;
+          border-bottom: 1px solid var(--line);
+        }
+        .role-id { display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap; }
+        .role-org { margin: 0; font-size: clamp(1.3rem, 3vw, 2.1rem); color: var(--fg); }
+        .role-title { color: var(--fg-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+        .role-span {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5em;
+          color: var(--fg-faint);
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          white-space: nowrap;
+        }
+        .role-span.is-current { color: var(--ember); }
+        .role-live {
+          width: 6px; height: 6px;
+          border-radius: 999px;
+          background: var(--ember);
+          animation: roleBlink 2.2s ease-in-out infinite;
+        }
+        @keyframes roleBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+        .role-headline {
+          margin-top: 1.1rem;
+          font-size: var(--step-1);
+          font-weight: 600;
+          color: var(--fg);
+          max-width: 34ch;
+          text-wrap: balance;
+        }
+        .role-lines { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 1rem; }
+        .role-lines li {
+          position: relative;
+          padding-left: 1.2rem;
+          color: var(--fg-dim);
+          font-size: var(--step--1);
+          line-height: 1.7;
+          max-width: 60ch;
+        }
+        .role-lines li::before {
+          content: "";
+          position: absolute;
+          left: 0; top: 0.85em;
+          width: 8px; height: 1px;
+          background: var(--fg-faint);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .exp-rail { transform: scaleY(1); }
+          .role-live { animation: none; }
+        }
+      `}</style>
     </section>
   );
 };

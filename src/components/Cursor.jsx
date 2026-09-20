@@ -1,230 +1,63 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import gsap from 'gsap';
-import { Github, Linkedin, Mail, Sun, Moon } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { gsap, EASE, reduced } from '../lib/motion';
 
+/* A dot that tracks exactly and a ring that lags behind it, swelling
+   over anything interactive. Fine pointers only — on touch there is no
+   cursor to draw, and the body keeps its native one. */
 const Cursor = () => {
-  const cursorRef = useRef(null);
-  const location = useLocation();
-
-  const snapElRef = useRef(null);
+  const dotRef = useRef(null);
+  const ringRef = useRef(null);
 
   useEffect(() => {
-    if (cursorRef.current) {
-      gsap.set(cursorRef.current, { xPercent: -50, yPercent: -50 });
-    }
-    // Reset cursor state on route change
-    if (cursorRef.current) {
-      cursorRef.current.classList.remove('active');
-      cursorRef.current.classList.remove('tooltip-active');
-      cursorRef.current.style.width = '';
-      cursorRef.current.style.height = '';
-      cursorRef.current.style.borderRadius = '';
-      cursorRef.current.style.backgroundColor = '';
-      cursorRef.current.style.border = 'none';
-      cursorRef.current.style.transform = 'scale(1)';
-    }
-    snapElRef.current = null;
-  }, [location.pathname]);
+    const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!fine || reduced()) return;
 
-  useEffect(() => {
-    const cursor = cursorRef.current;
-    
-    const moveCursor = (e) => {
-      if (snapElRef.current) {
-        // If the element is removed from the DOM, release the lock
-        if (!document.body.contains(snapElRef.current)) {
-          snapElRef.current = null;
-          if (cursor) {
-            cursor.classList.remove('active', 'tooltip-active');
-            cursor.style.width = '';
-            cursor.style.height = '';
-            cursor.style.borderRadius = '';
-            cursor.style.backgroundColor = '';
-            cursor.style.border = 'none';
-          }
-          return;
-        }
+    document.body.classList.add('has-cursor');
 
-        const shape = snapElRef.current.getAttribute('data-cursor-shape');
-        const rect = snapElRef.current.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        
-        if (shape === 'magnetic') {
-          const distanceX = e.clientX - centerX;
-          const distanceY = e.clientY - centerY;
-          
-          gsap.to(cursor, {
-            x: centerX + distanceX * 0.2,
-            y: centerY + distanceY * 0.2,
-            xPercent: -50,
-            yPercent: -50,
-            duration: 0.15,
-            ease: 'power2.out'
-          });
-          
-          gsap.to(snapElRef.current, {
-            x: distanceX * 0.2,
-            y: distanceY * 0.2,
-            duration: 0.3,
-            ease: 'power2.out'
-          });
-        } else {
-          gsap.to(cursor, {
-            x: centerX,
-            y: centerY,
-            xPercent: -50,
-            yPercent: -50,
-            duration: 0.15,
-            ease: 'power2.out'
-          });
-        }
-      } else {
-        gsap.to(cursor, {
-          x: e.clientX,
-          y: e.clientY,
-          xPercent: -50,
-          yPercent: -50,
-          duration: 0.15,
-          ease: 'power2.out'
-        });
-      }
+    const dot = dotRef.current;
+    const ring = ringRef.current;
+
+    const dx = gsap.quickTo(dot, 'x', { duration: 0.08, ease: 'none' });
+    const dy = gsap.quickTo(dot, 'y', { duration: 0.08, ease: 'none' });
+    const rx = gsap.quickTo(ring, 'x', { duration: 0.42, ease: EASE.swift });
+    const ry = gsap.quickTo(ring, 'y', { duration: 0.42, ease: EASE.swift });
+
+    const move = (e) => {
+      dx(e.clientX); dy(e.clientY);
+      rx(e.clientX); ry(e.clientY);
     };
 
-    const handleHover = (e) => {
-      // Find the closest interactive element
-      const el = e.target.closest('.interactive');
-      if (el) {
-        const infoText = el.getAttribute('data-cursor-info');
-        const infoIcon = el.getAttribute('data-cursor-icon');
-        const infoColor = el.getAttribute('data-cursor-color');
-        const infoShape = el.getAttribute('data-cursor-shape');
-        
-        if (infoColor) {
-          cursor.style.backgroundColor = infoColor;
-        } else {
-          cursor.style.backgroundColor = '';
-        }
+    const HOT = 'a, button, [role="button"], input, textarea, summary';
+    const over = (e) => {
+      if (e.target.closest?.(HOT)) gsap.to(ring, { scale: 2.1, opacity: 0.55, duration: 0.35, ease: EASE.swift });
+    };
+    const out = (e) => {
+      if (e.target.closest?.(HOT)) gsap.to(ring, { scale: 1, opacity: 1, duration: 0.35, ease: EASE.swift });
+    };
+    const down = () => gsap.to(ring, { scale: 0.75, duration: 0.2 });
+    const up = () => gsap.to(ring, { scale: 1, duration: 0.3 });
 
-        if (infoShape === 'pill') {
-          snapElRef.current = el; // Lock onto the element
-          const rect = el.getBoundingClientRect();
-          cursor.style.width = `${rect.width + 10}px`;
-          cursor.style.height = `${rect.height + 10}px`;
-          cursor.style.borderRadius = '50px';
-          cursor.classList.remove('tooltip-active');
-        } else if (infoShape === 'magnetic') {
-          snapElRef.current = el;
-          const rect = el.getBoundingClientRect();
-          cursor.style.width = `${rect.width + 10}px`;
-          cursor.style.height = `${rect.height + 10}px`;
-          cursor.style.borderRadius = '0px';
-          cursor.style.backgroundColor = 'transparent';
-          cursor.style.border = '2px solid var(--accent-red)';
-          cursor.classList.remove('tooltip-active');
-        } else if (infoShape === 'tooltip') {
-          snapElRef.current = null;
-          cursor.style.width = '';
-          cursor.style.height = '';
-          cursor.style.borderRadius = '';
-          cursor.classList.add('tooltip-active');
-        } else {
-          snapElRef.current = null;
-          cursor.style.width = '';
-          cursor.style.height = '';
-          cursor.style.borderRadius = '';
-          cursor.classList.remove('tooltip-active');
-        }
-        
-        cursor.classList.add('active');
-      }
-    };
-    
-    let hoveredKeyId = null;
-    let hideTimeout = null;
-    const handleKeycapHover = (e) => {
-      const { id, width, isHovered } = e.detail;
-      if (isHovered) {
-        hoveredKeyId = id;
-        if (hideTimeout) clearTimeout(hideTimeout);
-        cursor.style.opacity = '0'; // Completely hide the 2D cursor
-        cursor.style.border = 'none';
-        cursor.classList.remove('tooltip-active');
-        cursor.classList.add('active');
-        snapElRef.current = null;
-      } else {
-        if (hoveredKeyId === id) {
-          hoveredKeyId = null;
-          if (hideTimeout) clearTimeout(hideTimeout);
-          hideTimeout = setTimeout(() => {
-            if (!hoveredKeyId) {
-              cursor.classList.remove('active');
-              cursor.style.opacity = '1';
-              cursor.style.width = '';
-              cursor.style.height = '';
-              cursor.style.borderRadius = '';
-              cursor.style.backgroundColor = '';
-              cursor.style.border = 'none';
-            }
-          }, 50);
-        }
-      }
-    };
-    window.addEventListener('keycap-hover', handleKeycapHover);
-    
-    const handleLeave = () => {
-      if (snapElRef.current && snapElRef.current.getAttribute('data-cursor-shape') === 'magnetic') {
-        gsap.to(snapElRef.current, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.3)' });
-      }
-      snapElRef.current = null; // Release lock
-      cursor.classList.remove('active');
-      cursor.classList.remove('tooltip-active');
-      cursor.style.width = '';
-      cursor.style.height = '';
-      cursor.style.borderRadius = '';
-      cursor.style.backgroundColor = '';
-      cursor.style.border = 'none';
-    };
-
-    const handleMouseDown = () => {
-      if (cursor) gsap.to(cursor, { scale: 0.8, duration: 0.1 });
-    };
-
-    const handleMouseUp = () => {
-      if (cursor) gsap.to(cursor, { scale: 1, duration: 0.15, ease: 'back.out(2)' });
-    };
-
-    window.addEventListener('mousemove', moveCursor);
-    window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mouseup', handleMouseUp);
-    
-    const attachListeners = () => {
-      document.querySelectorAll('.interactive').forEach(el => {
-        el.addEventListener('mouseenter', handleHover);
-        el.addEventListener('mouseleave', handleLeave);
-      });
-    };
-    
-    attachListeners();
-    const interval = setInterval(attachListeners, 1000);
+    window.addEventListener('pointermove', move, { passive: true });
+    document.addEventListener('pointerover', over);
+    document.addEventListener('pointerout', out);
+    window.addEventListener('pointerdown', down);
+    window.addEventListener('pointerup', up);
 
     return () => {
-      window.removeEventListener('mousemove', moveCursor);
-      window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mouseup', handleMouseUp);
-      clearInterval(interval);
-      document.querySelectorAll('.interactive').forEach(el => {
-        el.removeEventListener('mouseenter', handleHover);
-        el.removeEventListener('mouseleave', handleLeave);
-      });
-      window.removeEventListener('keycap-hover', handleKeycapHover);
+      document.body.classList.remove('has-cursor');
+      window.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerover', over);
+      document.removeEventListener('pointerout', out);
+      window.removeEventListener('pointerdown', down);
+      window.removeEventListener('pointerup', up);
     };
   }, []);
 
   return (
-    <div ref={cursorRef} className="cursor">
-    </div>
+    <>
+      <span ref={ringRef} className="cursor-ring" aria-hidden="true" />
+      <span ref={dotRef} className="cursor-dot" aria-hidden="true" />
+    </>
   );
 };
 

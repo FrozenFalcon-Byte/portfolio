@@ -1,78 +1,86 @@
 import React, { useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { splitChars, drawRule, riseIn, cleanup } from '../lib/motion';
 
-gsap.registerPlugin(ScrollTrigger);
+/* The statement lights up character by character under the scrollbar —
+   the reader sets the pace of their own introduction. */
+const STATEMENT =
+  'I build generative AI systems — multi-agent frameworks, retrieval pipelines, and the full-stack architecture that carries them into production.';
+
+const MARKERS = [
+  { k: 'Discipline', v: 'AI & Machine Learning' },
+  { k: 'Based in', v: 'Pune, India' },
+  { k: 'Working on', v: 'Autonomous agent systems' },
+  { k: 'Open to', v: 'Internships & collaboration' },
+];
 
 const About = () => {
+  const rootRef = useRef(null);
   const textRef = useRef(null);
-  const sectionRef = useRef(null);
+  const ruleRef = useRef(null);
+  const gridRef = useRef(null);
 
   useEffect(() => {
-    // Wait for DOM to render completely
-    const timer = setTimeout(() => {
-      const chars = textRef.current.querySelectorAll('.about-char');
-      
-      gsap.to(chars, {
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top 70%", // Start animation when section is 30% into view
-          end: "bottom 80%",
-          scrub: 0.5,
-        },
-        opacity: 1,
-        stagger: 0.05,
-        ease: "none"
-      });
-      ScrollTrigger.refresh();
-    }, 500); // 500ms delay to ensure elements exist
-    
-    return () => clearTimeout(timer);
+    const fns = [
+      splitChars(textRef.current, { start: 'top 78%', end: 'bottom 58%', each: 0.5 }),
+      drawRule(ruleRef.current, { trigger: rootRef.current, start: 'top 80%' }),
+      riseIn(gridRef.current?.children, { trigger: gridRef.current, stagger: 0.09, y: 26 }),
+    ];
+    return cleanup(fns);
   }, []);
 
-  const text = "I am an AIML Engineering student specializing in Generative AI, multi-agent frameworks, and full-stack development. Experienced in building scalable LLM applications and intelligent systems to automate complex analytical workflows.";
-  
   return (
-    <section id="about" ref={sectionRef} className="section" data-scroll-section style={{ paddingTop: '15vh', paddingBottom: '15vh', position: 'relative', zIndex: 5 }}>
-      
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '5vh' }}>
-        <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '0.8rem' }}>// PROFILE_DATA</div>
-        <div style={{ flex: 1, height: '1px', background: 'var(--border-muted)' }}></div>
-      </div>
+    <section ref={rootRef} id="about" className="section about">
+      <div className="shell">
+        <div className="sec-head">
+          <span className="eyebrow">About</span>
+          <span className="rule" ref={ruleRef} />
+        </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <p ref={textRef} style={{ 
-          fontFamily: 'var(--font-heading)', 
-          fontSize: 'clamp(2rem, 5vw, 4rem)', 
-          lineHeight: 1.2, 
-          fontWeight: 600, 
-          maxWidth: '1200px',
-          textTransform: 'uppercase',
-          letterSpacing: '-0.02em',
-          position: 'relative'
-        }}>
-          {text.split("").map((char, i) => {
-            // Find GENERATIVE AI boundaries
-            const keywordStart = text.indexOf("Generative AI");
-            const keywordEnd = keywordStart + "Generative AI".length;
-            const isHighlight = i >= keywordStart && i < keywordEnd;
-            
-            return (
-              <span 
-                key={i} 
-                className="about-char" 
-                style={{ 
-                  color: isHighlight ? 'var(--accent-red)' : 'var(--text-primary)', 
-                  opacity: 0.2 // Starts barely visible
-                }}
-              >
-                {char}
-              </span>
-            );
-          })}
+        <p ref={textRef} className="about-statement display display--wide">
+          {STATEMENT}
         </p>
+
+        <div className="about-grid" ref={gridRef}>
+          {MARKERS.map((m) => (
+            <div key={m.k} className="about-marker">
+              <span className="eyebrow eyebrow--plain">{m.k}</span>
+              <span className="about-marker-v">{m.v}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
+      <style>{`
+        .about-statement {
+          font-size: clamp(1.6rem, 4.6vw, 3.9rem);
+          line-height: 1.08;
+          font-stretch: 84%;
+          font-weight: 800;
+          letter-spacing: -0.015em;
+          max-width: 21ch;
+          margin: 0;
+          /* Resting colour: readable on its own, before any scrub runs. */
+          color: var(--fg);
+        }
+        .about-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+          gap: clamp(1.5rem, 3vw, 2.5rem);
+          margin-top: clamp(3.5rem, 9vh, 6.5rem);
+          padding-top: clamp(1.75rem, 4vh, 2.5rem);
+          border-top: 1px solid var(--line);
+        }
+        .about-marker { display: flex; flex-direction: column; gap: 0.55rem; }
+        .about-marker-v {
+          font-size: var(--step-0);
+          color: var(--fg);
+          font-weight: 500;
+          text-wrap: balance;
+        }
+        @media (max-width: 720px) {
+          .about-statement { max-width: none; font-stretch: 78%; }
+        }
+      `}</style>
     </section>
   );
 };
