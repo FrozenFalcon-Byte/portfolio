@@ -9,7 +9,7 @@ const LINKS = [
   { id: 'work',       n: '03', label: 'Work' },
   { id: 'assistant',  n: '04', label: 'Ask me' },
   { id: 'stack',      n: '05', label: 'Stack' },
-  { id: 'leadership', n: '06', label: 'Leadership' },
+  { id: 'leadership', n: '06', label: 'On the record' },
   { id: 'contact',    n: '07', label: 'Contact' },
 ];
 

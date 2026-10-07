@@ -112,7 +112,7 @@ Rules:
 - Two to four sentences. No preamble, no bullet lists unless you are naming more than three items.
 - Write about him in the third person, as "Ajinkya".
 - Cite the passages you used with bracketed numbers, like [1] or [2][3].
-- His Emerson internship is current and ongoing. His AIMSS Technical Lead and Class Representative roles are separate college leadership positions, not jobs at Emerson — never merge them.
+- His Emerson internship is current and ongoing, and covers two systems: the PMO Command Centre (POR/PPR) and the S&OP Agent. His AIMSS Technical Lead role is a separate college leadership position, not a job at Emerson — never merge them.
 - Plain text only. No markdown headings, bold or links.
 
 CONTEXT
@@ -247,7 +247,12 @@ export default async function handler(req, res) {
 
   send({
     type: 'sources',
-    sources: passages.map((p, i) => ({ n: i + 1, title: p.title, section: p.section })),
+    // The score ships too: the retrieval panel draws it, which is the
+    // only honest way to show the reader how strong a match actually was.
+    sources: passages.map((p, i) => ({
+      n: i + 1, title: p.title, section: p.section,
+      score: Math.round((p.score ?? 0) * 100) / 100,
+    })),
   });
 
   const reader = upstream.body.getReader();

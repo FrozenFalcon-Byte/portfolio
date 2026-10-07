@@ -1,63 +1,123 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowUp, Loader2, Sparkles } from 'lucide-react';
-import { gsap, maskLines, riseIn, reduced, cleanup } from '../lib/motion';
+import { gsap, maskLines, riseIn, drawRule, reduced, cleanup } from '../lib/motion';
 
 const GREETING =
-  'Ask me about Ajinkya — what he is building at Emerson, how the RAG system decides to stay quiet, what he works in. I answer from this site and cite what I used.';
+  'Ask me about Ajinkya — what he is building at Emerson, how Swarm keeps a human in the loop, why FinMCP is an MCP server first. I answer from this site and show you what I used.';
 
 const SUGGESTED = [
   'What is he building at Emerson?',
-  'How does the risk predictor avoid hallucinating?',
-  'What does he actually work in?',
+  'Explain FinMCP in one paragraph.',
+  'What does Swarm actually do?',
   'How do I get in touch?',
 ];
 
 const HOW = [
-  { n: '01', k: 'Retrieve', v: 'Your question is embedded and ranked against passages from this site.' },
-  { n: '02', k: 'Ground',   v: 'Only the top matches reach the model, with instructions to use nothing else.' },
-  { n: '03', k: 'Cite',     v: 'Every answer points at the passages behind it — or admits it has none.' },
+  { n: '01', k: 'Retrieve', v: 'Your question is embedded and ranked against every passage behind this site.' },
+  { n: '02', k: 'Ground', v: 'Only the top matches reach the model, with instructions to use nothing else.' },
+  { n: '03', k: 'Cite', v: 'The passages it leaned on appear beside the answer — or it tells you it has none.' },
 ];
+
+/* The retrieval panel is the point of the whole section: it is the only
+   part of a RAG system a visitor can normally never see. */
+const Retrieval = ({ sources, busy, asked }) => {
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list || !sources.length || reduced()) return undefined;
+
+    const tl = gsap.timeline();
+    tl.fromTo(list.children, { opacity: 0, x: 14 }, {
+      opacity: 1, x: 0, duration: 0.5, stagger: 0.07, ease: 'swift',
+    })
+      .fromTo(list.querySelectorAll('.src-bar i'), { scaleX: 0 }, {
+        scaleX: (i, el) => Number(el.dataset.score) || 0.05,
+        duration: 0.9, stagger: 0.07, ease: 'glide',
+      }, 0.1);
+
+    return () => tl.kill();
+  }, [sources]);
+
+  return (
+    <aside className="retrieval" aria-label="Retrieved passages">
+      <header className="retrieval-head">
+        <span className="mono retrieval-k">Retrieval</span>
+        <span className={`retrieval-state mono${busy ? ' is-live' : ''}`}>
+          {busy ? 'ranking' : sources.length ? `${sources.length} passages` : 'idle'}
+        </span>
+      </header>
+
+      {sources.length > 0 ? (
+        <ol className="retrieval-list" ref={listRef}>
+          {sources.map((s) => (
+            <li key={s.n} className="src">
+              <span className="num src-n">[{s.n}]</span>
+              <span className="src-main">
+                <span className="src-title">{s.title}</span>
+                <span className="mono src-section">{s.section}</span>
+              </span>
+              <span className="src-bar" aria-hidden="true">
+                <i data-score={s.score ?? 0.5} />
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="retrieval-empty body">
+          {asked
+            ? 'No passage cleared the threshold. The answer will say so rather than improvise.'
+            : 'Nothing retrieved yet. Ask something and the passages it reads will land here, ranked.'}
+        </p>
+      )}
+
+      <footer className="retrieval-foot mono">
+        Embedded · cosine-ranked · top matches only
+      </footer>
+    </aside>
+  );
+};
 
 const Assistant = () => {
   const rootRef = useRef(null);
   const headRef = useRef(null);
+  const ruleRef = useRef(null);
   const howRef = useRef(null);
   const phoneRef = useRef(null);
   const feedRef = useRef(null);
-  const inputRef = useRef(null);
+  const consoleRef = useRef(null);
 
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
+  const [asked, setAsked] = useState(false);
+  const [sources, setSources] = useState([]);
   const [thread, setThread] = useState([{ role: 'assistant', content: GREETING, sources: [] }]);
 
   useEffect(() => {
     const fns = [
-      maskLines(headRef.current, { trigger: rootRef.current, start: 'top 72%', stagger: 0.09 }),
-      riseIn(howRef.current?.children, { trigger: howRef.current, start: 'top 88%', stagger: 0.09, y: 24 }),
+      maskLines(headRef.current, { trigger: rootRef.current, start: 'top 74%', stagger: 0.09 }),
+      drawRule(ruleRef.current, { trigger: rootRef.current, start: 'top 82%' }),
+      riseIn(howRef.current?.children, { trigger: howRef.current, start: 'top 90%', stagger: 0.1, y: 24 }),
+      riseIn(consoleRef.current, { trigger: consoleRef.current, start: 'top 94%', y: 28 }),
     ];
     return cleanup(fns);
   }, []);
 
-  /* void's device move: the phone arrives turned away and straightens
-     as you scroll into the section, then holds while the copy passes. */
+  /* The device arrives turned away and straightens as the section comes
+     up, then holds while the copy passes it. */
   useEffect(() => {
     const phone = phoneRef.current;
     if (!phone || reduced()) return undefined;
 
-    gsap.set(phone, { transformPerspective: 1400, transformOrigin: '50% 60%' });
+    gsap.set(phone, { transformPerspective: 1500, transformOrigin: '50% 60%' });
 
     const tween = gsap.fromTo(
       phone,
-      { rotateY: -26, rotateX: 16, rotateZ: -6, scale: 0.82, yPercent: 8 },
+      { rotateY: -22, rotateX: 14, rotateZ: -5, scale: 0.86, yPercent: 7 },
       {
         rotateY: 0, rotateX: 0, rotateZ: 0, scale: 1, yPercent: 0,
         ease: 'none',
-        scrollTrigger: {
-          trigger: rootRef.current,
-          start: 'top 85%',
-          end: 'top 18%',
-          scrub: 0.8,
-        },
+        scrollTrigger: { trigger: rootRef.current, start: 'top 82%', end: 'top 14%', scrub: 0.8 },
       }
     );
     return () => { tween.scrollTrigger?.kill(); tween.kill(); };
@@ -72,13 +132,13 @@ const Assistant = () => {
   const ask = useCallback(async (question) => {
     if (!question.trim() || busy) return;
 
-    const history = thread
-      .slice(1)
-      .map((m) => ({ role: m.role, content: m.content }));
+    const history = thread.slice(1).map((m) => ({ role: m.role, content: m.content }));
 
     setThread((t) => [...t, { role: 'user', content: question }]);
     setValue('');
     setBusy(true);
+    setAsked(true);
+    setSources([]);
 
     try {
       const res = await fetch('/api/ask', {
@@ -119,8 +179,10 @@ const Assistant = () => {
           const event = JSON.parse(line.slice(5).trim());
 
           if (event.type === 'delta') patch((m) => ({ ...m, content: m.content + event.text }));
-          else if (event.type === 'sources') patch((m) => ({ ...m, sources: event.sources }));
-          else if (event.type === 'error') patch((m) => ({ ...m, error: event.error }));
+          else if (event.type === 'sources') {
+            patch((m) => ({ ...m, sources: event.sources }));
+            setSources(event.sources);
+          } else if (event.type === 'error') patch((m) => ({ ...m, error: event.error }));
         }
       }
     } catch (err) {
@@ -137,28 +199,98 @@ const Assistant = () => {
 
   return (
     <section ref={rootRef} id="assistant" className="block assistant" data-tone="ink">
-      <div className="shell assistant-grid">
-        <div className="assistant-copy">
-          <div className="sec-head">
-            <span className="eyebrow">04 — Ask my portfolio</span>
-          </div>
+      <div className="shell">
+        <div className="sec-head">
+          <span className="eyebrow">04 — Ask my portfolio</span>
+          <span className="rule" ref={ruleRef} />
+          <span className="mono as-count">Grounded · cited · refuses</span>
+        </div>
 
-          <h2 ref={headRef} className="assistant-head display display--l">
+        <div className="as-masthead">
+          <h2 ref={headRef} className="as-head display">
             Don&rsquo;t read it.<br />Interrogate it.
           </h2>
-
-          <p className="body assistant-blurb">
-            I built the thing you are about to use. It is a small retrieval pipeline
-            over this site: your question gets embedded, ranked against the passages
-            behind these sections, and answered from the top matches only — with
-            citations, and with a refusal when the corpus does not cover you.
+          <p className="body as-blurb">
+            A small retrieval pipeline over this site. Your question is embedded,
+            ranked against the passages behind these sections, and answered from
+            the top matches only — with the passages shown beside the answer, and
+            a refusal when the corpus does not cover you.
           </p>
+        </div>
 
-          <form className="assistant-form" onSubmit={onSubmit}>
+        <div className="as-console" ref={consoleRef}>
+          <ol className="as-how" ref={howRef}>
+            {HOW.map((h) => (
+              <li key={h.n}>
+                <span className="num as-how-n">{h.n}</span>
+                <span className="as-how-k">{h.k}</span>
+                <span className="as-how-v">{h.v}</span>
+              </li>
+            ))}
+          </ol>
+
+          <div className="as-stage">
+            <div className="phone" ref={phoneRef}>
+              <span className="phone-glow" aria-hidden="true" />
+              <div className="phone-body">
+                <span className="phone-btn phone-btn--action" aria-hidden="true" />
+                <span className="phone-btn phone-btn--vol-up" aria-hidden="true" />
+                <span className="phone-btn phone-btn--vol-dn" aria-hidden="true" />
+                <span className="phone-btn phone-btn--power" aria-hidden="true" />
+
+                <div className="phone-screen" data-tone="paper">
+                  <div className="phone-island" aria-hidden="true" />
+
+                  <header className="screen-bar">
+                    <span className="screen-avatar" aria-hidden="true"><Sparkles size={12} strokeWidth={2.6} /></span>
+                    <span className="screen-name">Portfolio assistant</span>
+                    <span className="screen-state mono">{busy ? 'thinking' : 'online'}</span>
+                  </header>
+
+                  <div
+                    className="screen-feed"
+                    ref={feedRef}
+                    aria-live="polite"
+                    data-lenis-prevent
+                    tabIndex={0}
+                    role="log"
+                    aria-label="Conversation"
+                  >
+                    {thread.map((m, i) => (
+                      <div key={i} className={`bubble bubble--${m.role}`}>
+                        {m.error ? (
+                          <p className="bubble-error">{m.error}</p>
+                        ) : (
+                          <p>{m.content || (busy && i === thread.length - 1 ? '…' : '')}</p>
+                        )}
+                      </div>
+                    ))}
+
+                    {busy && (
+                      <div className="bubble bubble--assistant bubble--typing" aria-hidden="true">
+                        <i /><i /><i />
+                      </div>
+                    )}
+                  </div>
+
+                  <footer className="screen-foot mono">
+                    Answers from this site only
+                  </footer>
+
+                  <span className="phone-home" aria-hidden="true" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Retrieval sources={sources} busy={busy} asked={asked} />
+        </div>
+
+        <div className="as-input">
+          <form className="as-form" onSubmit={onSubmit}>
             <label className="sr-only" htmlFor="assistant-input">Ask a question about Ajinkya</label>
             <input
               id="assistant-input"
-              ref={inputRef}
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder="Ask anything about my work…"
@@ -166,123 +298,167 @@ const Assistant = () => {
               maxLength={400}
             />
             <button type="submit" disabled={busy || !value.trim()}>
-              {busy ? <Loader2 size={17} className="spin" /> : <ArrowUp size={17} strokeWidth={2.6} />}
+              {busy ? <Loader2 size={18} className="spin" /> : <ArrowUp size={18} strokeWidth={2.6} />}
               <span className="sr-only">Send</span>
             </button>
           </form>
 
-          <div className="assistant-chips">
+          <div className="as-chips">
             {SUGGESTED.map((q) => (
-              <button key={q} className="tag assistant-chip" onClick={() => ask(q)} disabled={busy}>
+              <button key={q} className="tag as-chip" onClick={() => ask(q)} disabled={busy}>
                 {q}
               </button>
             ))}
-          </div>
-
-          <ol className="assistant-how" ref={howRef}>
-            {HOW.map((h) => (
-              <li key={h.n}>
-                <span className="num assistant-how-n">{h.n}</span>
-                <span className="assistant-how-k">{h.k}</span>
-                <span className="assistant-how-v">{h.v}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        <div className="assistant-stage">
-          <div className="phone" ref={phoneRef}>
-            <span className="phone-glow" aria-hidden="true" />
-            <div className="phone-body">
-              <span className="phone-btn phone-btn--action" aria-hidden="true" />
-              <span className="phone-btn phone-btn--vol-up" aria-hidden="true" />
-              <span className="phone-btn phone-btn--vol-dn" aria-hidden="true" />
-              <span className="phone-btn phone-btn--power" aria-hidden="true" />
-
-              <div className="phone-screen" data-tone="paper">
-                <div className="phone-island" aria-hidden="true" />
-
-                <header className="screen-bar">
-                  <span className="screen-avatar" aria-hidden="true"><Sparkles size={12} strokeWidth={2.6} /></span>
-                  <span className="screen-name">Portfolio assistant</span>
-                  <span className="screen-state mono">{busy ? 'thinking' : 'online'}</span>
-                </header>
-
-                <div
-                  className="screen-feed"
-                  ref={feedRef}
-                  aria-live="polite"
-                  data-lenis-prevent
-                  tabIndex={0}
-                  role="log"
-                  aria-label="Conversation"
-                >
-                  {thread.map((m, i) => (
-                    <div key={i} className={`bubble bubble--${m.role}`}>
-                      {m.error ? (
-                        <p className="bubble-error">{m.error}</p>
-                      ) : (
-                        <p>{m.content || (busy && i === thread.length - 1 ? '…' : '')}</p>
-                      )}
-
-                      {m.sources?.length > 0 && (
-                        <ul className="bubble-sources">
-                          {m.sources.map((s) => (
-                            <li key={s.n} className="mono" title={s.title}>[{s.n}] {s.title}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
-
-                  {busy && (
-                    <div className="bubble bubble--assistant bubble--typing" aria-hidden="true">
-                      <i /><i /><i />
-                    </div>
-                  )}
-                </div>
-
-                <footer className="screen-foot mono">
-                  Grounded in {thread.length > 1 ? 'this site' : 'this site only'} · no training on you
-                </footer>
-
-                <span className="phone-home" aria-hidden="true" />
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
       <style>{`
         .assistant { overflow: hidden; }
-        .assistant-grid {
+        .as-count { color: var(--ink-3); white-space: nowrap; }
+
+        /* ---- masthead ---- */
+        .as-masthead {
           display: grid;
-          grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-          gap: clamp(2rem, 6vw, 5rem);
+          grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+          gap: clamp(1.5rem, 5vw, 4rem);
+          align-items: end;
+          margin-bottom: clamp(2.5rem, 7vh, 4rem);
+        }
+        .as-head {
+          margin: 0;
+          font-size: clamp(2.3rem, 7vw, 5.5rem);
+          letter-spacing: -0.045em;
+        }
+        .as-blurb { max-width: 52ch; padding-bottom: 0.4rem; }
+
+        /* ---- console ---- */
+        .as-console {
+          display: grid;
+          grid-template-columns: minmax(0, 0.85fr) auto minmax(0, 0.85fr);
+          gap: clamp(1.5rem, 3.5vw, 3rem);
           align-items: center;
         }
 
-        .assistant-head { margin: 0 0 1.2rem; letter-spacing: -0.04em; }
-        .assistant-blurb { max-width: 48ch; }
+        /* how-rail */
+        .as-how { display: flex; flex-direction: column; gap: 1.5rem; }
+        .as-how li {
+          position: relative;
+          display: grid;
+          grid-template-columns: 2.4rem 1fr;
+          gap: 0.3rem 0.9rem;
+          padding-bottom: 1.5rem;
+        }
+        .as-how li:not(:last-child)::after {
+          content: "";
+          position: absolute;
+          left: 0.65rem;
+          top: 1.6rem;
+          bottom: 0;
+          width: 1px;
+          background: var(--line);
+        }
+        .as-how-n {
+          grid-row: 1 / span 2;
+          color: var(--mark);
+          font-size: var(--step--2);
+          font-weight: 600;
+        }
+        .as-how-k { font-weight: 600; font-size: var(--step-0); }
+        .as-how-v { color: var(--ink-2); font-size: var(--step--1); line-height: 1.6; }
 
-        .assistant-form {
+        /* retrieval panel */
+        .retrieval {
+          display: flex;
+          flex-direction: column;
+          gap: 0.9rem;
+          min-height: 260px;
+          padding: clamp(1rem, 2vw, 1.4rem);
+          border-radius: 20px;
+          border: 1px solid var(--line);
+          background: var(--paper-2);
+        }
+        .retrieval-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .retrieval-k { text-transform: uppercase; letter-spacing: 0.14em; font-size: var(--step--2); }
+        .retrieval-state {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          color: var(--ink-3);
+          font-size: var(--step--2);
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+        }
+        .retrieval-state.is-live::before {
+          content: "";
+          width: 6px; height: 6px;
+          border-radius: 999px;
+          background: var(--mark);
+          animation: blink 1.1s var(--ease-in-out) infinite;
+        }
+
+        .retrieval-list { display: flex; flex-direction: column; gap: 0.75rem; flex: 1; }
+        .src {
+          display: grid;
+          grid-template-columns: 2rem minmax(0, 1fr);
+          gap: 0.2rem 0.6rem;
+        }
+        .src-n { color: var(--mark); font-size: var(--step--2); grid-row: 1 / span 2; }
+        .src-main { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+        .src-title {
+          font-size: var(--step--1);
+          font-weight: 500;
+          line-height: 1.35;
+        }
+        .src-section { color: var(--ink-3); font-size: var(--step--2); }
+        .src-bar {
+          grid-column: 2;
+          display: block;
+          height: 3px;
+          margin-top: 0.4rem;
+          border-radius: 3px;
+          background: var(--line);
+          overflow: hidden;
+        }
+        .src-bar i {
+          display: block;
+          height: 100%;
+          background: var(--mark);
+          transform-origin: left;
+          transform: scaleX(0);
+        }
+
+        .retrieval-empty { flex: 1; font-size: var(--step--1); max-width: 34ch; }
+        .retrieval-foot {
+          padding-top: 0.75rem;
+          border-top: 1px solid var(--line-2);
+          color: var(--ink-3);
+          font-size: var(--step--2);
+          letter-spacing: 0.06em;
+        }
+
+        /* ---- input ---- */
+        .as-input {
+          max-width: 760px;
+          margin: clamp(2.5rem, 7vh, 4rem) auto 0;
+        }
+        .as-form {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          margin-top: clamp(1.5rem, 4vh, 2.25rem);
-          padding: 0.4rem 0.4rem 0.4rem 1.2rem;
+          padding: 0.45rem 0.45rem 0.45rem 1.4rem;
           border-radius: 999px;
           border: 1px solid var(--line);
           background: var(--paper-2);
           transition: border-color 0.35s var(--ease-out);
         }
-        .assistant-form:focus-within { border-color: var(--mark); }
-        .assistant-form input { flex: 1; min-width: 0; padding-block: 0.7rem; outline: none; }
-        .assistant-form input::placeholder { color: var(--ink-3); }
-        .assistant-form button {
+        .as-form:focus-within { border-color: var(--mark); }
+        .as-form input { flex: 1; min-width: 0; padding-block: 0.8rem; outline: none; font-size: var(--step-0); }
+        .as-form input::placeholder { color: var(--ink-3); }
+        .as-form button {
           display: grid;
           place-items: center;
-          width: 40px; height: 40px;
+          width: 44px; height: 44px;
           flex: none;
           border-radius: 999px;
           background: var(--mark);
@@ -290,38 +466,17 @@ const Assistant = () => {
           cursor: pointer;
           transition: opacity 0.3s var(--ease-out), transform 0.3s var(--ease-out);
         }
-        .assistant-form button:disabled { opacity: 0.35; cursor: default; }
-        .assistant-form button:not(:disabled):hover { transform: scale(1.06); }
+        .as-form button:disabled { opacity: 0.35; cursor: default; }
+        .as-form button:not(:disabled):hover { transform: scale(1.06); }
 
-        .assistant-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.85rem; }
-        .assistant-chip {
-          cursor: pointer;
-          transition: border-color 0.3s var(--ease-out), color 0.3s var(--ease-out);
-        }
-        .assistant-chip:hover:not(:disabled) { color: var(--ink); border-color: var(--mark); }
-        .assistant-chip:disabled { opacity: 0.45; cursor: default; }
-
-        .assistant-how {
-          display: grid;
-          gap: 0.9rem;
-          margin-top: clamp(2rem, 6vh, 3rem);
-          padding-top: clamp(1.4rem, 4vh, 2rem);
-          border-top: 1px solid var(--line);
-        }
-        .assistant-how li {
-          display: grid;
-          grid-template-columns: 2.2rem 6.5rem 1fr;
-          gap: 0.9rem;
-          align-items: baseline;
-          font-size: var(--step--1);
-        }
-        .assistant-how-n { color: var(--mark); font-size: var(--step--2); }
-        .assistant-how-k { font-weight: 600; }
-        .assistant-how-v { color: var(--ink-2); line-height: 1.6; }
+        .as-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-top: 0.9rem; }
+        .as-chip { cursor: pointer; transition: border-color 0.3s var(--ease-out), color 0.3s var(--ease-out); }
+        .as-chip:hover:not(:disabled) { color: var(--ink); border-color: var(--mark); }
+        .as-chip:disabled { opacity: 0.45; cursor: default; }
 
         /* ---- device ---- */
-        .assistant-stage { display: grid; place-items: center; perspective: 1400px; }
-        .phone { position: relative; width: min(324px, 80vw); will-change: transform; }
+        .as-stage { display: grid; place-items: center; perspective: 1500px; }
+        .phone { position: relative; width: min(312px, 78vw); will-change: transform; }
         .phone-glow {
           position: absolute;
           inset: -18% -22%;
@@ -332,7 +487,7 @@ const Assistant = () => {
         }
         /* Proportioned off the real thing: 9:19.5 display, a band that
            reads as brushed metal, and the corner radius the hardware
-           actually has — at 52px on this width it was reading as a box. */
+           actually has — at a fixed pixel radius it reads as a box. */
         .phone-body {
           position: relative;
           padding: 11px;
@@ -463,18 +618,6 @@ const Assistant = () => {
           border-bottom-right-radius: 6px;
         }
         .bubble-error { color: var(--coral); }
-        .bubble-sources {
-          display: flex;
-          flex-direction: column;
-          gap: 0.2rem;
-          margin-top: 0.55rem;
-          padding-top: 0.5rem;
-          border-top: 1px solid var(--line);
-          font-size: 0.67rem;
-          color: var(--ink-3);
-          overflow: hidden;
-        }
-        .bubble-sources li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .bubble--typing { display: flex; gap: 4px; padding-block: 0.85rem; }
         .bubble--typing i {
@@ -497,14 +640,21 @@ const Assistant = () => {
           letter-spacing: 0.06em;
         }
 
-        @media (max-width: 960px) {
-          .assistant-grid { grid-template-columns: 1fr; gap: clamp(2.5rem, 7vh, 4rem); }
-          .assistant-how li { grid-template-columns: 1.8rem 5.5rem 1fr; }
-          .phone { width: min(306px, 78vw); }
+        /* ---- narrower ---- */
+        @media (max-width: 1080px) {
+          .as-masthead { grid-template-columns: 1fr; gap: 1.25rem; align-items: start; }
+          .as-console {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            grid-template-areas: "phone phone" "how retrieval";
+            gap: clamp(2rem, 5vh, 3rem) clamp(1.5rem, 4vw, 2.5rem);
+          }
+          .as-stage { grid-area: phone; }
+          .as-how { grid-area: how; }
+          .retrieval { grid-area: retrieval; }
         }
-        @media (max-width: 420px) {
-          .assistant-how li { grid-template-columns: 1.6rem 1fr; }
-          .assistant-how-v { grid-column: 2; }
+        @media (max-width: 700px) {
+          .as-console { grid-template-columns: 1fr; grid-template-areas: "phone" "retrieval" "how"; }
+          .as-how li { grid-template-columns: 2rem 1fr; }
         }
       `}</style>
     </section>

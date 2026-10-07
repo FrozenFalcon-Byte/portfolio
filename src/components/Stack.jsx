@@ -12,25 +12,25 @@ const LAYERS = [
     n: '02',
     title: 'GenAI & ML',
     blurb: 'Where most of the work happens now: agent graphs, retrieval, and the evaluation loops around them.',
-    items: ['LangGraph', 'LangChain', 'NumPy', 'Pandas', 'TensorFlow', 'Keras'],
+    items: ['LangGraph', 'LangChain', 'RAG', 'MCP', 'A2A', 'Azure OpenAI', 'TimeGPT', 'Scikit-Learn', 'TensorFlow', 'Keras'],
   },
   {
     n: '03',
     title: 'Web',
     blurb: 'Models are useless behind a bad interface. Front to back, so the system ships whole.',
-    items: ['React', 'FastAPI', 'Supabase', 'PostgreSQL', 'Streamlit'],
+    items: ['React', 'TypeScript', 'FastAPI', 'Supabase', 'PostgreSQL', 'Streamlit'],
   },
   {
     n: '04',
     title: 'Cloud',
     blurb: 'Where it runs when it stops running on a laptop.',
-    items: ['AWS S3', 'AWS EC2', 'Azure', 'Azure AI'],
+    items: ['Azure', 'Azure AI', 'Azure App Service', 'AWS S3', 'AWS EC2', 'Vercel', 'Render', 'Firebase'],
   },
   {
     n: '05',
     title: 'Tooling',
     blurb: 'Reproducible environments and version control, because "works on my machine" is not a deployment.',
-    items: ['Git', 'GitHub', 'Docker', 'Hugging Face'],
+    items: ['Git', 'GitHub', 'GitHub Actions', 'Docker', 'Hugging Face'],
   },
 ];
 

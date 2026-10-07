@@ -1,348 +1,467 @@
 import React, { useEffect, useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { TransitionLink } from '../components/RouteCurtain';
-import { maskLines, riseIn, drawRule, cleanup } from '../lib/motion';
+import { gsap, maskLines, riseIn, drawRule, reduced, cleanup } from '../lib/motion';
 
-const STACK = [
-  'LangGraph', 'LangChain', 'Azure OpenAI', 'FastAPI', 'Azure PostgreSQL',
-  'sqlglot', 'psycopg2', 'React', 'TypeScript', 'Chart.js',
+/* This page is deliberately shallow on content and deep on structure.
+   The work is Emerson's; the architecture is the part that is mine to
+   show, so the page shows the graphs and nothing that sits inside them —
+   no queries, no columns, no business questions, no numbers. */
+
+const FOOTPRINT = [
+  'LangGraph', 'LangChain', 'Azure OpenAI', 'FastAPI', 'Server-sent events',
+  'Azure SQL', 'Azure PostgreSQL', 'sqlglot', 'TimeGPT', 'React', 'TypeScript',
+  'Azure App Service',
 ];
 
-/* The pipeline is the project. Everything else on this page is context
-   for why each of these nodes has to exist. */
-const NODES = [
-  { n: '01', k: 'Guardrail',          v: 'Blocks unsafe or out-of-scope questions before anything else runs.' },
-  { n: '02', k: 'Conversation router', v: 'Decides whether this is a follow-up, a fresh query, or just chat.' },
-  { n: '03', k: 'Query intent',       v: 'Pulls the metrics, filters and grouping out of the sentence into a typed result.' },
-  { n: '04', k: 'Orchestrator',       v: 'Routes to the metric tools the intent actually needs, and deduplicates overlapping ones.' },
-  { n: '05', k: 'Planner',            v: 'Composes the SQL template, applies the business glossary, enforces row limits.' },
-  { n: '06', k: 'SQL generator',      v: 'Writes the query — and writes the explanation that ships with the answer.' },
-  { n: '07', k: 'SQL validator',      v: 'Parses the AST with sqlglot. Join fan-out and malformed filters die here.' },
-  { n: '08', k: 'Data executor',      v: 'Runs it against Azure PostgreSQL, partitioned quarterly on fiscal period.' },
-  { n: '09', k: 'Output agent',       v: 'Formats the Markdown table and picks a chart the answer deserves.' },
-];
-
-/* Schema navigation was the hard part, not the prompting. */
-const DOMAIN = [
+const POR_NOTES = [
   {
-    k: 'The fiscal calendar is not the calendar',
-    v: 'Emerson’s year starts in October, and fp_posted stores a fiscal literal — 2026-01 means fiscal October 2026, not January. Every date filter the model writes has to be translated through that.',
+    k: 'One graph, two products',
+    v: 'Each reporting module declares what it needs in configuration and the loader assembles the graph at runtime. The shared agent code has no branch for either product, which is what stopped the two from drifting apart.',
   },
   {
-    k: 'Hierarchies the schema does not name',
-    v: 'World Area to CoE to project class. A business glossary maps what a person says ("PSS Pune") to the column value the database holds, so the planner never invents a filter combination the schema rejects.',
+    k: 'Agents with one job each',
+    v: 'Extraction turns documents into structure. The SQL agent answers against the warehouse. Neither carries the other’s failure modes, so either can be replaced without touching the rest of the graph.',
   },
   {
-    k: 'Correctness over plausibility',
-    v: 'An LLM will happily produce SQL that parses and returns the wrong number. Validation runs at the AST level, and the answer carries its own methodology so a planner can check the working.',
-  },
-  {
-    k: 'State that does not bleed',
-    v: 'Checkpointing keeps a session’s context across turns without letting a previous turn’s filters — a stray LIMIT 2 — leak into the next question.',
+    k: 'Failure is a state, not an exception',
+    v: 'The validator is allowed to send work back. Because the retry loop is a node rather than a try/except, a bad generation is corrected inside the run instead of surfacing as an error.',
   },
 ];
 
-const ASKS = [
-  'What is FTE utilisation for PSS Pune next quarter?',
-  'Show demand against supply by CoE for FY26 P04–P06.',
-  'Which projects moved most on recovery this fiscal year?',
+const SNOP_NOTES = [
+  {
+    k: 'Intent before SQL',
+    v: 'The question is reduced to a typed intent before any query exists. Everything downstream operates on that structure, which is what makes the rest of the graph deterministic enough to test.',
+  },
+  {
+    k: 'Checked before it runs',
+    v: 'Generation and execution are separate stages with a parser between them. The query is validated at the level of its syntax tree, so structural faults are caught before the database is ever touched.',
+  },
+  {
+    k: 'Streamed, not awaited',
+    v: 'Answers arrive over server-sent events as they are produced, so a long-running stage reads as progress in the interface rather than as a spinner.',
+  },
+  {
+    k: 'Forecasting beside retrieval',
+    v: 'Demand and resource forecasting run on TimeGPT, benchmarked against classical SARIMA and SARIMAX baselines rather than adopted on faith.',
+  },
 ];
 
-const ExperienceDetail = () => {
+/* ------------------------------------------------------------------
+   Diagram plumbing.
+
+   Paths carry pathLength="1" so a single dashoffset tween draws any of
+   them regardless of real length. A second copy of each path, dashed
+   short, carries a charge along the same route once drawn — which is
+   how the picture says "pipeline" without a legend.
+   ------------------------------------------------------------------ */
+const useDiagram = (rootRef) => {
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+
+    const boxes = Array.from(root.querySelectorAll('.dg-box'));
+    const lines = Array.from(root.querySelectorAll('.dg-line'));
+    const pulses = Array.from(root.querySelectorAll('.dg-pulse'));
+
+    if (reduced()) {
+      gsap.set([...boxes, ...lines], { opacity: 1, strokeDashoffset: 0 });
+      gsap.set(pulses, { opacity: 0 });
+      return undefined;
+    }
+
+    const tl = gsap.timeline({
+      scrollTrigger: { trigger: root, start: 'top 78%', once: true },
+    });
+
+    tl.fromTo(boxes, { opacity: 0, scale: 0.94 }, {
+      opacity: 1, scale: 1, duration: 0.65, stagger: 0.06,
+      ease: 'swift', transformOrigin: 'center',
+    })
+      .fromTo(lines, { strokeDashoffset: 1 }, {
+        strokeDashoffset: 0, duration: 0.7, stagger: 0.05, ease: 'glide',
+      }, 0.25);
+
+    // The charge keeps running after the draw, on its own clock.
+    const charge = gsap.fromTo(
+      pulses,
+      { strokeDashoffset: 1 },
+      {
+        strokeDashoffset: -1,
+        duration: 2.6,
+        ease: 'none',
+        repeat: -1,
+        stagger: { each: 0.12, repeat: -1 },
+        scrollTrigger: { trigger: root, start: 'top 95%', end: 'bottom 5%', toggleActions: 'play pause resume pause' },
+      }
+    );
+
+    return () => {
+      tl.scrollTrigger?.kill();
+      tl.kill();
+      charge.scrollTrigger?.kill();
+      charge.kill();
+    };
+  }, [rootRef]);
+};
+
+const Node = ({ x, y, w, label, strong }) => (
+  <g className="dg-box">
+    <rect x={x} y={y} width={w} height={strong ? 56 : 46} rx={12} className={strong ? 'dg-rect dg-rect--strong' : 'dg-rect'} />
+    <text x={x + w / 2} y={y + (strong ? 34 : 29)} className="dg-label" textAnchor="middle">{label}</text>
+  </g>
+);
+
+const Edge = ({ d }) => (
+  <>
+    <path d={d} className="dg-line" pathLength="1" />
+    <path d={d} className="dg-pulse" pathLength="1" />
+  </>
+);
+
+const CommandCentreDiagram = () => {
+  const ref = useRef(null);
+  useDiagram(ref);
+
+  return (
+    <div className="dg" ref={ref}>
+      <svg viewBox="0 0 920 626" role="img" aria-label="Architecture of the PMO Command Centre: two configuration modules feed a config-driven loader, which assembles one shared agent graph; the graph fans out to an extraction agent and a SQL agent, both of which report to a validator that can send work back to the SQL agent before a report is produced.">
+        <Edge d="M260 74 V101 H460 V128" />
+        <Edge d="M660 74 V101 H460 V128" />
+        <Edge d="M460 174 V228" />
+        <Edge d="M460 284 V321 H230 V358" />
+        <Edge d="M460 284 V321 H690 V358" />
+        <Edge d="M230 404 V440 H460 V468" />
+        <Edge d="M690 404 V440 H460 V468" />
+        <Edge d="M460 514 V558" />
+        <Edge d="M580 491 H862 V381 H810" />
+
+        <Node x={150} y={28} w={220} label="POR module" />
+        <Node x={550} y={28} w={220} label="PPR module" />
+        <Node x={310} y={128} w={300} label="Config-driven loader" />
+        <Node x={260} y={228} w={400} label="Shared agent graph" strong />
+        <Node x={110} y={358} w={240} label="Extraction agent" />
+        <Node x={570} y={358} w={240} label="SQL agent" />
+        <Node x={340} y={468} w={240} label="Validator" />
+        <Node x={370} y={558} w={180} label="Report" />
+
+        <text x={872} y={430} className="dg-note" textAnchor="middle" transform="rotate(90 872 430)">
+          self-correcting retry
+        </text>
+      </svg>
+    </div>
+  );
+};
+
+const SnopDiagram = () => {
+  const ref = useRef(null);
+  useDiagram(ref);
+
+  return (
+    <div className="dg" ref={ref}>
+      <svg viewBox="0 0 920 410" role="img" aria-label="Architecture of the S&OP agent: a question passes through a guardrail, a conversation router and intent extraction, then an orchestrator, planner, SQL generator and an abstract-syntax-tree validator, before an executor, an output agent and a streamed response.">
+        <Edge d="M170 63 H230" />
+        <Edge d="M380 63 H440" />
+        <Edge d="M590 63 H650" />
+        <Edge d="M800 63 H862 V213 H800" />
+        <Edge d="M650 213 H590" />
+        <Edge d="M440 213 H380" />
+        <Edge d="M230 213 H170" />
+        <Edge d="M95 236 V340" />
+        <Edge d="M170 363 H230" />
+        <Edge d="M380 363 H440" />
+
+        <Node x={20} y={40} w={150} label="Question" />
+        <Node x={230} y={40} w={150} label="Guardrail" />
+        <Node x={440} y={40} w={150} label="Router" />
+        <Node x={650} y={40} w={150} label="Intent" />
+
+        <Node x={650} y={190} w={150} label="Orchestrator" />
+        <Node x={440} y={190} w={150} label="Planner" />
+        <Node x={230} y={190} w={150} label="SQL gen" />
+        <Node x={20} y={190} w={150} label="AST check" />
+
+        <Node x={20} y={340} w={150} label="Executor" />
+        <Node x={230} y={340} w={150} label="Output agent" />
+        <Node x={440} y={340} w={150} label="Stream" strong />
+      </svg>
+    </div>
+  );
+};
+
+const Chapter = ({ n, name, sub, lead, notes, diagram, tone }) => {
   const rootRef = useRef(null);
-  const titleRef = useRef(null);
-  const ruleRef = useRef(null);
-  const nodesRef = useRef(null);
-  const domainRef = useRef(null);
+  const nameRef = useRef(null);
+  const notesRef = useRef(null);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-    window.lenis?.scrollTo(0, { immediate: true, force: true });
-
     const fns = [
-      maskLines(titleRef.current, { trigger: false, stagger: 0.09 }),
-      drawRule(ruleRef.current, { trigger: rootRef.current, start: 'top 95%' }),
-      riseIn(nodesRef.current?.children, { trigger: nodesRef.current, start: 'top 85%', stagger: 0.06, y: 22 }),
-      riseIn(domainRef.current?.children, { trigger: domainRef.current, start: 'top 86%', stagger: 0.09, y: 26 }),
+      maskLines(nameRef.current, { trigger: rootRef.current, start: 'top 80%', stagger: 0.08 }),
+      riseIn(notesRef.current?.children, { trigger: notesRef.current, start: 'top 88%', stagger: 0.09, y: 24 }),
     ];
     return cleanup(fns);
   }, []);
 
   return (
-    <article ref={rootRef} className="case block block--flat" data-tone="paper">
-      <div className="shell case-shell">
-        <TransitionLink to="/#experience" className="case-back">
-          <ArrowLeft size={16} strokeWidth={2.4} /> Back to portfolio
-        </TransitionLink>
-
-        <header className="case-head">
-          <span className="eyebrow">Case study — Emerson</span>
-
-          <h1 ref={titleRef} className="display display--l case-title">
-            SNOP GenAI<br />Pipeline
-          </h1>
-
-          <p className="lead case-standfirst">
-            A multi-agent system that turns a natural-language business question into
-            a correct SQL query over Emerson&rsquo;s Sales &amp; Operations Planning
-            database — and returns the numbers, a chart, and its own reasoning.
-          </p>
-
-          <dl className="case-meta">
-            <div><dt className="mono">Organisation</dt><dd>Emerson</dd></div>
-            <div><dt className="mono">Role</dt><dd>PMO AI/ML Intern</dd></div>
-            <div><dt className="mono">Timeframe</dt><dd>Dec 2025 — Present</dd></div>
-            <div><dt className="mono">Status</dt><dd className="case-live">In production, actively maintained</dd></div>
-          </dl>
-
-          <span className="rule" ref={ruleRef} />
-
-          <ul className="case-stack">
-            {STACK.map((s) => <li key={s} className="tag">{s}</li>)}
-          </ul>
-        </header>
-
-        <section className="case-overview" data-tone="lilac">
-          <h2 className="mono case-kicker">The problem</h2>
-          <p className="lead">
-            S&amp;OP teams were hand-writing ad-hoc SQL to answer the same recurring
-            questions about workforce utilisation, demand and supply forecasting,
-            financial recovery and operational effectiveness. The schema is not
-            friendly: nuanced fiscal calendars, multi-dimensional hierarchies, and
-            business rules that live in people&rsquo;s heads rather than in columns.
-            Getting an LLM to write SQL is easy. Getting it to write SQL that is
-            <em> right</em> is the work.
-          </p>
-        </section>
-
-        <div className="case-grid">
-          <section className="case-col">
-            <h2 className="mono case-kicker">How a question becomes an answer</h2>
-            <ol className="case-nodes" ref={nodesRef}>
-              {NODES.map((n) => (
-                <li key={n.n} className="node">
-                  <span className="num node-n">{n.n}</span>
-                  <span className="node-k">{n.k}</span>
-                  <span className="node-v">{n.v}</span>
-                </li>
-              ))}
-            </ol>
-
-            <h2 className="mono case-kicker case-kicker--spaced">What made it hard</h2>
-            <div className="case-domain" ref={domainRef}>
-              {DOMAIN.map((d) => (
-                <div key={d.k} className="domain-card">
-                  <h3 className="domain-k">{d.k}</h3>
-                  <p className="body domain-v">{d.v}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <aside className="case-aside">
-            <div className="case-panel">
-              <span className="mono panel-label">things it gets asked</span>
-              <ul className="case-asks">
-                {ASKS.map((q) => (
-                  <li key={q}>
-                    <span className="ask-caret" aria-hidden="true">&rsaquo;</span>
-                    {q}
-                  </li>
-                ))}
-              </ul>
-              <p className="mono panel-note">
-                Each answer comes back with the table, a chart, and the
-                methodology behind the query that produced it.
-              </p>
-            </div>
-
-            <div className="case-panel case-code" data-tone="ink">
-              <span className="mono panel-label">pipeline_state.py</span>
-              <pre className="mono"><code>{`class PipelineState(TypedDict):
-    session_id: str
-    user_message: str
-    is_safe: bool
-    conversation_history: list[dict]
-    intents: list[IntentResult]
-    planned_tools: list[str]
-    sql_queries: dict[str, str]
-    query_results: dict[str, Any]
-    reasoning_trace: list[ReasoningEntry]
-    final_response: str
-    chart_config: ChartConfig | None`}</code></pre>
-              <p className="mono panel-note">
-                Checkpointed per session, so a follow-up keeps its context
-                without inheriting the last turn&rsquo;s filters.
-              </p>
-            </div>
-
-            <div className="case-panel case-next" data-tone="cyan">
-              <span className="mono panel-label">shipping next</span>
-              <p className="body">
-                A geopolitical-impact tool — web search wired into the same graph,
-                so the system can answer how current events move an industry and
-                Emerson&rsquo;s supply chain, not just what the database already knows.
-              </p>
-            </div>
-          </aside>
+    <section ref={rootRef} className="block cs-chapter" data-tone={tone}>
+      <div className="shell">
+        <div className="cs-chapter-head">
+          <span className="num cs-chapter-n">{n}</span>
+          <div>
+            <h2 ref={nameRef} className="display cs-chapter-name">{name}</h2>
+            <span className="mono cs-chapter-sub">{sub}</span>
+          </div>
         </div>
 
-        <TransitionLink to="/#experience" className="btn case-foot-cta">
-          Back to portfolio <span className="arrow" aria-hidden="true">→</span>
-        </TransitionLink>
+        <p className="lead cs-chapter-lead">{lead}</p>
+
+        {diagram}
+
+        <ul className="cs-notes" ref={notesRef}>
+          {notes.map((x) => (
+            <li key={x.k} className="cs-note">
+              <h3 className="cs-note-k">{x.k}</h3>
+              <p className="body cs-note-v">{x.v}</p>
+            </li>
+          ))}
+        </ul>
       </div>
+    </section>
+  );
+};
+
+const ExperienceDetail = () => {
+  const headRef = useRef(null);
+  const ruleRef = useRef(null);
+  const footRef = useRef(null);
+
+  useEffect(() => {
+    const fns = [
+      maskLines(headRef.current, { trigger: headRef.current, start: 'top 92%', stagger: 0.09 }),
+      drawRule(ruleRef.current, { start: 'top 95%' }),
+      riseIn(footRef.current?.children, { trigger: footRef.current, start: 'top 88%', stagger: 0.07, y: 20 }),
+    ];
+    return cleanup(fns);
+  }, []);
+
+  return (
+    <article className="cs">
+      <header className="block cs-hero" data-tone="paper">
+        <div className="shell">
+          <TransitionLink to="/#experience" className="cs-back">
+            <ArrowLeft size={15} strokeWidth={2.4} />
+            <span>Back to portfolio</span>
+          </TransitionLink>
+
+          <div className="cs-hero-meta">
+            <span className="eyebrow">Emerson · PMO AI/ML</span>
+            <span className="rule" ref={ruleRef} />
+            <span className="mono">Dec 2025 — Present</span>
+          </div>
+
+          <h1 ref={headRef} className="display display--hero cs-title">
+            Two graphs,<br />one footprint.
+          </h1>
+
+          <p className="lead cs-standfirst">
+            Two multi-agent systems built inside the same internship, on the same
+            Azure stack and the same agent conventions. What follows is the shape
+            of each one — the nodes, the edges and the decisions behind them.
+            The data they run on stays where it belongs.
+          </p>
+
+          <ul className="cs-footprint" ref={footRef}>
+            {FOOTPRINT.map((t) => <li key={t} className="tag">{t}</li>)}
+          </ul>
+        </div>
+      </header>
+
+      <Chapter
+        n="01"
+        tone="lilac"
+        name="PMO Command Centre"
+        sub="POR / PPR · one agent graph serving two reporting products"
+        lead="Two reporting products had grown two codebases that did nearly the same thing. Rebuilding them as one configurable graph removed the duplication without flattening the differences between them."
+        notes={POR_NOTES}
+        diagram={<CommandCentreDiagram />}
+      />
+
+      <Chapter
+        n="02"
+        tone="cyan"
+        name="S&OP Agent"
+        sub="Sales & Operations Planning · natural language to validated SQL"
+        lead="A planning question in plain English, turned into a query that has been checked before it runs, and answered with the reasoning attached rather than a bare number."
+        notes={SNOP_NOTES}
+        diagram={<SnopDiagram />}
+      />
+
+      <footer className="block cs-foot" data-tone="ink">
+        <div className="shell cs-foot-in">
+          <h2 className="display display--m cs-foot-head">
+            The architecture travels;<br />the data does not.
+          </h2>
+          <p className="body cs-foot-note">
+            Everything above is structure: how the graphs are composed, where
+            validation sits, and what happens when a generation is wrong. The
+            queries, the schema and the business content stay inside Emerson.
+          </p>
+          <TransitionLink to="/#experience" className="btn btn--mark cs-foot-cta">
+            Back to portfolio
+            <span className="arrow" aria-hidden="true">→</span>
+          </TransitionLink>
+        </div>
+      </footer>
 
       <style>{`
-        .case { min-height: 100svh; }
-        .case-shell {
-          display: flex;
-          flex-direction: column;
-          gap: clamp(2.5rem, 7vh, 4.5rem);
-          padding-top: clamp(6rem, 14vh, 9rem);
-        }
+        .cs { display: block; }
 
-        .case-back {
+        /* ---- hero ---- */
+        .cs-hero { padding-block: clamp(5.5rem, 14vh, 9rem) var(--bay); }
+        .cs-back {
           display: inline-flex;
           align-items: center;
-          gap: 0.5em;
-          align-self: flex-start;
-          padding: 0.6em 1.1em 0.65em 0.9em;
-          border-radius: 999px;
-          border: 1px solid var(--line);
+          gap: 0.5rem;
+          color: var(--ink-2);
+          font-family: var(--font-mono);
           font-size: var(--step--1);
-          font-weight: 500;
-          transition: border-color 0.3s var(--ease-out), color 0.3s var(--ease-out);
+          transition: color 0.35s var(--ease-out), gap 0.35s var(--ease-out);
         }
-        .case-back:hover { border-color: var(--mark); color: var(--mark); }
+        .cs-back:hover { color: var(--ink); gap: 0.75rem; }
 
-        .case-head { display: flex; flex-direction: column; gap: clamp(1.2rem, 3.5vh, 2rem); align-items: flex-start; }
-        .case-title { margin: 0; letter-spacing: -0.045em; }
-        .case-standfirst { max-width: 58ch; }
-        .case-meta { display: flex; flex-wrap: wrap; gap: 1.2rem 2.5rem; }
-        .case-meta dt {
-          color: var(--ink-3);
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
-          font-size: var(--step--2);
-          margin-bottom: 0.3rem;
-        }
-        .case-meta dd { font-size: var(--step--1); font-weight: 500; }
-        .case-live { color: var(--mark); }
-        .case-head .rule { width: 100%; flex: none; }
-        .case-stack { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-
-        .case-kicker {
-          color: var(--ink-3);
-          text-transform: uppercase;
-          letter-spacing: 0.14em;
-          font-size: var(--step--2);
-          margin-bottom: 1.2rem;
-        }
-        .case-kicker--spaced { margin-top: clamp(2.5rem, 7vh, 4rem); }
-
-        .case-overview {
-          padding: clamp(1.5rem, 4vw, 2.75rem);
-          border-radius: clamp(18px, 2.4vw, 28px);
-        }
-        .case-overview .lead { color: var(--ink); max-width: 64ch; }
-        .case-overview em { font-style: italic; color: var(--mark); }
-
-        .case-grid {
-          display: grid;
-          grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
-          gap: clamp(1.5rem, 4vw, 3.5rem);
-          align-items: start;
-        }
-
-        /* ---- the pipeline ---- */
-        .case-nodes { border-top: 1px solid var(--line); }
-        .node {
-          display: grid;
-          grid-template-columns: 2.4rem 11rem minmax(0, 1fr);
-          gap: 0.9rem;
-          align-items: baseline;
-          padding-block: 0.85rem;
-          border-bottom: 1px solid var(--line-2);
-          position: relative;
-        }
-        .node::before {
-          content: "";
-          position: absolute;
-          left: 0.55rem;
-          top: 2.1rem;
-          bottom: -0.3rem;
-          width: 1px;
-          background: var(--line);
-        }
-        .node:last-child::before { display: none; }
-        .node-n { color: var(--mark); font-size: var(--step--2); font-weight: 500; }
-        .node-k { font-weight: 600; font-size: var(--step--1); }
-        .node-v { color: var(--ink-2); font-size: var(--step--1); line-height: 1.6; }
-
-        /* ---- what made it hard ---- */
-        .case-domain { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem; }
-        .domain-card {
-          padding: 1.3rem 1.4rem;
-          border-radius: 18px;
-          border: 1px solid var(--line);
-          background: var(--paper-2);
-          transition: border-color 0.35s var(--ease-out);
-        }
-        .domain-card:hover { border-color: var(--mark); }
-        .domain-k { font-size: var(--step-0); font-weight: 600; margin-bottom: 0.5rem; letter-spacing: -0.01em; }
-        .domain-v { font-size: var(--step--1); }
-
-        /* ---- aside ---- */
-        .case-aside { display: flex; flex-direction: column; gap: 1rem; position: sticky; top: 5.5rem; }
-        .case-panel {
-          padding: 1.2rem 1.3rem 1.4rem;
-          border-radius: 18px;
-          border: 1px solid var(--line);
-          background: var(--paper-2);
-        }
-        .panel-label {
-          display: block;
-          color: var(--ink-3);
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
-          font-size: var(--step--2);
-          margin-bottom: 1.1rem;
-        }
-        .panel-note {
-          margin-top: 0.9rem;
-          padding-top: 0.9rem;
-          border-top: 1px solid var(--line);
-          color: var(--ink-3);
-          font-size: 0.68rem;
-          line-height: 1.6;
-        }
-        .case-asks { display: flex; flex-direction: column; gap: 0.7rem; }
-        .case-asks li {
+        .cs-hero-meta {
           display: flex;
-          gap: 0.6rem;
+          align-items: center;
+          gap: clamp(0.75rem, 2vw, 1.5rem);
+          margin-top: clamp(2rem, 6vh, 3.5rem);
+          color: var(--ink-3);
+        }
+        .cs-title {
+          margin: clamp(1.5rem, 4vh, 2.5rem) 0 0;
+          font-size: clamp(2.6rem, 9vw, 7.5rem);
+        }
+        .cs-standfirst { max-width: 56ch; margin-top: clamp(1.5rem, 4vh, 2.25rem); }
+        .cs-footprint {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.4rem;
+          margin-top: clamp(2rem, 5vh, 3rem);
+        }
+
+        /* ---- chapters ---- */
+        .cs-chapter-head {
+          display: flex;
+          align-items: flex-start;
+          gap: clamp(0.9rem, 2.5vw, 1.75rem);
+        }
+        .cs-chapter-n {
+          color: var(--mark);
+          font-size: clamp(1rem, 1.8vw, 1.25rem);
+          font-weight: 600;
+          padding-top: 0.45em;
+        }
+        .cs-chapter-name {
+          margin: 0;
+          font-size: clamp(2rem, 5.5vw, 4rem);
+          letter-spacing: -0.045em;
+        }
+        .cs-chapter-sub {
+          display: block;
+          margin-top: 0.7rem;
+          color: var(--ink-3);
           font-size: var(--step--1);
-          line-height: 1.55;
-          color: var(--ink);
         }
-        .case-asks li + li { padding-top: 0.7rem; border-top: 1px solid var(--line); }
-        .ask-caret { color: var(--mark); flex: none; font-weight: 600; }
-
-        .case-code { overflow-x: auto; }
-        .case-code pre { font-size: 0.72rem; line-height: 1.75; color: var(--ink-2); }
-        .case-code code { white-space: pre; }
-
-        .case-next .body { color: var(--ink); font-size: var(--step--1); }
-
-        .case-foot-cta { align-self: flex-start; margin-bottom: clamp(3rem, 10vh, 6rem); }
-
-        @media (max-width: 900px) {
-          .case-grid { grid-template-columns: 1fr; }
-          .case-aside { position: static; }
+        .cs-chapter-lead {
+          max-width: 58ch;
+          margin-top: clamp(1.25rem, 3.5vh, 2rem);
         }
-        @media (max-width: 560px) {
-          .node { grid-template-columns: 2rem minmax(0, 1fr); }
-          .node-v { grid-column: 2; }
-          .node::before { display: none; }
+
+        /* ---- diagram ---- */
+        .dg {
+          margin-top: clamp(2rem, 6vh, 3.5rem);
+          padding: clamp(1rem, 3vw, 2.25rem);
+          border-radius: clamp(18px, 2.2vw, 28px);
+          border: 1px solid var(--line);
+          background: var(--paper-2);
+          overflow-x: auto;
+        }
+        .dg svg { width: 100%; min-width: 580px; height: auto; overflow: visible; }
+
+        .dg-rect {
+          fill: var(--paper);
+          stroke: var(--line);
+          stroke-width: 1.25;
+        }
+        .dg-rect--strong {
+          fill: color-mix(in srgb, var(--mark) 12%, var(--paper));
+          stroke: var(--mark);
+          stroke-width: 1.75;
+        }
+        .dg-label {
+          fill: var(--ink);
+          font-family: var(--font-mono);
+          font-size: 15px;
+          letter-spacing: 0.01em;
+        }
+        .dg-note {
+          fill: var(--ink-3);
+          font-family: var(--font-mono);
+          font-size: 12px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+        .dg-line {
+          fill: none;
+          stroke: var(--line);
+          stroke-width: 1.5;
+          stroke-dasharray: 1;
+        }
+        /* A short dash chasing the same route — the charge. */
+        .dg-pulse {
+          fill: none;
+          stroke: var(--mark);
+          stroke-width: 2.25;
+          stroke-linecap: round;
+          stroke-dasharray: 0.07 0.93;
+          opacity: 0.85;
+        }
+
+        /* ---- notes ---- */
+        .cs-notes {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+          gap: 1px;
+          margin-top: clamp(2rem, 5vh, 3rem);
+          background: var(--line);
+          border: 1px solid var(--line);
+          border-radius: clamp(16px, 2vw, 24px);
+          overflow: hidden;
+        }
+        .cs-note {
+          padding: clamp(1.2rem, 2.4vw, 1.9rem);
+          background: var(--paper);
+          transition: background 0.4s var(--ease-out);
+        }
+        .cs-note:hover { background: var(--paper-2); }
+        .cs-note-k {
+          font-family: var(--font-display);
+          font-size: var(--step-1);
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          line-height: 1.15;
+        }
+        .cs-note-v { margin-top: 0.7rem; font-size: var(--step--1); }
+
+        /* ---- foot ---- */
+        .cs-foot { padding-block: clamp(4rem, 11vh, 7rem); }
+        .cs-foot-in { display: flex; flex-direction: column; align-items: flex-start; gap: 1.25rem; }
+        .cs-foot-head { margin: 0; letter-spacing: -0.04em; }
+        .cs-foot-note { max-width: 54ch; }
+        .cs-foot-cta { margin-top: 0.75rem; }
+
+        @media (max-width: 640px) {
+          .cs-chapter-n { padding-top: 0.2em; }
         }
       `}</style>
     </article>

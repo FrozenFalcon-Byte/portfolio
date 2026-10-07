@@ -8,9 +8,11 @@ const STATEMENT =
 
 const MARKERS = [
   { k: 'Discipline', v: 'AI & Machine Learning' },
+  { k: 'Studying', v: 'B.Tech CSE (AI/ML), VIIT Pune' },
+  { k: 'CGPA', v: '9.55 / 10' },
+  { k: 'Currently', v: 'PMO AI/ML Intern at Emerson' },
+  { k: 'Published', v: 'IEEE ICICIS 2026, co-author' },
   { k: 'Based in', v: 'Pune, India' },
-  { k: 'Currently', v: 'AI/ML Intern at Emerson' },
-  { k: 'Open to', v: 'Internships & collaboration' },
 ];
 
 const About = () => {
