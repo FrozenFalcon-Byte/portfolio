@@ -204,7 +204,7 @@ const Chapter = ({ n, name, sub, lead, notes, diagram, tone }) => {
   }, []);
 
   return (
-    <section ref={rootRef} className="block cs-chapter" data-tone={tone}>
+    <section ref={rootRef} className={`block cs-chapter cs-chapter--${n}`} data-tone={tone}>
       <div className="shell">
         <div className="cs-chapter-head">
           <span className="num cs-chapter-n">{n}</span>
@@ -279,7 +279,7 @@ const ExperienceDetail = () => {
 
       <Chapter
         n="01"
-        tone="lilac"
+        tone="paper"
         name="PMO Command Centre"
         sub="POR / PPR · one agent graph serving two reporting products"
         lead="Two reporting products had grown two codebases that did nearly the same thing. Rebuilding them as one configurable graph removed the duplication without flattening the differences between them."
@@ -289,7 +289,7 @@ const ExperienceDetail = () => {
 
       <Chapter
         n="02"
-        tone="cyan"
+        tone="paper"
         name="S&OP Agent"
         sub="Sales & Operations Planning · natural language to validated SQL"
         lead="A planning question in plain English, turned into a query that has been checked before it runs, and answered with the reasoning attached rather than a bare number."
@@ -349,7 +349,10 @@ const ExperienceDetail = () => {
           margin-top: clamp(2rem, 5vh, 3rem);
         }
 
-        /* ---- chapters ---- */
+        /* ---- chapters ----
+           Every chapter is on the same neutral tone now, so the block
+           stacking no longer separates them. A hairline does it instead. */
+        .cs-chapter { border-top: 1px solid var(--line); }
         .cs-chapter-head {
           display: flex;
           align-items: flex-start;

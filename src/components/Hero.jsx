@@ -139,8 +139,9 @@ const Hero = () => {
 
         <div className="hero-foot">
           <p className="hero-tagline lead">
-            AI/ML engineering student and developer. I specialise in generative AI,
-            multi-agent frameworks, and full-stack system architecture.
+            AI/ML engineering student building production generative AI —
+            multi-agent LangGraph pipelines, RAG, and MCP/A2A agent services,
+            shipped full-stack on FastAPI and React, deployed on Azure.
           </p>
 
           <div className="hero-acts" ref={asideRef}>

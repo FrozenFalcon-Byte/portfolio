@@ -4,7 +4,7 @@ import { splitChars, drawRule, riseIn, cleanup } from '../lib/motion';
 /* The statement lights up character by character under the scroll line —
    the reader sets the pace of their own introduction. */
 const STATEMENT =
-  'I build generative AI systems — multi-agent frameworks, retrieval pipelines, and the full-stack architecture that carries them into production.';
+  'I build production-grade generative AI systems — multi-agent LangGraph pipelines, retrieval, and MCP and A2A agent services — delivered as full-stack applications on FastAPI and React, and deployed on Azure.';
 
 const MARKERS = [
   { k: 'Discipline', v: 'AI & Machine Learning' },

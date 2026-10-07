@@ -387,26 +387,30 @@ html.lenis, html.lenis body { height: auto; }
 @media (hover: hover) and (pointer: fine) {
   body { cursor: none; }
   a, button, input, textarea, [role="button"] { cursor: none; }
-  .cursor-dot, .cursor-ring {
+  .cursor-field, .cursor-dot {
     position: fixed;
     top: 0; left: 0;
     z-index: 10000;
     pointer-events: none;
-    border-radius: 999px;
+    /* Applied after the JS transform, so it centres the element on its
+       own box whatever size the latch has tweened it to. */
     translate: -50% -50%;
-    will-change: transform;
+    will-change: transform, width, height;
   }
-  .cursor-dot { width: 7px; height: 7px; background: var(--mark); }
-  /* Difference blend so one ring reads on every block, light or dark,
+  /* Difference blend so one cursor reads on every block, light or dark,
      without a per-tone override. */
-  .cursor-ring {
-    width: 34px; height: 34px;
+  .cursor-field {
     border: 1.5px solid #FFF;
     mix-blend-mode: difference;
   }
+  .cursor-dot {
+    width: 5px; height: 5px;
+    border-radius: 999px;
+    background: var(--mark);
+  }
 }
 @media not all and (hover: hover) {
-  .cursor-dot, .cursor-ring { display: none; }
+  .cursor-field, .cursor-dot { display: none; }
 }
 
 /* ============================================================

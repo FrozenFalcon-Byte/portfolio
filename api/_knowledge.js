@@ -20,7 +20,7 @@ export const CHUNKS = [
     id: 'intro',
     title: 'Who Ajinkya is',
     section: 'About',
-    text: `Ajinkya Chavan is an AI/ML engineering student and developer based in Pune, India. He specialises in generative AI, multi-agent frameworks and full-stack system architecture: building the model layer and the application that carries it into production. He is studying B.Tech Computer Science and Engineering (AI/ML) at VIIT Pune with a CGPA of 9.55, is a co-author on an IEEE ICICIS 2026 paper, and is currently a PMO AI/ML intern at Emerson. He is open to further internships and collaboration, and can be reached at frozenfalcon8494@gmail.com.`,
+    text: `Ajinkya Chavan is an AI/ML engineering student and developer based in Pune, India. He builds production-grade generative AI systems — multi-agent LangGraph pipelines, retrieval-augmented generation, and MCP and A2A agent services — delivered as full-stack applications with FastAPI and React and deployed on Azure. He is studying B.Tech Computer Science and Engineering (AI/ML) at VIIT Pune with a CGPA of 9.55, is a co-author on an IEEE ICICIS 2026 paper, and is currently a PMO AI/ML intern at Emerson. He is open to further internships and collaboration, and can be reached at frozenfalcon8494@gmail.com.`,
   },
   {
     id: 'emerson-role',

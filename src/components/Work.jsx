@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowUpRight, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { gsap, maskLines, riseIn, drawRule, reduced, cleanup } from '../lib/motion';
+import { gsap, maskLines, riseIn, drawRule, reduced, fine, cleanup } from '../lib/motion';
 
-/* Each tile carries its own column span, so the grid is composed rather
-   than uniform — the newest systems get the room they need and the older
-   ones sit as a row of footnotes underneath. */
+/* The work reads as an index: one line per system, newest first. The
+   screenshot is not in the row — it rides the pointer, so the list stays
+   a list and the images still get to do their job. */
 const PROJECTS = [
   {
     id: 'finmcp',
@@ -328,38 +328,53 @@ const Splash = ({ index, from, onClose, onStep }) => {
   );
 };
 
-const Tile = ({ p, i, onOpen }) => {
+/* ------------------------------------------------------------------
+   Row — one system as a line in the index.
+
+   The hover state is CSS so it stays glued to the pointer; only the
+   entrance is tweened. The row is also what the splash flies out of,
+   so it keeps the `tile` class the panel measures.
+   ------------------------------------------------------------------ */
+const Row = ({ p, i, onOpen, onEnter, onLeave }) => {
   const rootRef = useRef(null);
 
   useEffect(() => cleanup([
-    riseIn(rootRef.current, { trigger: rootRef.current, start: 'top 92%', y: 36, delay: (i % 3) * 0.05 }),
+    riseIn(rootRef.current, { trigger: rootRef.current, start: 'top 94%', y: 30 }),
   ]), [i]);
 
   return (
     <button
       type="button"
       ref={rootRef}
-      className="tile"
+      className="tile idx-row"
       onClick={() => onOpen(i, rootRef.current)}
+      onPointerEnter={() => onEnter(i)}
+      onPointerLeave={onLeave}
+      onFocus={() => onEnter(i)}
+      onBlur={onLeave}
       aria-label={`Open ${p.title}`}
     >
-      <span className="tile-media">
+      {/* Wipes in from the left under the text rather than fading, so the
+          row reads as being swept rather than lit. */}
+      <span className="idx-wash" aria-hidden="true" />
+
+      <span className="num idx-n">{p.n}</span>
+
+      {/* Touch has no pointer to carry a preview, so the row keeps a
+          thumbnail of its own. */}
+      <span className="idx-thumb" aria-hidden="true">
         <img src={p.img} alt="" loading="lazy" />
       </span>
 
-      <span className="tile-foot">
-        <span className="tile-top">
-          <span className="num tile-n">{p.n}</span>
-          <span className="tag tile-kind">{p.kind}</span>
-        </span>
+      <span className="idx-main">
+        <span className="display idx-title">{p.title}</span>
+        <span className="idx-kind">{p.kind}</span>
+      </span>
 
-        <span className="display tile-title">{p.title}</span>
-        <span className="tile-desc">{p.desc}</span>
+      <span className="mono idx-meta">{p.meta}</span>
 
-        <span className="tile-open mono">
-          Open
-          <ArrowUpRight size={15} strokeWidth={2.6} />
-        </span>
+      <span className="idx-go" aria-hidden="true">
+        <ArrowUpRight size={18} strokeWidth={2.4} />
       </span>
     </button>
   );
@@ -371,7 +386,15 @@ const Work = () => {
   const headRef = useRef(null);
 
   const [open, setOpen] = useState(null);   // { index, from }
-  const returnRef = useRef(null);           // the tile that opened it
+  const returnRef = useRef(null);           // the row that opened it
+
+  /* The preview rides the pointer. It lives outside the rows so that
+     switching between them is a crossfade on one object rather than
+     seven elements appearing and disappearing. */
+  const previewRef = useRef(null);
+  const shotRefs = useRef([]);
+  const activeRef = useRef(-1);
+  const driveRef = useRef(null);
 
   useEffect(() => {
     const fns = [
@@ -379,6 +402,73 @@ const Work = () => {
       maskLines(headRef.current, { trigger: rootRef.current, start: 'top 76%', stagger: 0.08 }),
     ];
     return cleanup(fns);
+  }, []);
+
+  /* Pointer drive. quickTo keeps its own velocity between calls, so the
+     preview trails the cursor instead of being re-aimed every frame, and
+     the sway is taken straight from how fast the pointer is moving. */
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el || reduced() || !fine()) return undefined;
+
+    const x = gsap.quickTo(el, 'x', { duration: 0.52, ease: 'swift' });
+    const y = gsap.quickTo(el, 'y', { duration: 0.52, ease: 'swift' });
+    const rot = gsap.quickTo(el, 'rotate', { duration: 0.75, ease: 'swift' });
+
+    let lastX = 0;
+    const move = (e) => {
+      // Kept fully on screen: near an edge the frame slides along the
+      // pointer rather than hanging off it.
+      const half = el.offsetWidth / 2;
+      const halfH = el.offsetHeight / 2;
+      x(gsap.utils.clamp(half + 12, innerWidth - half - 12, e.clientX));
+      y(gsap.utils.clamp(halfH + 12, innerHeight - halfH - 12, e.clientY));
+      rot(gsap.utils.clamp(-13, 13, (e.clientX - lastX) * 0.7));
+      lastX = e.clientX;
+    };
+
+    window.addEventListener('pointermove', move, { passive: true });
+    driveRef.current = { x, y };
+    return () => window.removeEventListener('pointermove', move);
+  }, []);
+
+  const showPreview = useCallback((i) => {
+    const el = previewRef.current;
+    if (!el || reduced() || !fine()) return;
+    if (activeRef.current === i) return;
+
+    const shots = shotRefs.current.filter(Boolean);
+    gsap.to(shots, { opacity: 0, duration: 0.25, ease: 'none', overwrite: 'auto' });
+    gsap.fromTo(
+      shots[i],
+      { opacity: 0, scale: 1.12 },
+      { opacity: 1, scale: 1, duration: 0.55, ease: 'swift', overwrite: 'auto' }
+    );
+
+    if (activeRef.current === -1) {
+      // First row of a sweep: open the aperture rather than fading a
+      // rectangle in, which is how the rest of the site reveals media.
+      gsap.fromTo(
+        el,
+        { clipPath: 'inset(46% 8% round 18px)', opacity: 0, scale: 0.92 },
+        { clipPath: 'inset(0% 0% round 18px)', opacity: 1, scale: 1, duration: 0.62, ease: 'swift', overwrite: 'auto' }
+      );
+    }
+    activeRef.current = i;
+  }, []);
+
+  const hidePreview = useCallback(() => {
+    const el = previewRef.current;
+    if (!el || reduced() || !fine()) return;
+    activeRef.current = -1;
+    gsap.to(el, {
+      clipPath: 'inset(46% 8% round 18px)',
+      opacity: 0,
+      scale: 0.92,
+      duration: 0.4,
+      ease: 'swift',
+      overwrite: 'auto',
+    });
   }, []);
 
   const openAt = (index, el) => {
@@ -429,13 +519,27 @@ const Work = () => {
           Seven systems.<br />Open any of them.
         </h2>
 
-        <div className="mosaic">
+        <div className="idx" onPointerLeave={hidePreview}>
           {PROJECTS.map((p, i) => (
-            <div key={p.id} id={`tile-${p.id}`} className="mosaic-cell" style={{ '--span': p.span }}>
-              <Tile p={p} i={i} onOpen={openAt} />
+            <div key={p.id} id={`tile-${p.id}`} className="idx-slot">
+              <Row p={p} i={i} onOpen={openAt} onEnter={showPreview} onLeave={hidePreview} />
             </div>
           ))}
         </div>
+      </div>
+
+      {/* One frame, seven images, crossfaded. It sits outside the list so
+          the rows never have to reflow around it. */}
+      <div className="idx-preview" ref={previewRef} aria-hidden="true">
+        {PROJECTS.map((p, i) => (
+          <img
+            key={p.id}
+            src={p.img}
+            alt=""
+            loading="lazy"
+            ref={(el) => { shotRefs.current[i] = el; }}
+          />
+        ))}
       </div>
 
       {/* No key on Splash: stepping between projects must keep the same
@@ -453,92 +557,130 @@ const Work = () => {
         .work-count { color: var(--ink-3); white-space: nowrap; }
         .work-lede { margin: 0 0 clamp(2.5rem, 7vh, 4rem); max-width: 16ch; letter-spacing: -0.04em; }
 
-        /* ---- mosaic ---- */
-        .mosaic {
-          display: grid;
-          grid-template-columns: repeat(12, minmax(0, 1fr));
-          gap: clamp(0.75rem, 1.6vw, 1.4rem);
-        }
-        .mosaic-cell { grid-column: span var(--span); min-width: 0; }
+        /* ---- the index ---- */
+        .idx { border-top: 1px solid var(--line); }
+        .idx-slot { min-width: 0; }
 
-        .tile {
-          display: flex;
-          flex-direction: column;
-          width: 100%;
-          height: 100%;
-          padding: clamp(0.7rem, 1.1vw, 1rem);
-          text-align: left;
-          border-radius: clamp(18px, 2vw, 26px);
-          border: 1px solid var(--line);
-          background: var(--paper);
-          cursor: pointer;
-          overflow: hidden;
-          transition:
-            border-color 0.45s var(--ease-out),
-            background 0.45s var(--ease-out),
-            transform 0.5s var(--ease-out);
-        }
-        .tile:hover { border-color: var(--mark); background: var(--paper-2); transform: translateY(-4px); }
-        .tile:focus-visible { outline-offset: 4px; }
-
-        .tile-media {
+        .idx-row {
           position: relative;
-          display: block;
-          aspect-ratio: 16 / 10;
-          border-radius: clamp(12px, 1.4vw, 18px);
-          overflow: hidden;
-          background: var(--paper-3);
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto auto;
+          align-items: center;
+          gap: clamp(1rem, 3vw, 2.5rem);
+          width: 100%;
+          padding: clamp(1.1rem, 2.6vh, 1.9rem) clamp(0.5rem, 1.5vw, 1.25rem);
+          text-align: left;
+          border-bottom: 1px solid var(--line);
+          background: none;
+          isolation: isolate;
+        }
+        .idx-row:focus-visible { outline-offset: -3px; }
+
+        /* The wash sits behind everything in the row and wipes in. */
+        .idx-wash {
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          background: var(--paper-2);
+          transform: scaleX(0);
+          transform-origin: left;
+          transition: transform 0.62s var(--ease-out);
+        }
+        .idx-row:hover .idx-wash,
+        .idx-row:focus-visible .idx-wash { transform: scaleX(1); }
+
+        .idx-n {
           flex: none;
+          color: var(--ink-3);
+          font-size: var(--step--1);
+          font-weight: 500;
+          transition: color 0.4s var(--ease-out);
         }
-        .tile-media img {
-          width: 100%; height: 100%;
-          object-fit: cover;
-          transition: transform 0.9s var(--ease-out);
-        }
-        .tile:hover .tile-media img { transform: scale(1.05); }
+        .idx-row:hover .idx-n { color: var(--mark); }
 
-        .tile-foot {
+        /* Desktop carries the preview on the pointer, so the row's own
+           thumbnail only exists where there is no pointer to carry it. */
+        .idx-thumb { display: none; }
+
+        .idx-main {
           display: flex;
-          flex-direction: column;
-          gap: 0.55rem;
-          flex: 1;
-          padding: clamp(0.9rem, 1.6vw, 1.25rem) clamp(0.35rem, 0.8vw, 0.6rem) clamp(0.3rem, 0.6vw, 0.5rem);
+          align-items: baseline;
+          flex-wrap: wrap;
+          gap: 0.4rem 1.1rem;
+          min-width: 0;
+          transition: transform 0.55s var(--ease-out);
         }
-        .tile-top { display: flex; align-items: center; gap: 0.65rem; min-width: 0; }
-        .tile-n { color: var(--mark); font-size: var(--step--2); font-weight: 600; flex: none; }
-        .tile-kind {
-          background: color-mix(in srgb, var(--ink) 7%, transparent);
-          border-color: transparent;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+        .idx-row:hover .idx-main { transform: translateX(clamp(6px, 1vw, 14px)); }
 
-        .tile-title {
-          font-family: var(--font-display);
-          font-weight: 800;
-          font-size: clamp(1.25rem, 2.4vw, 2rem);
-          letter-spacing: -0.035em;
-          line-height: 1.05;
+        .idx-title {
+          font-size: clamp(1.5rem, 4.2vw, 3.1rem);
+          letter-spacing: -0.04em;
+          line-height: 1.02;
         }
-        .tile-desc {
+        .idx-kind {
           color: var(--ink-2);
           font-size: var(--step--1);
-          line-height: 1.6;
-          max-width: 46ch;
         }
-        .tile-open {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.4rem;
-          margin-top: auto;
-          padding-top: 0.75rem;
+
+        .idx-meta {
           color: var(--ink-3);
           font-size: var(--step--2);
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
-          transition: color 0.4s var(--ease-out), gap 0.4s var(--ease-out);
+          white-space: nowrap;
+          opacity: 0.65;
+          transition: opacity 0.4s var(--ease-out);
         }
-        .tile:hover .tile-open { color: var(--mark); gap: 0.65rem; }
+        .idx-row:hover .idx-meta { opacity: 1; }
+
+        .idx-go {
+          display: grid;
+          place-items: center;
+          width: clamp(2.2rem, 4vw, 2.9rem);
+          aspect-ratio: 1;
+          flex: none;
+          border-radius: 999px;
+          border: 1px solid var(--line);
+          color: var(--ink-2);
+          transition:
+            transform 0.5s var(--ease-out),
+            background 0.4s var(--ease-out),
+            color 0.4s var(--ease-out),
+            border-color 0.4s var(--ease-out);
+        }
+        .idx-row:hover .idx-go {
+          transform: rotate(45deg) scale(1.08);
+          background: var(--mark);
+          border-color: transparent;
+          color: #FFF;
+        }
+        [data-theme="dark"] .idx-row:hover .idx-go { color: #101403; }
+
+        /* ---- the pointer-borne preview ---- */
+        .idx-preview {
+          position: fixed;
+          top: 0; left: 0;
+          z-index: 20;
+          width: clamp(240px, 23vw, 380px);
+          aspect-ratio: 16 / 10;
+          /* Applied after the GSAP transform, so x/y centre the frame. */
+          translate: -50% -50%;
+          border-radius: 18px;
+          overflow: hidden;
+          pointer-events: none;
+          opacity: 0;
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+          clip-path: inset(46% 8% round 18px);
+        }
+        .idx-preview img {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          opacity: 0;
+        }
+        @media not all and (hover: hover) {
+          .idx-preview { display: none; }
+        }
 
         /* ---- splash ---- */
         .splash-root { position: fixed; inset: 0; z-index: 9000; }
@@ -646,15 +788,33 @@ const Work = () => {
         .splash-link { padding: 0.75em 1.2em; font-size: var(--step--1); }
 
         /* ---- narrower ---- */
-        @media (max-width: 1100px) {
-          .mosaic-cell { grid-column: span 6; }
+        @media (max-width: 860px) {
+          .idx-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+          .idx-meta { display: none; }
         }
         @media (max-width: 920px) {
           .splash-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 0.8fr) minmax(0, 1.2fr); }
           .splash-media { border-right: 0; border-bottom: 1px solid var(--line); }
         }
         @media (max-width: 680px) {
-          .mosaic-cell { grid-column: span 12; }
+          .idx-row {
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 0.75rem 1rem;
+            align-items: center;
+          }
+          .idx-thumb {
+            display: block;
+            grid-row: 1 / span 2;
+            width: clamp(68px, 22vw, 96px);
+            aspect-ratio: 16 / 10;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+          }
+          .idx-thumb img { width: 100%; height: 100%; object-fit: cover; }
+          .idx-n { grid-column: 2; }
+          .idx-main { grid-column: 2; }
+          .idx-go { display: none; }
           .splash-body { grid-template-rows: minmax(0, 0.6fr) minmax(0, 1.4fr); }
         }
       `}</style>
