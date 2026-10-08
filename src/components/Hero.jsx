@@ -144,16 +144,16 @@ const Console = () => {
 };
 
 /* ------------------------------------------------------------------
-   Side — the empty half beside the name, put to work as a short
-   timeline: where he is, what comes next, what he is open to. Each
-   step is a stop on one rail in its own accent; the current one
-   pulses. Above it, Pune's time with a ticking colon, so the page
-   knows when it is being read.
+   Side — the empty half beside the name. Where he is, what comes next
+   and what he is open to, as three tiles in their own accents laid
+   over each other like stickers on a laptop lid. Each sits a little
+   crooked; pointing at one straightens it and lifts it to the top of
+   the pile. Pune's time rides on the pile as a small ink tab.
    ------------------------------------------------------------------ */
 const STEPS = [
-  { k: 'Now', v: 'AI / ML intern', s: 'Emerson, PMO · since Dec ’25', acc: 'blue', live: true },
-  { k: 'Next', v: 'B.Tech, AI / ML', s: 'VIIT Pune · class of 2027', acc: 'yellow' },
-  { k: 'Open to', v: 'Full-time AI roles', s: 'Agents, RAG, ML systems', acc: 'lime' },
+  { k: 'Now', v: 'AI / ML intern', s: 'Emerson, PMO · since Dec ’25', acc: 'blue', rot: -3, x: '0rem', live: true },
+  { k: 'Next', v: 'B.Tech, AI / ML', s: 'VIIT Pune · class of 2027', acc: 'yellow', rot: 2.5, x: '1.6rem' },
+  { k: 'Open to', v: 'Full-time AI roles', s: 'Agents, RAG, ML systems', acc: 'lime', rot: -1.5, x: '0.5rem' },
 ];
 
 const Side = () => {
@@ -167,16 +167,23 @@ const Side = () => {
   }, []);
   return (
     <aside className="hero-side" aria-label="Status">
-      <p className="hs-clock">
+      <p className="hs-clock" data-surface="ink">
         <span className="hs-city">Pune</span>
         <span className="num hs-time">{hm[0]}<i>:</i>{hm[1]}</span>
-        <span className="hs-tz">IST</span>
       </p>
-      <ol className="hs-steps">
-        {STEPS.map((x) => (
-          <li key={x.k} className={`hs-step${x.live ? ' is-live' : ''}`} data-acc={x.acc}>
-            <span className="hs-dot" aria-hidden="true" />
-            <span className="hs-k">{x.k}</span>
+      <ol className="hs-pile">
+        {STEPS.map((x, i) => (
+          <li
+            key={x.k}
+            className="hs-tile"
+            data-acc={x.acc}
+            style={{ '--rot': `${x.rot}deg`, '--x': x.x, zIndex: STEPS.length - i }}
+          >
+            <span className="hs-k">
+              {x.live && <i className="hs-live" aria-hidden="true" />}
+              {x.k}
+              <span className="num hs-i">{String(i + 1).padStart(2, '0')}</span>
+            </span>
             <span className="display hs-v">{x.v}</span>
             <span className="hs-s">{x.s}</span>
           </li>
@@ -198,7 +205,8 @@ const Hero = () => {
   useEffect(() => {
     const root = rootRef.current;
     const glyphs = root.querySelectorAll('.hero-shell .glyph');
-    const furniture = root.querySelectorAll('.hero-ctas, .hs-clock, .hs-step');
+    const furniture = root.querySelectorAll('.hero-ctas');
+    const tiles = root.querySelectorAll('.hs-clock, .hs-tile');
     const card = root.querySelector('.hero-reel');
 
     if (reduced()) return undefined;
@@ -210,13 +218,18 @@ const Hero = () => {
     ];
     gsap.set(glyphs, { '--open': 0 });
     gsap.set(furniture, { y: 24, opacity: 0 });
+    gsap.set(tiles, { y: 120, opacity: 0, rotate: (i) => (i % 2 ? 14 : -14) });
     gsap.set(card, { y: 160 });
 
     const play = () => {
       start?.();
       gsap.timeline({ defaults: { ease: EASE.swift } })
         .to(glyphs, { '--open': 1, duration: 1.1, stagger: 0.12, ease: EASE.glide }, 0.55)
-        .to(furniture, { y: 0, opacity: 1, duration: 0.9, stagger: 0.09 }, 0.45)
+        .to(furniture, { y: 0, opacity: 1, duration: 0.9, stagger: 0.06 }, 0.3)
+        .to(tiles, {
+          y: 0, opacity: 1, rotate: 0, duration: 1.1, stagger: 0.1, ease: 'back.out(1.4)',
+          clearProps: 'transform,opacity',
+        }, 0.6)
         .to(card, { y: 0, duration: 1.3, ease: EASE.glide }, 0.5);
     };
 
@@ -318,54 +331,48 @@ const Hero = () => {
         .hero-shell { flex: 1; display: flex; flex-direction: column; justify-content: center; }
         .hero-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; }
 
-        /* ---- side timeline ---- */
-        .hero-side { flex: none; width: clamp(15rem, 21vw, 21rem); padding-top: 0.6rem; }
-        .hs-clock { display: flex; align-items: baseline; gap: 0.5rem; padding-bottom: 1rem; margin-bottom: 1.1rem; border-bottom: 1px solid var(--line-2); color: var(--ink-3); font-size: var(--step--1); }
-        .hs-time { font-size: var(--step-2); color: var(--ink); letter-spacing: -0.03em; }
-        .hs-time i { font-style: normal; animation: ex-blink 2s steps(2) infinite; }
-        .hs-city { color: var(--ink-2); font-weight: 600; }
-        .hs-tz { margin-left: auto; }
-        .hs-steps { position: relative; display: grid; gap: clamp(0.9rem, 2.4svh, 1.4rem); }
-        .hs-steps::before { content: ""; position: absolute; left: 6px; top: 0.6rem; bottom: 0.6rem; width: 2px; border-radius: 2px; background: var(--line-2); }
-        .hs-step {
-          position: relative;
-          display: grid;
-          grid-template-columns: 14px minmax(0, 1fr);
-          column-gap: 1rem;
-          cursor: default;
-        }
-        .hs-dot {
-          grid-row: 1 / 4;
-          position: relative;
-          width: 14px; height: 14px; margin-top: 0.15rem;
-          border-radius: 99px;
-          background: var(--paper);
-          border: 2.5px solid var(--acc);
-          transition: background 0.3s, transform 0.5s var(--ease-out);
-        }
-        .hs-step.is-live .hs-dot { background: var(--acc); }
-        .hs-step.is-live .hs-dot::after {
-          content: ""; position: absolute; inset: -6px;
-          border-radius: inherit; border: 2px solid var(--acc);
-          animation: hs-ping 1.8s var(--ease-out) infinite;
-        }
-        @keyframes hs-ping { from { transform: scale(0.5); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
-        .hs-k { font-size: var(--step--1); color: var(--ink-3); font-weight: 500; }
-        .hs-v {
-          justify-self: start;
-          font-size: clamp(1.1rem, 1.55vw, 1.55rem); font-weight: 650; letter-spacing: -0.035em; line-height: 1.1;
+        /* ---- side: a pile of tiles ---- */
+        .hero-side { flex: none; width: clamp(15rem, 21vw, 20rem); padding-top: 0.4rem; margin-right: 1.6rem; }
+        .hs-clock {
+          display: inline-flex; align-items: baseline; gap: 0.55rem;
+          margin: 0 0 -0.6rem 1.4rem;
+          padding: 0.55rem 1rem 1.1rem;
+          border-radius: 18px 18px 0 0;
+          background: var(--paper); color: var(--ink);
+          font-size: var(--step--1);
           position: relative; z-index: 0;
         }
-        .hs-v::after {
-          content: ""; position: absolute; z-index: -1;
-          left: -0.05em; right: -0.05em; bottom: 0.08em; height: 0.38em;
-          background: var(--acc); border-radius: 0.08em;
-          transform: scaleX(0); transform-origin: left;
-          transition: transform 0.5s var(--ease-out);
+        .hs-city { color: var(--ink-3); font-weight: 600; }
+        .hs-time { font-size: var(--step-1); letter-spacing: -0.03em; }
+        .hs-time i { font-style: normal; animation: ex-blink 2s steps(2) infinite; }
+        .hs-pile { position: relative; z-index: 1; display: grid; }
+        .hs-tile {
+          position: relative;
+          display: grid;
+          gap: 0.2rem;
+          padding: 1rem 1.2rem 1.1rem;
+          margin-top: -0.5rem;
+          border-radius: 22px;
+          background: var(--acc);
+          color: var(--acc-ink);
+          box-shadow: 0 0 0 3px var(--paper);
+          transform: translateX(var(--x)) rotate(var(--rot));
+          transition: transform 0.6s var(--ease-out);
+          cursor: default;
         }
-        .hs-s { font-size: var(--step--1); color: var(--ink-2); margin-top: 0.15rem; }
-        .hs-step:hover .hs-dot { background: var(--acc); transform: scale(1.3); }
-        .hs-step:hover .hs-v::after { transform: scaleX(1); }
+        .hs-tile:first-child { margin-top: 0; }
+        .hs-tile:hover { transform: translateX(var(--x)) rotate(0deg) translateY(-6px) scale(1.04); z-index: 5 !important; }
+        .hs-k { display: flex; align-items: center; gap: 0.45rem; font-size: var(--step--1); font-weight: 600; opacity: 0.8; }
+        .hs-i { margin-left: auto; font-size: 0.75rem; opacity: 0.7; }
+        .hs-live { position: relative; width: 8px; height: 8px; border-radius: 99px; background: currentColor; }
+        .hs-live::after {
+          content: ""; position: absolute; inset: -4px;
+          border-radius: inherit; border: 2px solid currentColor;
+          animation: hs-ping 1.8s var(--ease-out) infinite;
+        }
+        @keyframes hs-ping { from { transform: scale(0.5); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+        .hs-v { font-size: clamp(1.25rem, 1.7vw, 1.7rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; }
+        .hs-s { font-size: var(--step--1); opacity: 0.75; }
         @media (max-width: 1180px) { .hero-side { display: none; } }
 
         .hero-name {
