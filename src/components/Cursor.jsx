@@ -19,9 +19,12 @@ import { gsap, EASE, fine, reduced } from '../lib/motion';
    hand can be built from plain rounded rectangles without seams.
 
    The shapes sit exactly on the hotspot — nothing about the pointer
-   itself lags. What is allowed to be late is the label chip under it,
-   which trails on a spring and names the thing you are about to open.
-   Colours come off the section under the pointer.
+   lags. Pinned to the tip is plnty's name tag: a small ink chip,
+   squared off at the corner that touches the pointer, reading "You"
+   like a multiplayer cursor. Over anything with somewhere to go it
+   says where instead, with an arrow; the text rolls over in place
+   and the chip eases to its new width, so it never jumps. Colours
+   come off the section under the pointer.
    ------------------------------------------------------------------ */
 const HOT = 'a, button, [role="button"], summary, label, select, [data-cursor="hot"]';
 const TEXT = 'input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, [contenteditable="true"], [data-cursor="text"]';
@@ -31,6 +34,7 @@ const labelFor = (el) => {
   if (given) return given;
   if (el.matches('a[download]')) return 'Download';
   if (el.matches('a[target="_blank"]')) return 'Visit';
+  if (el.matches('a[href^="mailto:"]')) return 'Email';
   return '';
 };
 
@@ -66,6 +70,7 @@ const Cursor = () => {
   const rootRef = useRef(null);
   const chipRef = useRef(null);
   const labelRef = useRef(null);
+  const measureRef = useRef(null);
   const tiltRef = useRef(null);
 
   useEffect(() => {
@@ -77,12 +82,12 @@ const Cursor = () => {
     const root = rootRef.current;
     const chip = chipRef.current;
     const label = labelRef.current;
+    const measure = measureRef.current;
     const tiltEl = tiltRef.current;
     document.body.classList.add('has-cursor');
 
     const ptr = { x: innerWidth / 2, y: innerHeight / 2 };
     const last = { x: ptr.x, y: ptr.y };
-    const trail = { x: 0, y: 0 };
     const tilt = { a: 0, v: 0 };
     const s = { scale: 1 };
 
@@ -113,18 +118,30 @@ const Cursor = () => {
       st.setProperty('--cur-paper', cs.getPropertyValue('--paper').trim() || '#FFFFFF');
     };
 
-    let chipOn = false;
-    const setChip = (text) => {
-      if (text) {
-        label.textContent = text;
-        if (!chipOn) gsap.fromTo(chip, { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.45, ease: 'back.out(2.2)', overwrite: true });
-        chipOn = true;
-      } else if (chipOn) {
-        chipOn = false;
-        gsap.to(chip, { scale: 0.3, opacity: 0, duration: 0.22, ease: EASE.swift, overwrite: true });
-      }
+    /* The tag. Its width is measured off a hidden twin and eased, and
+       the new words roll up from under the old ones. */
+    const YOU = 'You';
+    let said = '';
+    let arrow = null;
+    const sizeTo = (text, withArrow) => {
+      measure.textContent = text;
+      const w = Math.ceil(measure.offsetWidth) + 24 + (withArrow ? 16 : 0);
+      chip.style.width = `${w}px`;
     };
-
+    const say = (text, withArrow) => {
+      const next = text || YOU;
+      if (next === said && withArrow === arrow) return;
+      const first = !said;
+      said = next; arrow = withArrow;
+      chip.toggleAttribute('data-arrow', withArrow);
+      sizeTo(next, withArrow);
+      label.textContent = next;
+      if (first || still) return;
+      label.classList.remove('is-roll');
+      void label.offsetWidth;          // restart the roll
+      label.classList.add('is-roll');
+    };
+    const setChip = (text, el) => say(text, !!text && !!el?.matches?.('a, [data-cursor-arrow]'));
     /* State is read off whatever is actually under the hotspot, every
        few frames and on every scroll — content moves under a still
        pointer, sheets close, buttons unmount — so the cursor can never
@@ -141,7 +158,7 @@ const Cursor = () => {
       const h = el.closest?.(HOT);
       hot = !!h;
       setState(hot ? (down ? 'press' : 'hand') : 'arrow');
-      setChip(h ? labelFor(h) : '');
+      setChip(h ? labelFor(h) : '', h);
     };
     const probe = () => evaluate(document.elementFromPoint(ptr.x, ptr.y));
 
@@ -155,7 +172,9 @@ const Cursor = () => {
       root.style.opacity = on ? '1' : '0';
     };
     gsap.set(root, { opacity: 0 });
-    gsap.set(chip, { scale: 0.3, opacity: 0 });
+    // Fonts change the measured width, so the tag is sized once they land.
+    say('', false);
+    document.fonts?.ready.then(() => sizeTo(said, arrow));
 
     const onMove = (e) => { ptr.x = e.clientX; ptr.y = e.clientY; show(true); };
     const onOver = (e) => evaluate(e.target);
@@ -182,8 +201,7 @@ const Cursor = () => {
       if (shown && frame % 5 === 0) { if (under && !under.isConnected) under = undefined; probe(); }
 
       const vx = ptr.x - last.x;
-      const vy = ptr.y - last.y;
-      last.x = ptr.x; last.y = ptr.y;
+        last.x = ptr.x; last.y = ptr.y;
 
       // The shape leans into its own travel on a spring and settles
       // back upright.
@@ -192,15 +210,8 @@ const Cursor = () => {
       tilt.v *= 0.8;
       tilt.a += tilt.v;
 
-      // The chip is dragged behind by the motion and springs back.
-      const k = still ? 0 : 2.2;
-      trail.x += (gsap.utils.clamp(-40, 40, -vx * k) - trail.x) * 0.18 * dt;
-      trail.y += (gsap.utils.clamp(-40, 40, -vy * k) - trail.y) * 0.18 * dt;
-
       root.style.transform = `translate3d(${ptr.x}px, ${ptr.y}px, 0)`;
       tiltEl.style.transform = `rotate(${state === 'beam' ? tilt.a * 0.3 : tilt.a}deg) scale(${s.scale})`;
-      chip.style.translate = `${trail.x}px ${trail.y}px`;
-      chip.style.rotate = `${tilt.a * 0.5}deg`;
     };
 
     gsap.ticker.add(tick);
@@ -250,8 +261,11 @@ const Cursor = () => {
 
       <span className="cur-chip" ref={chipRef}>
         <span className="cur-chip-label" ref={labelRef} />
-        <i className="cur-chip-dot" />
+        <svg className="cur-chip-arrow" viewBox="0 0 10 10" width="10" height="10">
+          <path d="M2 8 L8 2 M3.2 2 H8 V6.8" />
+        </svg>
       </span>
+      <span className="cur-chip-measure" ref={measureRef} />
     </div>
   );
 };

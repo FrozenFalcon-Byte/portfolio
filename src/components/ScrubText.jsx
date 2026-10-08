@@ -32,7 +32,10 @@ const ScrubText = ({ tokens, className = '', start = 'top 78%', end = 'bottom 58
     items.forEach((it, i) => {
       const at = i * 0.35;
       if (it.classList.contains('glyph')) {
-        tl.fromTo(it, { '--open': 0 }, { '--open': 1, duration: 1.4, ease: 'power2.out' }, at);
+        // The glyph's room is kept from the start and it scales up into
+        // it: animating its width would re-wrap the whole paragraph on
+        // every frame of the scroll, which is what made it judder.
+        tl.fromTo(it, { '--open': 1, scale: 0.2, opacity: 0, rotate: -8 }, { scale: 1, opacity: 1, rotate: 0, duration: 1.2, ease: 'back.out(1.6)' }, at);
       } else {
         tl.fromTo(it, { opacity: 0.14, y: '0.1em' }, { opacity: 1, y: 0, duration: 0.6, ease: 'none' }, at);
         if (it.classList.contains('hl')) {

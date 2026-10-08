@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowDownRight, ArrowUpRight, Download } from 'lucide-react';
 import {
-  gsap, EASE, linesIn, scrambleHover, magnetic, reduced, cleanup,
+  gsap, EASE, linesIn, scrambleHover, magnetic, reduced, cleanup, fx, fx0,
 } from '../lib/motion';
 import Glyph from './Glyph';
 import Mark from './Mark';
@@ -143,6 +143,89 @@ const Console = () => {
   );
 };
 
+/* ------------------------------------------------------------------
+   Side — the status card in the space beside the name.
+
+   One rounded card, not a list: Pune's time across the top, then a
+   three-way switch — Now, Next, Open to — and one large answer under
+   it. The switch runs itself, a bar filling in the live segment, and
+   the answer blurs out and the next one rises in under the old one;
+   hovering a segment takes the wheel. Each status brings its own
+   accent with it.
+   ------------------------------------------------------------------ */
+const STEPS = [
+  { k: 'Now', v: 'AI / ML intern', s: 'Emerson, PMO · since Dec ’25', acc: 'blue', glyph: 'graph' },
+  { k: 'Next', v: 'B.Tech, AI / ML', s: 'VIIT Pune · class of 2027', acc: 'yellow', glyph: 'type' },
+  { k: 'Open to', v: 'Full-time AI roles', s: 'Agents, RAG, ML systems', acc: 'lime', glyph: 'ship' },
+];
+const HOLD = 4.2;
+
+const Side = () => {
+  const rootRef = useRef(null);
+  const bodyRef = useRef(null);
+  const [hm, setHm] = useState(['--', '--']);
+  const [i, setI] = useState(0);
+  const [held, setHeld] = useState(false);
+  const step = STEPS[i];
+
+  useEffect(() => {
+    const fmt = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+    const set = () => setHm(fmt.format(new Date()).split(':'));
+    set();
+    const id = setInterval(set, 10000);
+    return () => clearInterval(id);
+  }, []);
+
+  // The bar in the live segment fills over the hold, then the card
+  // moves on. Hovering stops the clock where it is.
+  useEffect(() => {
+    const bar = rootRef.current?.querySelector('.hc-seg.is-on .hc-fill');
+    if (!bar || reduced() || held) return undefined;
+    const t = gsap.fromTo(bar, { scaleX: 0 }, {
+      scaleX: 1, duration: HOLD, ease: 'none',
+      onComplete: () => setI((n) => (n + 1) % STEPS.length),
+    });
+    return () => t.kill();
+  }, [i, held]);
+
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body || reduced()) return;
+    gsap.fromTo(body.children,
+      { yPercent: 70, opacity: 0, ...fx(10) },
+      { yPercent: 0, opacity: 1, ...fx0(), duration: 0.7, stagger: 0.06, ease: EASE.swift });
+  }, [i]);
+
+  return (
+    <aside className="hero-side" aria-label="Status" ref={rootRef} data-acc={step.acc}
+      onMouseLeave={() => setHeld(false)}>
+      <div className="hc-top">
+        <span className="hc-city">Pune</span>
+        <span className="num hc-time">{hm[0]}<i>:</i>{hm[1]}</span>
+        <span className="hc-tz">IST</span>
+      </div>
+
+      <div className="hc-segs" role="tablist">
+        {STEPS.map((x, k) => (
+          <button key={x.k} type="button" role="tab" aria-selected={k === i}
+            className={`hc-seg${k === i ? ' is-on' : ''}`} data-acc={x.acc}
+            onMouseEnter={() => { setHeld(true); setI(k); }} onFocus={() => setI(k)}
+            data-cursor-label={x.k}>
+            <span className="hc-fill" aria-hidden="true" />
+            <span className="hc-seg-t">{x.k}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="hc-body" ref={bodyRef} aria-live="polite">
+        <Glyph kind={step.glyph} acc={step.acc} />
+        <span className="display hc-v">{step.v}</span>
+        <span className="hc-s">{step.s}</span>
+      </div>
+    </aside>
+  );
+};
+
 const Hero = () => {
   const rootRef = useRef(null);
   const nameRef = useRef(null);
@@ -155,7 +238,7 @@ const Hero = () => {
   useEffect(() => {
     const root = rootRef.current;
     const glyphs = root.querySelectorAll('.hero-shell .glyph');
-    const furniture = root.querySelectorAll('.hero-ctas');
+    const furniture = root.querySelectorAll('.hero-ctas, .hero-side');
     const card = root.querySelector('.hero-reel');
 
     if (reduced()) return undefined;
@@ -166,14 +249,14 @@ const Hero = () => {
       linesIn(ledeRef.current, { play: (go) => { const prev = start; start = () => { prev(); go(); }; }, stagger: 0.08, delay: 0.35 }),
     ];
     gsap.set(glyphs, { '--open': 0 });
-    gsap.set(furniture, { y: 24, opacity: 0 });
+    gsap.set(furniture, { y: 24, opacity: 0, ...fx(10) });
     gsap.set(card, { y: 160 });
 
     const play = () => {
       start?.();
       gsap.timeline({ defaults: { ease: EASE.swift } })
         .to(glyphs, { '--open': 1, duration: 1.1, stagger: 0.12, ease: EASE.glide }, 0.55)
-        .to(furniture, { y: 0, opacity: 1, duration: 0.9, stagger: 0.06 }, 0.3)
+        .to(furniture, { y: 0, opacity: 1, ...fx0(), duration: 0.9, stagger: 0.09 }, 0.45)
         .to(card, { y: 0, duration: 1.3, ease: EASE.glide }, 0.5);
     };
 
@@ -221,9 +304,12 @@ const Hero = () => {
               Ajinkya<Glyph kind="spark" acc="pink" />
             </span></span>
             <span className="ln"><span className="ln-in hero-row hero-row--b">
-              Chavan<Glyph kind="graph" acc="blue" />
+              <Glyph kind="graph" acc="blue" />Chavan
             </span></span>
           </h1>
+          <Side />
+          </div>
+
           <div className="hero-bottom">
             <p ref={ledeRef} className="hero-lede display">
               <span className="ln"><span className="ln-in">I build generative AI</span></span>
@@ -248,7 +334,6 @@ const Hero = () => {
               </div>
             </div>
           </div>
-          </div>
         </div>
       </div>
 
@@ -271,57 +356,86 @@ const Hero = () => {
           background: var(--paper);
         }
         .hero-shell { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        /* Wide screens: the name on the left, and the sentence and the
-           buttons standing in the space its short second row leaves —
-           read top to bottom, they end on the buttons. */
-        .hero-head {
-          display: grid;
-          grid-template-columns: auto minmax(0, 1fr);
-          gap: clamp(2rem, 4vw, 4.5rem);
-          align-items: stretch;
+        .hero-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; }
+
+        /* ---- side: the status card ---- */
+        .hero-side {
+          flex: none;
+          width: clamp(16rem, 22vw, 22rem);
+          margin-top: 0.4rem;
+          padding: 1.1rem;
+          border-radius: var(--r-l);
+          background: var(--paper-2);
+          box-shadow: inset 0 0 0 1px var(--line-2);
         }
+        .hc-top { display: flex; align-items: baseline; gap: 0.5rem; padding: 0 0.3rem 0.9rem; color: var(--ink-3); font-size: var(--step--1); }
+        .hc-city { color: var(--ink-2); font-weight: 600; }
+        .hc-time { font-size: var(--step-1); color: var(--ink); letter-spacing: -0.03em; }
+        .hc-time i { font-style: normal; animation: ex-blink 2s steps(2) infinite; }
+        .hc-tz { margin-left: auto; }
+        .hc-segs {
+          display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 3px; padding: 3px;
+          border-radius: var(--r-pill);
+          background: var(--paper);
+          box-shadow: 0 1px 2px var(--shadow);
+        }
+        .hc-seg {
+          position: relative; overflow: hidden;
+          height: 2.1rem;
+          border-radius: var(--r-pill);
+          color: var(--ink-3);
+          font-size: var(--step--1); font-weight: 600;
+          cursor: pointer;
+          transition: color 0.35s var(--ease-out), background 0.35s var(--ease-out);
+        }
+        .hc-seg:hover { color: var(--ink); }
+        .hc-seg.is-on { background: var(--paper-3); color: var(--ink); }
+        .hc-fill {
+          position: absolute; left: 0.9rem; right: 0.9rem; bottom: 4px; height: 3px;
+          border-radius: 3px;
+          background: var(--acc);
+          transform-origin: left; transform: scaleX(0);
+          opacity: 0;
+        }
+        .hc-seg.is-on .hc-fill { opacity: 1; }
+        .hc-seg-t { position: relative; }
+        .hc-body {
+          display: grid; justify-items: start; gap: 0.45rem;
+          padding: 1.25rem 0.3rem 0.2rem;
+          min-height: 8.6rem;
+          overflow: hidden;
+        }
+        .hc-body .glyph { --gw: 1.9; font-size: 2.1rem; margin: 0 0 0.35rem; }
+        .hc-v { font-size: clamp(1.35rem, 1.9vw, 1.9rem); font-weight: 650; letter-spacing: -0.04em; line-height: 1.05; }
+        .hc-s { font-size: var(--step--1); color: var(--ink-2); }
+        @media (max-width: 1180px) { .hero-side { display: none; } }
+
         .hero-name {
           margin: 0;
           font-size: clamp(2.8rem, min(13.4vw, 17.5svh), 14.5rem);
         }
-        @media (min-width: 1181px) {
-          .hero-name { font-size: min(10.4vw, 16svh, 13rem); }
-        }
         .hero-row { white-space: nowrap; will-change: transform; }
-        .hero-row--b { padding-left: min(6vw, 9svh); }
+        .hero-row--b { padding-left: 0; }
+        .hero-row--b .glyph { margin-left: 0; }
         .hero-name .glyph { margin-inline: 0.08em; }
 
         .hero-bottom {
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          gap: clamp(1.5rem, 4svh, 2.5rem);
-          padding-block: clamp(0.6rem, 1.6svh, 1.4rem) clamp(0.4rem, 1.2svh, 1rem);
+          display: grid;
+          grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr);
+          gap: clamp(1.25rem, 4vw, 4rem);
+          align-items: end;
+          margin-top: clamp(1rem, 3.5svh, 2.5rem);
         }
         .hero-lede {
-          font-size: clamp(1.3rem, min(2.15vw, 4svh), 2.4rem);
+          font-size: clamp(1.3rem, min(3.1vw, 4.4svh), 3rem);
           font-weight: 650;
           line-height: 1.04;
           letter-spacing: -0.04em;
         }
-        .hero-ctas { display: grid; gap: clamp(0.75rem, 2svh, 1.25rem); justify-items: start; }
+        .hero-ctas { display: grid; gap: clamp(0.75rem, 2svh, 1.25rem); justify-items: end; text-align: right; }
         .hero-where { color: var(--ink-2); font-size: var(--step-0); line-height: 1.35; }
-        .hero-btns { display: flex; flex-wrap: wrap; gap: 0.6rem; }
-
-        /* Narrower: the name takes the full width again and the sentence
-           and buttons sit in a row beneath it. */
-        @media (max-width: 1180px) {
-          .hero-head { grid-template-columns: minmax(0, 1fr); gap: clamp(1rem, 3.5svh, 2.5rem); }
-          .hero-bottom {
-            display: grid;
-            grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr);
-            align-items: end;
-            padding: 0;
-          }
-          .hero-lede { font-size: clamp(1.3rem, min(3.1vw, 4.4svh), 3rem); }
-          .hero-ctas { justify-items: end; }
-          .hero-btns { justify-content: flex-end; }
-        }
+        .hero-btns { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-end; }
         .hero-btns .btn { padding: min(0.95em, 1.6svh) 1.5em; }
 
         /* ---- the console ---- */
@@ -417,7 +531,7 @@ const Hero = () => {
 
         @media (max-width: 860px) {
           .hero-bottom { grid-template-columns: minmax(0, 1fr); }
-          .hero-ctas { justify-items: start; }
+          .hero-ctas { justify-items: start; text-align: left; }
           .hero-btns { justify-content: flex-start; }
           .hero-row--b { padding-left: 0; }
           .cs-body { grid-template-columns: minmax(0, 1fr); }

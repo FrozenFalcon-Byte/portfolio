@@ -119,10 +119,10 @@ const Shell = () => {
     <>
       <Cursor />
       <Loader />
-      <Nav />
       <RouteEffects />
 
       <RouteCurtain>
+        <Nav />
         <main className="page">
           <Routes>
             <Route path="/" element={<Home />} />

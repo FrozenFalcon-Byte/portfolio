@@ -17,6 +17,44 @@ export const reduced = () =>
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/* ------------------------------------------------------------------
+   Motion blur.
+
+   A filter is paid for per pixel, per frame, so blur is used only
+   where a machine can afford it: enough cores and memory, no data
+   saver, no reduced motion, and a first second of frames that actually
+   came in on time. Every use is short and clears itself afterwards, so
+   at rest nothing on the page carries a filter.
+
+   fx(n) is spread into a tween's from-state, fx0() into its to-state;
+   on a machine that cannot afford it both are empty and the tween runs
+   exactly as it would have without blur.
+   ------------------------------------------------------------------ */
+let blurOK = null;
+export const canBlur = () => {
+  if (blurOK !== null) return blurOK;
+  if (typeof window === 'undefined') return false;
+  const cores = navigator.hardwareConcurrency || 4;
+  const mem = navigator.deviceMemory || 8;
+  blurOK = !reduced() && cores >= 4 && mem >= 4 && !navigator.connection?.saveData;
+  return blurOK;
+};
+if (typeof window !== 'undefined') {
+  // A frame-rate probe: if the opening second is already dropping
+  // frames, blur is switched off for the rest of the visit.
+  let n = 0; let t0 = 0;
+  const probe = (t) => {
+    if (!t0) t0 = t;
+    n += 1;
+    if (n < 40) { requestAnimationFrame(probe); return; }
+    if ((t - t0) / (n - 1) > 24) blurOK = false;
+  };
+  requestAnimationFrame(probe);
+}
+const shrink = () => (typeof window !== 'undefined' && window.innerWidth < 700 ? 0.6 : 1);
+export const fx = (px) => (canBlur() ? { filter: `blur(${(px * shrink()).toFixed(1)}px)` } : {});
+export const fx0 = () => (canBlur() ? { filter: 'blur(0px)', clearProps: 'filter' } : {});
+
 /** Read a CSS custom property off :root so JS never hardcodes a hue. */
 export const token = (name, el = document.documentElement) =>
   getComputedStyle(el).getPropertyValue(name).trim();
@@ -100,10 +138,11 @@ export function maskLines(el, opts = {}) {
 
   const tween = gsap.fromTo(
     wrapped,
-    { yPercent: 108, opacity: 0 },
+    { yPercent: 108, opacity: 0, ...fx(8) },
     {
       yPercent: 0,
       opacity: 1,
+      ...fx0(),
       duration,
       delay,
       stagger,
@@ -133,10 +172,11 @@ export function riseIn(targets, opts = {}) {
 
   const tween = gsap.fromTo(
     targets,
-    { y, opacity: 0 },
+    { y, opacity: 0, ...fx(10) },
     {
       y: 0,
       opacity: 1,
+      ...fx0(),
       duration,
       delay,
       stagger,
@@ -308,10 +348,11 @@ export function clipReveal(targets, opts = {}) {
 
   const tween = gsap.fromTo(
     targets,
-    { clipPath: shut, opacity: 0 },
+    { clipPath: shut, opacity: 0, ...fx(8) },
     {
       clipPath: 'inset(0% 0% 0% 0%)',
       opacity: 1,
+      ...fx0(),
       duration,
       stagger,
       ease: EASE.swift,
@@ -678,13 +719,13 @@ export function linesIn(el, opts = {}) {
   const { start = 'top 86%', stagger = 0.09, duration = 1.1, delay = 0, trigger, play } = opts;
   if (reduced()) { gsap.set(lines, { yPercent: 0 }); return null; }
 
-  gsap.set(lines, { yPercent: 112, rotate: 2.5 });
+  gsap.set(lines, { yPercent: 112, rotate: 2.5, ...fx(9) });
   const tl = gsap.timeline({
     paused: !!play,
     delay,
     scrollTrigger: play ? undefined : { trigger: trigger || el, start, once: true },
   });
-  tl.to(lines, { yPercent: 0, rotate: 0, duration, stagger, ease: EASE.swift });
+  tl.to(lines, { yPercent: 0, rotate: 0, ...fx0(), duration, stagger, ease: EASE.swift });
   if (play) play(() => tl.play());
   return () => { tl.scrollTrigger?.kill(); tl.kill(); };
 }
@@ -750,11 +791,12 @@ export function charsIn(el, opts = {}) {
 
   const tween = gsap.fromTo(
     split.chars,
-    { yPercent: 115, opacity: 0, rotate: 5 },
+    { yPercent: 115, opacity: 0, rotate: 5, ...fx(6) },
     {
       yPercent: 0,
       opacity: 1,
       rotate: 0,
+      ...fx0(),
       duration,
       delay,
       stagger,

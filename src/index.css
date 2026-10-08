@@ -532,30 +532,45 @@ html.lenis, html.lenis body { height: auto; }
   .cur-beam-rim { fill: none; stroke: var(--cur-paper); stroke-width: 6; stroke-linecap: round; }
   .cur-beam-line { fill: none; stroke: var(--cur-ink); stroke-width: 2.2; stroke-linecap: round; }
 
-  /* The label hangs off the lower right of the pointer and trails it. */
+  /* plnty's tag: pinned under the tip, squared at the corner that
+     meets the pointer, ink on paper with a hairline rim so it holds on
+     both grounds, and a soft contact shadow so it floats. */
   .cur-chip {
     position: absolute;
-    top: 30px; left: 18px;
+    top: 0; left: 0;
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    height: 30px;
-    padding: 0 11px 0 13px;
-    border-radius: 99px;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    overflow: hidden;
+    border-radius: 6px 15px 15px 15px;
     background: var(--cur-ink);
     color: var(--cur-paper);
-    box-shadow: 0 0 0 2px var(--cur-paper);
-    transform-origin: 0 0;
+    box-shadow: 0 0 0 1.5px var(--cur-paper), 0 6px 14px -4px rgba(0, 0, 0, 0.28);
     white-space: nowrap;
+    translate: 15px 22px;
+    transition: width 0.32s var(--ease-out), translate 0.3s var(--ease-out), background 0.35s, color 0.35s;
   }
-  .cur-chip-label {
-    font-family: var(--font-display);
-    font-size: 0.8rem;
-    font-weight: 650;
-    letter-spacing: -0.015em;
+  .cur[data-state="hand"] .cur-chip,
+  .cur[data-state="press"] .cur-chip { translate: 16px 36px; }
+  .cur[data-state="beam"] .cur-chip { translate: 10px 17px; }
+  .cur-chip-label, .cur-chip-measure {
+    font-family: var(--font-body);
+    font-size: 0.86rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
     line-height: 1;
   }
-  .cur-chip-dot { width: 6px; height: 6px; border-radius: 99px; background: var(--cur-acc); }
+  .cur-chip-label { display: block; }
+  .cur-chip-label.is-roll { animation: cur-roll 0.32s var(--ease-out); }
+  @keyframes cur-roll { from { transform: translateY(105%); opacity: 0; } }
+  .cur-chip-arrow {
+    display: none; flex: none; max-width: none;
+    fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .cur-chip[data-arrow] .cur-chip-arrow { display: block; animation: cur-roll 0.32s var(--ease-out); }
+  .cur-chip-measure { position: absolute; left: -9999px; top: 0; visibility: hidden; white-space: nowrap; }
 }
 
 @media not all and (hover: hover) {

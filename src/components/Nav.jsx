@@ -3,6 +3,8 @@ import { gsap, ScrollTrigger, EASE, reduced } from '../lib/motion';
 import ThemeToggle from './ThemeToggle';
 import { useTheme } from '../lib/theme';
 import Mark from './Mark';
+import { useLocation } from 'react-router-dom';
+import { useRouteTransition } from './RouteCurtain';
 
 const LINKS = [
   { id: 'about',      n: '01', label: 'About' },
@@ -28,6 +30,10 @@ const Nav = () => {
   const hopAt = useRef(null);
   const [active, setActive] = useState(null);
   const busy = useRef(false);
+  const { pathname } = useLocation();
+  const route = useRouteTransition();
+  const where = useRef(pathname);
+  where.current = pathname;
 
   /* ------------------------------------------------------------------
      Jump. A section link never scrolls the page through everything in
@@ -38,6 +44,16 @@ const Nav = () => {
      ------------------------------------------------------------------ */
   const jump = React.useCallback((id) => {
     const target = id === 'top' ? null : document.getElementById(id);
+    /* Off the home page the sections do not exist here: go home under
+       the route curtain and land on the section asked for. */
+    if (where.current !== '/' && (id === 'top' || !target)) {
+      const link = LINKS.find((l) => l.id === id);
+      route(id === 'top' ? '/' : `/#${id}`, {
+        title: link ? link.label : 'Home',
+        kicker: 'Ajinkya Chavan · Portfolio',
+      });
+      return;
+    }
     if (id !== 'top' && !target) return;
     const place = () => {
       const y = target ? target.getBoundingClientRect().top + window.scrollY - 70 : 0;
@@ -62,7 +78,7 @@ const Nav = () => {
       .to(word, { yPercent: -110, duration: 0.45, ease: 'power2.in' }, 0.85)
       .to(sheet, { clipPath: 'inset(0% 0% 100% 0% round 0px 0px 64px 64px)', duration: 0.7, ease: EASE.glide }, 0.95)
       .set(sheet, { pointerEvents: 'none', visibility: 'hidden' });
-  }, []);
+  }, [route]);
 
   /* Every in-page anchor on the site goes through the jump, so the
      hero's buttons and the footer behave exactly like the menu. */
@@ -84,6 +100,8 @@ const Nav = () => {
   /* Which section is being read. The highlight in the pill slides to
      its link, so the bar doubles as a map of where you are. */
   useEffect(() => {
+    setActive(null);
+    if (pathname !== '/') return undefined;
     const sts = LINKS.map((l) => {
       const el = document.getElementById(l.id);
       if (!el) return null;
@@ -99,7 +117,7 @@ const Nav = () => {
       });
     }).filter(Boolean);
     return () => sts.forEach((t) => t.kill());
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     const pill = pillRef.current;
