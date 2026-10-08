@@ -250,6 +250,9 @@ const Reel = ({ onOpen }) => {
   const p = PROJECTS[active];
 
   return (
+    // The wrapper keeps React's node outside the pin spacer, so the reel
+    // can unmount (on a resize below the breakpoint) while pinned.
+    <div className="wk-pinwrap">
     <div className="wk-scene" ref={sceneRef} data-acc={p.acc}>
       <div className="shell wk-stage">
         <div className="wk-col">
@@ -328,6 +331,7 @@ const Reel = ({ onOpen }) => {
         </article>
 
       </div>
+    </div>
     </div>
   );
 };

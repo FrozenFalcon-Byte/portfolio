@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { gsap, ScrollTrigger, EASE, reduced } from '../lib/motion';
+import { gsap, ScrollTrigger, EASE, reduced, fx, fx0 } from '../lib/motion';
 import ThemeToggle from './ThemeToggle';
 import { useTheme } from '../lib/theme';
 import Mark from './Mark';
@@ -73,9 +73,9 @@ const Nav = () => {
       .fromTo(sheet,
         { clipPath: 'inset(100% 0% 0% 0% round 64px 64px 0px 0px)' },
         { clipPath: 'inset(0% 0% 0% 0% round 0px 0px 0px 0px)', duration: 0.6, ease: EASE.glide })
-      .fromTo(word, { yPercent: 110 }, { yPercent: 0, duration: 0.55, ease: EASE.swift }, 0.18)
+      .fromTo(word, { yPercent: 110, ...fx(12) }, { yPercent: 0, ...fx0(), duration: 0.55, ease: EASE.swift }, 0.18)
       .add(place, 0.62)
-      .to(word, { yPercent: -110, duration: 0.45, ease: 'power2.in' }, 0.85)
+      .to(word, { yPercent: -110, ...fx(12), duration: 0.45, ease: 'power2.in' }, 0.85)
       .to(sheet, { clipPath: 'inset(0% 0% 100% 0% round 0px 0px 64px 64px)', duration: 0.7, ease: EASE.glide }, 0.95)
       .set(sheet, { pointerEvents: 'none', visibility: 'hidden' });
   }, [route]);
@@ -158,13 +158,6 @@ const Nav = () => {
       stagger: { each: 0.025, from: 'center' },
     }, 0.38);
   };
-  const knock = (e) => {
-    if (reduced()) return;
-    gsap.fromTo(e.currentTarget.querySelectorAll('.nav-ch'), { y: 0 }, {
-      keyframes: [{ y: -4, duration: 0.14, ease: 'power2.out' }, { y: 0, duration: 0.4, ease: 'bounce.out' }],
-      stagger: { each: 0.03, from: 'end' },
-    });
-  };
   const unhop = () => {
     hopAt.current = null;
     gsap.to(hopRef.current, { scale: 0, duration: 0.3, ease: EASE.swift });
@@ -234,8 +227,8 @@ const Nav = () => {
             { clipPath: 'inset(0% 0% 100% 0%)' },
             { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.78, ease: EASE.glide })
           .fromTo(links,
-            { yPercent: 115 },
-            { yPercent: 0, duration: 0.9, stagger: 0.055, ease: EASE.swift }, 0.22)
+            { yPercent: 115, ...fx(10) },
+            { yPercent: 0, ...fx0(), duration: 0.9, stagger: 0.055, ease: EASE.swift }, 0.22)
           .fromTo(meta,
             { y: 18, opacity: 0 },
             { y: 0, opacity: 1, duration: 0.6, stagger: 0.06, ease: EASE.swift }, 0.5);
@@ -300,11 +293,16 @@ const Nav = () => {
 
         <div className="nav-right">
           <ThemeToggle theme={theme} onToggle={toggle} />
-          <a href="#contact" className="nav-cta" onClick={(e) => go(e, 'contact')} onMouseEnter={knock} data-cursor-label="Say hi" aria-label="Say hello">
-            <span className="nav-cta-t" aria-hidden="true">
-              {'Say hello'.split('').map((c, k) => <span className="nav-ch" key={k}>{c === ' ' ? '\u00a0' : c}</span>)}
+          <a href="#contact" className="nav-cta" onClick={(e) => go(e, 'contact')} data-cursor="hot" aria-label="Say hello">
+            <span className="nav-cta-live" aria-hidden="true"><i /></span>
+            <span className="nav-cta-roll" aria-hidden="true">
+              <span>Say hello</span>
+              <span>Open to work</span>
             </span>
-            <i className="nav-cta-dot" aria-hidden="true" />
+            <span className="nav-cta-arr" aria-hidden="true">
+              <svg viewBox="0 0 12 12"><path d="M3 9 L9 3 M4 3 H9 V8" /></svg>
+              <svg viewBox="0 0 12 12"><path d="M3 9 L9 3 M4 3 H9 V8" /></svg>
+            </span>
           </a>
           <button
             className={`nav-burger${open ? ' is-open' : ''}`}
@@ -452,29 +450,51 @@ const Nav = () => {
         .nav-link-t { display: block; line-height: 1.25em; white-space: nowrap; }
         .nav-ch { display: inline-block; will-change: transform; }
 
-        /* The CTA ends in the logo's full stop. On hover the stop swells
-           until it has swallowed the button, turning it ink, and the
-           letters jump as it passes under them. */
+        /* The CTA is a status line you can press: a live dot says the
+           door is open, and on hover the words roll over to say what
+           for while the arrow goes out and comes back round. */
         .nav-cta {
-          position: relative;
-          display: inline-flex; align-items: center; gap: 0.5em;
-          padding: 0.7em 1.05em 0.7em 1.3em;
+          display: inline-flex; align-items: center; gap: 0.6em;
+          height: 2.6rem;
+          padding: 0 0.4rem 0 1rem;
           border-radius: var(--r-pill);
-          background: var(--acc); color: var(--acc-ink);
+          background: var(--ink); color: var(--paper);
           font-family: var(--font-display); font-weight: 650; font-size: var(--step--1); letter-spacing: -0.02em;
-          overflow: hidden; isolation: isolate;
-          transition: color 0.35s var(--ease-out);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 8px 18px -10px rgba(0, 0, 0, 0.5);
+          transition: background 0.45s var(--ease-out), color 0.45s var(--ease-out), translate 0.45s var(--ease-out);
         }
-        .nav-cta-t { position: relative; z-index: 1; white-space: nowrap; }
-        .nav-cta-dot {
-          width: 7px; height: 7px; flex: none;
+        .nav-cta-live { position: relative; width: 8px; height: 8px; flex: none; }
+        .nav-cta-live i, .nav-cta-live::after {
+          position: absolute; inset: 0; border-radius: 99px; background: var(--lime);
+        }
+        .nav-cta-live::after { content: ""; animation: nav-live 2s var(--ease-out) infinite; }
+        @keyframes nav-live { from { transform: scale(1); opacity: 0.7; } to { transform: scale(2.8); opacity: 0; } }
+        .nav-cta-roll {
+          display: grid; height: 1.3em; overflow: hidden; line-height: 1.3em; white-space: nowrap;
+        }
+        .nav-cta-roll > span { grid-area: 1 / 1; transition: transform 0.55s var(--ease-out), opacity 0.4s; }
+        .nav-cta-roll > span:last-child { transform: translateY(110%); opacity: 0; }
+        .nav-cta-arr {
+          position: relative; display: grid; place-items: center;
+          width: 1.9rem; height: 1.9rem; flex: none;
           border-radius: 99px;
-          background: var(--acc-ink);
-          transition: transform 0.6s var(--ease-out), background 0.3s;
-          z-index: 0;
+          background: var(--paper); color: var(--ink);
+          overflow: hidden;
+          transition: background 0.45s var(--ease-out), color 0.45s;
         }
-        .nav-cta:hover { color: var(--paper); }
-        .nav-cta:hover .nav-cta-dot { transform: scale(34); background: var(--ink); }
+        .nav-cta-arr svg {
+          grid-area: 1 / 1; width: 0.72rem; height: 0.72rem; max-width: none;
+          fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+          transition: transform 0.55s var(--ease-out);
+        }
+        .nav-cta-arr svg:last-child { transform: translate(-160%, 160%); }
+        .nav-cta:hover { background: var(--acc); color: var(--acc-ink); }
+        .nav-cta:hover .nav-cta-roll > span:first-child { transform: translateY(-110%); opacity: 0; }
+        .nav-cta:hover .nav-cta-roll > span:last-child { transform: translateY(0); opacity: 1; }
+        .nav-cta:hover .nav-cta-arr { background: var(--acc-ink); color: var(--acc); }
+        .nav-cta:hover .nav-cta-arr svg:first-child { transform: translate(160%, -160%); }
+        .nav-cta:hover .nav-cta-arr svg:last-child { transform: translate(0, 0); }
+        .nav-cta:active { translate: 0 1px; }
 
         /* ---- jump sheet ---- */
         .jump {
