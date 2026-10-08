@@ -102,6 +102,28 @@ const Assistant = () => {
     return () => [t1, t2].forEach((t) => { t.scrollTrigger?.kill(); t.kill(); });
   }, []);
 
+  /* The log scrolls itself only while it has somewhere to go; at
+     either end the wheel goes back to the page, so the smooth page
+     scroll never hands over to a native one halfway down the section
+     and a short log never swallows the wheel. */
+  useEffect(() => {
+    const feed = feedRef.current;
+    if (!feed) return undefined;
+    const onWheel = (e) => {
+      const room = feed.scrollHeight - feed.clientHeight;
+      if (room <= 1) return;
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      const down = dy > 0 && feed.scrollTop < room - 1;
+      const up = dy < 0 && feed.scrollTop > 0;
+      if (!down && !up) return;
+      e.preventDefault();
+      e.stopPropagation();
+      feed.scrollTop += dy;
+    };
+    feed.addEventListener('wheel', onWheel, { passive: false });
+    return () => feed.removeEventListener('wheel', onWheel);
+  }, []);
+
   /* Keep the newest turn in view without yanking the whole page. */
   useEffect(() => {
     const feed = feedRef.current;
@@ -209,7 +231,7 @@ const Assistant = () => {
               <span className={`mono as-app-state${busy ? ' is-busy' : ''}`}><i />{busy ? 'thinking' : 'online'}</span>
             </header>
 
-            <div className="as-feed" ref={feedRef} aria-live="polite" data-lenis-prevent tabIndex={0} role="log" aria-label="Conversation">
+            <div className="as-feed" ref={feedRef} aria-live="polite" tabIndex={0} role="log" aria-label="Conversation">
               {thread.map((m, i) => (
                 <div key={i} className={`msg msg--${m.role}`}>
                   {m.error
@@ -316,6 +338,7 @@ const Assistant = () => {
           display: flex; flex-direction: column; gap: 0.6rem;
           height: clamp(15rem, 34vh, 22rem);
           overflow-y: auto;
+          overscroll-behavior: contain;
           padding: 0.3rem;
           scrollbar-width: thin;
         }

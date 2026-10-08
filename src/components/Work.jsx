@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Plus, X } from 'lucide-react';
-import { gsap, ScrollTrigger, EASE, heading, drawRule, riseIn, reduced, cleanup } from '../lib/motion';
+import { gsap, ScrollTrigger, EASE, heading, drawRule, riseIn, reduced, cleanup, canBlur, fx, fx0 } from '../lib/motion';
 import { PROJECTS } from '../data/projects';
 import Glyph from './Glyph';
 
@@ -170,6 +170,7 @@ const Reel = ({ onOpen }) => {
     const film = filmRef.current;
     const strip = film.querySelector('.wk-strip');
     const frames = Array.from(strip.children);
+    const blur = canBlur();
 
     const paint = (f) => {
       const step = pills[0].offsetHeight + 10;
@@ -179,15 +180,30 @@ const Reel = ({ onOpen }) => {
         el.style.opacity = String(Math.max(0.12, 1 - d * 0.3));
         el.style.transform = `scale(${Math.max(0.78, 1 - d * 0.07)})`;
       });
-      const h = film.offsetHeight + 16;
-      strip.style.transform = `translate3d(0, ${-f * h}px, 0)`;
+      /* The frames are a deck, not a strip: the one on the line sits
+         flat and whole; its neighbours wait just behind it, a little
+         smaller and lower, and as the scroll turns them one lifts away
+         while the next rises into its place, smeared by motion blur
+         for the instant it is moving. At rest every frame is exactly
+         its screenshot, uncropped and unscaled. */
       frames.forEach((fr, i) => {
         const d = i - f;
-        const a = Math.min(1, Math.abs(d));
-        fr.style.transform = `scale(${1 - a * 0.14}) rotate(${d * -2.5}deg)`;
-        fr.style.borderRadius = `${28 + a * 60}px`;
-        fr.firstElementChild.style.transform = `translate3d(0, ${d * -38}%, 0) scale(${1.25 - (1 - a) * 0.17})`;
-        fr.lastElementChild.style.opacity = String(1 - Math.min(1, a * 3));
+        const a = Math.abs(d);
+        if (a >= 1) { fr.style.visibility = 'hidden'; return; }
+        fr.style.visibility = '';
+        if (d <= 0) {
+          // Leaving: on top, lifting off and smearing as it goes.
+          fr.style.zIndex = '2';
+          fr.style.opacity = String(Math.max(0, 1 - a * 1.4));
+          fr.style.transform = `translate3d(0, ${-a * 18}%, 0) rotate(${-a * 3}deg) scale(${1 + a * 0.04})`;
+          fr.style.filter = blur && a > 0.02 ? `blur(${(a * 16).toFixed(1)}px)` : '';
+        } else {
+          // Arriving: solid underneath, settling up into place.
+          fr.style.zIndex = '1';
+          fr.style.opacity = '1';
+          fr.style.transform = `translate3d(0, ${a * 6}%, 0) scale(${1 - a * 0.06})`;
+          fr.style.filter = blur && a > 0.02 ? `blur(${(a * 6).toFixed(1)}px)` : '';
+        }
       });
     };
     paint(0);
@@ -219,7 +235,7 @@ const Reel = ({ onOpen }) => {
     const rest = el.querySelectorAll('.wk-tags .tag, .wk-actions > *');
     const tl = gsap.timeline()
       .fromTo(words, { yPercent: 110 }, { yPercent: 0, duration: 0.7, stagger: 0.012, ease: EASE.swift }, 0)
-      .fromTo(rest, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, stagger: 0.04, ease: EASE.swift }, 0.15);
+      .fromTo(rest, { y: 18, opacity: 0, ...fx(8) }, { y: 0, opacity: 1, ...fx0(), duration: 0.6, stagger: 0.04, ease: EASE.swift }, 0.15);
     return () => tl.kill();
   }, [active]);
 
@@ -236,6 +252,7 @@ const Reel = ({ onOpen }) => {
   return (
     <div className="wk-scene" ref={sceneRef} data-acc={p.acc}>
       <div className="shell wk-stage">
+        <div className="wk-col">
         <div className="wk-reel">
           <span className="wk-line" aria-hidden="true" />
           <ol className="wk-track" ref={trackRef}>
@@ -249,22 +266,41 @@ const Reel = ({ onOpen }) => {
             ))}
           </ol>
         </div>
+          {/* The position is told in the projects' own colours: one dot
+              each, and the current one stretches into a pill carrying its
+              number — the same full stop as the logo, put to work. */}
+          <div className="wk-dots">
+            {PROJECTS.map((x, i) => (
+              <button
+                key={x.id}
+                className={`wk-dot${i === active ? ' is-on' : ''}`}
+                data-acc={x.acc}
+                onClick={() => jump(i)}
+                aria-label={`${x.n} — ${x.title}`}
+                data-cursor-label={x.title}
+              >
+                <span className="num">{x.n}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         <article className="wk-panel">
-          {/* The screenshots are one film strip, wound by the same
-              scroll that turns the reel, so the picture is always exactly
-              as far along as the name on the line. A frame leaving the
-              window shrinks and rounds off like a card being lifted; the
-              image inside moves slower than its frame, so every change
-              has depth instead of a cut. */}
+          {/* The screenshots are a deck turned by the same scroll as the
+              reel, so the picture is always exactly as far along as the
+              name on the line. */}
           <div className="wk-film" ref={filmRef} data-cursor="hot" data-cursor-label="Open case" onClick={() => onOpen(p)}>
             <div className="wk-strip">
               {PROJECTS.map((x, i) => (
                 <div key={x.id} className="wk-frame" data-acc={x.acc}>
+                  <div className="wk-chrome" aria-hidden="true">
+                    <i /><i /><i />
+                    <span className="wk-url">{x.title.toLowerCase().replace(/\s+/g, '-')}</span>
+                    <span className="wk-media-tag">{x.meta}</span>
+                  </div>
                   <div className="wk-frame-in">
                     <img src={x.img} alt="" loading={i < 2 ? 'eager' : 'lazy'} />
                   </div>
-                  <span className="wk-media-tag display">{x.meta}</span>
                 </div>
               ))}
             </div>
@@ -291,23 +327,6 @@ const Reel = ({ onOpen }) => {
           </div>
         </article>
 
-        {/* The position is told in the projects' own colours: one dot
-            each, and the current one stretches into a pill carrying its
-            number — the same full stop as the logo, put to work. */}
-        <div className="wk-dots">
-          {PROJECTS.map((x, i) => (
-            <button
-              key={x.id}
-              className={`wk-dot${i === active ? ' is-on' : ''}`}
-              data-acc={x.acc}
-              onClick={() => jump(i)}
-              aria-label={`${x.n} — ${x.title}`}
-              data-cursor-label={x.title}
-            >
-              <span className="num">{x.n}</span>
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );
@@ -392,9 +411,11 @@ const Work = () => {
           padding-top: 4.5rem;
         }
 
+        .wk-col { display: flex; flex-direction: column; gap: 1rem; height: 100%; min-height: 0; }
         .wk-reel {
           position: relative;
-          height: 100%;
+          flex: 1;
+          min-height: 0;
           overflow: hidden;
           /* The reading line sits a third of the way down: the active
              pill is near the top of the column, with the queue below. */
@@ -447,39 +468,60 @@ const Work = () => {
         .wk-pill.is-on .wk-pill-n { background: var(--acc-ink); color: var(--acc); }
 
         .wk-panel {
-          display: grid;
-          grid-template-rows: minmax(0, 1fr) auto;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
           gap: 1.25rem;
           height: 100%;
           min-height: 0;
         }
+        /* The window is the screenshots' own shape, so each one shows
+           whole: nothing is cropped and nothing is scaled at rest. */
         .wk-film {
           position: relative;
-          min-height: 0;
-          overflow: hidden;
+          flex: none;
+          width: min(100%, calc((min(78svh, 46rem) - 15rem) * 1.6));
+          aspect-ratio: 1.6 / 1.075;
           cursor: pointer;
         }
-        .wk-strip { position: absolute; inset: 0; will-change: transform; }
+        .wk-strip { position: absolute; inset: 0; }
         .wk-frame {
-          position: relative;
-          height: 100%;
-          margin-bottom: 16px;
-          border-radius: 28px;
-          overflow: hidden;
-          background: var(--acc);
-          will-change: transform, border-radius;
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          padding: 0 6px 6px;
+          border-radius: 22px;
+          background: var(--paper-2);
+          box-shadow:
+            inset 0 0 0 1px var(--line-2),
+            0 1px 2px rgba(0, 0, 0, 0.06),
+            0 24px 50px -24px rgba(0, 0, 0, 0.35);
+          transform-origin: 50% 0;
+          will-change: transform, opacity;
         }
-        .wk-frame-in { position: absolute; inset: 0; will-change: transform; }
-        .wk-frame-in img { width: 100%; height: 100%; object-fit: cover; }
-        .wk-film:hover .wk-frame-in img { scale: 1.03; }
-        .wk-frame-in img { transition: scale 0.8s var(--ease-out); }
-        .wk-media-tag {
-          position: absolute; left: 0; bottom: 0; z-index: 3;
-          padding: 0.7rem 1.2rem 0 1.4rem;
+        .wk-chrome {
+          display: flex; align-items: center; gap: 6px;
+          height: 34px; flex: none;
+          padding: 0 8px;
+          font-size: var(--step--2);
+          color: var(--ink-3);
+        }
+        .wk-chrome i { width: 9px; height: 9px; border-radius: 99px; background: var(--paper-3); }
+        .wk-chrome i:first-child { background: var(--acc); }
+        .wk-url {
+          margin-left: 10px; padding: 3px 12px;
+          border-radius: 99px; background: var(--paper);
+          font-family: var(--font-mono);
+        }
+        .wk-media-tag { margin-left: auto; font-weight: 600; color: var(--ink-2); }
+        .wk-frame-in {
+          position: relative; flex: 1; min-height: 0;
+          border-radius: 16px; overflow: hidden;
           background: var(--paper);
-          border-top-right-radius: var(--r-l);
-          font-weight: 650; letter-spacing: -0.02em;
         }
+        .wk-frame-in img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 0; transition: scale 0.8s var(--ease-out); }
+        .wk-film:hover .wk-frame-in img { scale: 1.02; }
 
         .wk-w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.08em; margin-bottom: -0.08em; }
         .wk-w > span { display: inline-block; }
@@ -490,9 +532,7 @@ const Work = () => {
         .wk-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
 
         .wk-dots {
-          position: absolute;
-          left: var(--gutter);
-          bottom: -2.4rem;
+          position: relative;
           display: flex; align-items: center; gap: 6px;
         }
         .wk-dot {
