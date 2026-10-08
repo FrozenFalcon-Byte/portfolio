@@ -490,90 +490,72 @@ html.lenis, html.lenis body { height: auto; }
    Colours are written in by JS from the section's own tokens.
    ============================================================ */
 @media (hover: hover) and (pointer: fine) {
-  body.has-cursor,
-  body.has-cursor a,
-  body.has-cursor button,
-  body.has-cursor input,
-  body.has-cursor textarea,
-  body.has-cursor select,
-  body.has-cursor [role="button"] { cursor: none; }
+  /* Every element, whatever its own cursor rule says, or the system
+     pointer shows through on top of ours. */
+  body.has-cursor, body.has-cursor * { cursor: none !important; }
 
   .cur {
     --cur-acc: #E61A66;
     --cur-on-acc: #FFFFFF;
-    --cur-rim: #FFFFFF;
+    --cur-ink: #0E0E0D;
+    --cur-paper: #FFFFFF;
     position: fixed;
     top: 0; left: 0;
     z-index: 10000;
     pointer-events: none;
     will-change: transform;
   }
+  .cur-tilt { position: absolute; top: 0; left: 0; will-change: transform; }
 
-  .cur-arrow, .cur-beam {
-    position: absolute;
-    top: 0; left: 0;
-    overflow: visible;
-    /* The tip of the path is at roughly (4, 4), so the whole mark is
-       pulled back by that much and the hotspot lands on the pointer. */
-    margin: -4px 0 0 -4px;
-    transform-origin: 5px 5px;
-  }
-  .cur-beam { opacity: 0; margin: -15px 0 0 -8px; transform-origin: 50% 50%; }
+  /* Each shape is pulled back by its own hotspot so the tip, or the
+     fingertip, lands exactly on the pointer; the tilt pivots there. */
+  .cur-shape { position: absolute; overflow: visible; display: none; max-width: none; max-height: none; }
+  .cur-arrow { left: -4px; top: -4.5px; }
+  .cur-hand, .cur-press { left: -13.5px; top: -2px; }
+  .cur-beam { left: -8px; top: -15px; }
+  .cur[data-state="arrow"] .cur-arrow,
+  .cur[data-state="hand"] .cur-hand,
+  .cur[data-state="press"] .cur-press,
+  .cur[data-state="beam"] .cur-beam { display: block; }
 
-  /* Drawn as a fat stroke under the fill, which is what gives the
-     arrow its sticker rim without a second path to keep in register. */
-  .cur-arrow .cur-rim {
-    fill: none;
-    stroke: var(--cur-rim);
-    stroke-width: 6;
-    stroke-linejoin: round;
-  }
-  .cur-arrow .cur-fill {
-    fill: var(--cur-acc);
-    stroke: var(--cur-acc);
-    stroke-width: 1.2;
-    stroke-linejoin: round;
-    transition: fill 0.4s var(--ease-out), stroke 0.4s var(--ease-out);
-  }
-  .cur-beam .cur-rim {
-    fill: none;
-    stroke: var(--cur-rim);
-    stroke-width: 5.5;
-    stroke-linecap: round;
-  }
-  .cur-beam .cur-beam-line {
-    fill: none;
-    stroke: var(--cur-acc);
-    stroke-width: 2;
-    stroke-linecap: round;
-    transition: stroke 0.4s var(--ease-out);
-  }
+  .cur-l1 > * { fill: var(--cur-ink); stroke: var(--cur-ink); stroke-width: 7.5; stroke-linejoin: round; }
+  .cur-l2 > * { fill: var(--cur-paper); stroke: var(--cur-paper); stroke-width: 4; stroke-linejoin: round; }
+  .cur-l3 > * { fill: var(--cur-acc); transition: fill 0.35s var(--ease-out); }
 
-  /* Tail-first corner is tight and the rest are round, so the chip
-     reads as hanging off the arrow rather than floating beside it. */
+  .cur-ring {
+    fill: none; stroke: var(--cur-acc); stroke-width: 2.5;
+    transform-box: fill-box; transform-origin: center;
+    animation: cur-ring 0.5s var(--ease-out) forwards;
+  }
+  @keyframes cur-ring { from { transform: scale(0.3); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
+
+  .cur-beam-rim { fill: none; stroke: var(--cur-paper); stroke-width: 6; stroke-linecap: round; }
+  .cur-beam-line { fill: none; stroke: var(--cur-ink); stroke-width: 2.2; stroke-linecap: round; }
+
+  /* The label hangs off the lower right of the pointer and trails it. */
   .cur-chip {
     position: absolute;
-    top: 20px; left: 16px;
+    top: 30px; left: 18px;
     display: inline-flex;
     align-items: center;
-    height: 28px;
-    padding-inline: 11px;
-    border-radius: 6px 14px 14px 14px;
-    background: var(--cur-acc);
-    color: var(--cur-on-acc);
-    opacity: 0;
-    transform: scale(0.4);
+    gap: 0.4rem;
+    height: 30px;
+    padding: 0 11px 0 13px;
+    border-radius: 99px;
+    background: var(--cur-ink);
+    color: var(--cur-paper);
+    box-shadow: 0 0 0 2px var(--cur-paper);
     transform-origin: 0 0;
     white-space: nowrap;
-    transition: background-color 0.4s var(--ease-out), color 0.4s var(--ease-out);
   }
   .cur-chip-label {
     font-family: var(--font-display);
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-size: 0.8rem;
+    font-weight: 650;
+    letter-spacing: -0.015em;
     line-height: 1;
   }
+  .cur-chip-dot { width: 6px; height: 6px; border-radius: 99px; background: var(--cur-acc); }
 }
 
 @media not all and (hover: hover) {

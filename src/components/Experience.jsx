@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { TransitionLink } from './RouteCurtain';
 import { gsap, ScrollTrigger, EASE, heading, reduced, cleanup } from '../lib/motion';
 import Glyph from './Glyph';
@@ -132,7 +132,7 @@ const Scene = ({ sys, pos, idx, total }) => {
           {String(head + 1).padStart(2, '0')}<em>/{String(n).padStart(2, '0')}</em>
         </span>
         <Caption text={sys.stages[head].c} id={`${sys.id}-${head}`} />
-        <span className="num ex-narr-sys">System {idx + 1} of {total}</span>
+        <span className="num ex-narr-sys">System {idx + 1} of {total}{idx === 0 ? ' · the other one is optional' : ''}</span>
       </div>
     </div>
   );
@@ -145,6 +145,8 @@ const Experience = () => {
   const [wide, setWide] = useState(() => typeof window !== 'undefined'
     && window.matchMedia('(min-width: 961px)').matches && !reduced());
   const [prog, setProg] = useState(0);
+  const [sel, setSel] = useState(0);
+  const stRef = useRef(null);
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 961px)');
@@ -155,25 +157,44 @@ const Experience = () => {
 
   useEffect(() => cleanup([heading(headRef.current)]), []);
 
-  /* The scene pins while both graphs run, one after the other. Each
-     system gets half the distance, with a short dwell at its end so the
-     last stage is read before the next system replaces it. */
+  /* The scene pins while one graph runs, with a short dwell at its end
+     so the last stage is read. The second system is never forced on
+     anyone: it is offered at the end, and taking the offer rewinds the
+     same scene with the other graph loaded. */
   useEffect(() => {
     if (!wide) return undefined;
     const st = ScrollTrigger.create({
       trigger: sceneRef.current,
       start: 'top top',
-      end: () => `+=${window.innerHeight * 3.4}`,
+      end: () => `+=${window.innerHeight * 1.9}`,
       pin: true,
       onUpdate: (self) => setProg(Math.round(self.progress * 400) / 400),
     });
+    stRef.current = st;
     return () => st.kill();
   }, [wide]);
 
-  const idx = prog < 0.5 ? 0 : 1;
+  const idx = sel;
   const sys = SYSTEMS[idx];
-  const local = Math.min(1, ((prog - idx * 0.5) / 0.5) / 0.85);
+  const other = SYSTEMS[1 - idx];
+  const local = Math.min(1, prog / 0.85);
   const pos = local * (sys.stages.length - 1);
+  const done = local > 0.8;
+
+  const choose = () => {
+    const st = stRef.current;
+    const inner = sceneRef.current?.querySelector('.ex-sys');
+    const swap = () => {
+      setSel(1 - idx);
+      const y = st ? st.start + 2 : 0;
+      if (window.lenis) window.lenis.scrollTo(y, { immediate: true, force: true });
+      else window.scrollTo(0, y);
+      ScrollTrigger.update();
+      if (inner && !reduced()) gsap.fromTo(sceneRef.current.querySelector('.ex-sys'), { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease: EASE.swift });
+    };
+    if (!inner || reduced()) { swap(); return; }
+    gsap.to(inner, { opacity: 0, y: -30, duration: 0.35, ease: 'power2.in', onComplete: swap });
+  };
 
   return (
     <section ref={rootRef} id="experience" className="experience" data-acc="blue">
@@ -186,7 +207,7 @@ const Experience = () => {
         <div className="ex-role">
           <span className="ex-role-t">PMO AI/ML Intern</span>
           <span className="ex-role-d">Dec 2025 — Present</span>
-          <TransitionLink to="/experience/pmo" className="ex-more" data-cursor-label="Architecture">
+          <TransitionLink to="/experience/pmo" title="Two graphs" kicker="Emerson · PMO AI/ML" className="ex-more" data-cursor-label="Architecture">
             Full architecture <ArrowUpRight size={16} strokeWidth={2.4} />
           </TransitionLink>
         </div>
@@ -196,12 +217,22 @@ const Experience = () => {
         <div className="ex-pin" ref={sceneRef}>
           <div className="shell ex-pin-in">
             <Scene sys={sys} pos={pos} idx={idx} total={SYSTEMS.length} />
-            <div className="ex-dots" aria-hidden="true">
-              {SYSTEMS.map((s, i) => (
-                <span key={s.id} className={i === idx ? 'is-on' : ''}>
-                  <i style={{ transform: `scaleX(${i < idx ? 1 : i === idx ? local : 0})` }} />
+            <div className={`ex-offer${done ? ' is-ready' : ''}`}>
+              <div className="ex-tabs" role="tablist" aria-label="Systems">
+                {SYSTEMS.map((x, i) => (
+                  <span key={x.id} className={`ex-tab${i === idx ? ' is-on' : ''}`}>
+                    {i === idx && <i style={{ transform: `scaleX(${local})` }} />}
+                    <b>{x.name}</b>
+                  </span>
+                ))}
+              </div>
+              <button className="ex-next" onClick={choose} data-cursor-label="Run it">
+                <span className="ex-next-k">{idx === 0 ? 'Optional · there is a second one' : 'Back to the first'}</span>
+                <span className="display ex-next-t">
+                  {idx === 0 ? 'Scroll through the ' : 'Run the '}{other.name}
+                  <ArrowRight size={20} strokeWidth={2.6} />
                 </span>
-              ))}
+              </button>
             </div>
           </div>
         </div>
@@ -346,6 +377,32 @@ const Experience = () => {
         .ex-cap { font-size: clamp(1.5rem, 2.8vw, 2.6rem); font-weight: 650; line-height: 1.1; letter-spacing: -0.04em; max-width: 30ch; }
         .ex-narr-sys { color: var(--ink-3); font-size: var(--step--2); white-space: nowrap; padding-top: 0.5rem; }
 
+        .ex-offer { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-top: 1.5rem; }
+        .ex-tabs { display: flex; gap: 0.4rem; }
+        .ex-tab {
+          position: relative; overflow: hidden;
+          padding: 0.45rem 0.9rem; border-radius: 99px;
+          background: var(--paper-2); color: var(--ink-3);
+          font-size: var(--step--1);
+        }
+        .ex-tab b { position: relative; font-weight: 600; }
+        .ex-tab i { position: absolute; left: 0.9rem; right: 0.9rem; bottom: 0.25rem; height: 3px; background: var(--acc); transform-origin: left; border-radius: 3px; }
+        .ex-tab.is-on { color: var(--ink); }
+        .ex-next {
+          display: grid; gap: 0.15rem; text-align: right;
+          padding: 0.75rem 1.25rem; border-radius: var(--r-l);
+          background: var(--paper-2); color: var(--ink);
+          cursor: pointer;
+          opacity: 0.55;
+          transition: opacity 0.4s, background 0.4s, color 0.4s, transform 0.5s var(--ease-out);
+        }
+        .ex-offer.is-ready .ex-next { opacity: 1; background: var(--acc); color: var(--acc-ink); animation: ex-nudge 2.4s var(--ease-in-out) 0.4s infinite; }
+        .ex-next:hover { opacity: 1; transform: translateY(-3px); }
+        .ex-next-k { font-size: var(--step--2); opacity: 0.75; }
+        .ex-next-t { display: inline-flex; align-items: center; justify-content: flex-end; gap: 0.5rem; font-size: var(--step-1); font-weight: 650; letter-spacing: -0.03em; }
+        .ex-next:hover .ex-next-t svg { transform: translateX(4px); }
+        .ex-next-t svg { transition: transform 0.4s var(--ease-out); }
+        @keyframes ex-nudge { 0%, 70%, 100% { transform: translateX(0); } 80% { transform: translateX(-6px); } 90% { transform: translateX(3px); } }
         .ex-dots { display: flex; gap: 6px; margin-top: 1.5rem; width: 12rem; }
         .ex-dots span { flex: 1; height: 4px; border-radius: 4px; background: var(--paper-3); overflow: hidden; }
         .ex-dots i { display: block; height: 100%; background: var(--acc); transform-origin: left; }

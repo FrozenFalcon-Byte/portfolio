@@ -143,56 +143,6 @@ const Console = () => {
   );
 };
 
-/* ------------------------------------------------------------------
-   Side — the empty half beside the name. Where he is, what comes next
-   and what he is open to, as three tiles in their own accents laid
-   over each other like stickers on a laptop lid. Each sits a little
-   crooked; pointing at one straightens it and lifts it to the top of
-   the pile. Pune's time rides on the pile as a small ink tab.
-   ------------------------------------------------------------------ */
-const STEPS = [
-  { k: 'Now', v: 'AI / ML intern', s: 'Emerson, PMO · since Dec ’25', acc: 'blue', rot: -3, x: '0rem', live: true },
-  { k: 'Next', v: 'B.Tech, AI / ML', s: 'VIIT Pune · class of 2027', acc: 'yellow', rot: 2.5, x: '1.6rem' },
-  { k: 'Open to', v: 'Full-time AI roles', s: 'Agents, RAG, ML systems', acc: 'lime', rot: -1.5, x: '0.5rem' },
-];
-
-const Side = () => {
-  const [hm, setHm] = useState(['--', '--']);
-  useEffect(() => {
-    const fmt = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
-    const set = () => setHm(fmt.format(new Date()).split(':'));
-    set();
-    const id = setInterval(set, 10000);
-    return () => clearInterval(id);
-  }, []);
-  return (
-    <aside className="hero-side" aria-label="Status">
-      <p className="hs-clock" data-surface="ink">
-        <span className="hs-city">Pune</span>
-        <span className="num hs-time">{hm[0]}<i>:</i>{hm[1]}</span>
-      </p>
-      <ol className="hs-pile">
-        {STEPS.map((x, i) => (
-          <li
-            key={x.k}
-            className="hs-tile"
-            data-acc={x.acc}
-            style={{ '--rot': `${x.rot}deg`, '--x': x.x, zIndex: STEPS.length - i }}
-          >
-            <span className="hs-k">
-              {x.live && <i className="hs-live" aria-hidden="true" />}
-              {x.k}
-              <span className="num hs-i">{String(i + 1).padStart(2, '0')}</span>
-            </span>
-            <span className="display hs-v">{x.v}</span>
-            <span className="hs-s">{x.s}</span>
-          </li>
-        ))}
-      </ol>
-    </aside>
-  );
-};
-
 const Hero = () => {
   const rootRef = useRef(null);
   const nameRef = useRef(null);
@@ -206,7 +156,6 @@ const Hero = () => {
     const root = rootRef.current;
     const glyphs = root.querySelectorAll('.hero-shell .glyph');
     const furniture = root.querySelectorAll('.hero-ctas');
-    const tiles = root.querySelectorAll('.hs-clock, .hs-tile');
     const card = root.querySelector('.hero-reel');
 
     if (reduced()) return undefined;
@@ -218,7 +167,6 @@ const Hero = () => {
     ];
     gsap.set(glyphs, { '--open': 0 });
     gsap.set(furniture, { y: 24, opacity: 0 });
-    gsap.set(tiles, { y: 120, opacity: 0, rotate: (i) => (i % 2 ? 14 : -14) });
     gsap.set(card, { y: 160 });
 
     const play = () => {
@@ -226,10 +174,6 @@ const Hero = () => {
       gsap.timeline({ defaults: { ease: EASE.swift } })
         .to(glyphs, { '--open': 1, duration: 1.1, stagger: 0.12, ease: EASE.glide }, 0.55)
         .to(furniture, { y: 0, opacity: 1, duration: 0.9, stagger: 0.06 }, 0.3)
-        .to(tiles, {
-          y: 0, opacity: 1, rotate: 0, duration: 1.1, stagger: 0.1, ease: 'back.out(1.4)',
-          clearProps: 'transform,opacity',
-        }, 0.6)
         .to(card, { y: 0, duration: 1.3, ease: EASE.glide }, 0.5);
     };
 
@@ -280,9 +224,6 @@ const Hero = () => {
               Chavan<Glyph kind="graph" acc="blue" />
             </span></span>
           </h1>
-          <Side />
-          </div>
-
           <div className="hero-bottom">
             <p ref={ledeRef} className="hero-lede display">
               <span className="ln"><span className="ln-in">I build generative AI</span></span>
@@ -307,6 +248,7 @@ const Hero = () => {
               </div>
             </div>
           </div>
+          </div>
         </div>
       </div>
 
@@ -329,76 +271,57 @@ const Hero = () => {
           background: var(--paper);
         }
         .hero-shell { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .hero-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; }
-
-        /* ---- side: a pile of tiles ---- */
-        .hero-side { flex: none; width: clamp(15rem, 21vw, 20rem); padding-top: 0.4rem; margin-right: 1.6rem; }
-        .hs-clock {
-          display: inline-flex; align-items: baseline; gap: 0.55rem;
-          margin: 0 0 -0.6rem 1.4rem;
-          padding: 0.55rem 1rem 1.1rem;
-          border-radius: 18px 18px 0 0;
-          background: var(--paper); color: var(--ink);
-          font-size: var(--step--1);
-          position: relative; z-index: 0;
-        }
-        .hs-city { color: var(--ink-3); font-weight: 600; }
-        .hs-time { font-size: var(--step-1); letter-spacing: -0.03em; }
-        .hs-time i { font-style: normal; animation: ex-blink 2s steps(2) infinite; }
-        .hs-pile { position: relative; z-index: 1; display: grid; }
-        .hs-tile {
-          position: relative;
+        /* Wide screens: the name on the left, and the sentence and the
+           buttons standing in the space its short second row leaves —
+           read top to bottom, they end on the buttons. */
+        .hero-head {
           display: grid;
-          gap: 0.2rem;
-          padding: 1rem 1.2rem 1.1rem;
-          margin-top: -0.5rem;
-          border-radius: 22px;
-          background: var(--acc);
-          color: var(--acc-ink);
-          box-shadow: 0 0 0 3px var(--paper);
-          transform: translateX(var(--x)) rotate(var(--rot));
-          transition: transform 0.6s var(--ease-out);
-          cursor: default;
+          grid-template-columns: auto minmax(0, 1fr);
+          gap: clamp(2rem, 4vw, 4.5rem);
+          align-items: stretch;
         }
-        .hs-tile:first-child { margin-top: 0; }
-        .hs-tile:hover { transform: translateX(var(--x)) rotate(0deg) translateY(-6px) scale(1.04); z-index: 5 !important; }
-        .hs-k { display: flex; align-items: center; gap: 0.45rem; font-size: var(--step--1); font-weight: 600; opacity: 0.8; }
-        .hs-i { margin-left: auto; font-size: 0.75rem; opacity: 0.7; }
-        .hs-live { position: relative; width: 8px; height: 8px; border-radius: 99px; background: currentColor; }
-        .hs-live::after {
-          content: ""; position: absolute; inset: -4px;
-          border-radius: inherit; border: 2px solid currentColor;
-          animation: hs-ping 1.8s var(--ease-out) infinite;
-        }
-        @keyframes hs-ping { from { transform: scale(0.5); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
-        .hs-v { font-size: clamp(1.25rem, 1.7vw, 1.7rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; }
-        .hs-s { font-size: var(--step--1); opacity: 0.75; }
-        @media (max-width: 1180px) { .hero-side { display: none; } }
-
         .hero-name {
           margin: 0;
           font-size: clamp(2.8rem, min(13.4vw, 17.5svh), 14.5rem);
+        }
+        @media (min-width: 1181px) {
+          .hero-name { font-size: min(10.4vw, 16svh, 13rem); }
         }
         .hero-row { white-space: nowrap; will-change: transform; }
         .hero-row--b { padding-left: min(6vw, 9svh); }
         .hero-name .glyph { margin-inline: 0.08em; }
 
         .hero-bottom {
-          display: grid;
-          grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr);
-          gap: clamp(1.25rem, 4vw, 4rem);
-          align-items: end;
-          margin-top: clamp(1rem, 3.5svh, 2.5rem);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          gap: clamp(1.5rem, 4svh, 2.5rem);
+          padding-block: clamp(0.6rem, 1.6svh, 1.4rem) clamp(0.4rem, 1.2svh, 1rem);
         }
         .hero-lede {
-          font-size: clamp(1.3rem, min(3.1vw, 4.4svh), 3rem);
+          font-size: clamp(1.3rem, min(2.15vw, 4svh), 2.4rem);
           font-weight: 650;
           line-height: 1.04;
           letter-spacing: -0.04em;
         }
-        .hero-ctas { display: grid; gap: clamp(0.75rem, 2svh, 1.25rem); justify-items: end; text-align: right; }
+        .hero-ctas { display: grid; gap: clamp(0.75rem, 2svh, 1.25rem); justify-items: start; }
         .hero-where { color: var(--ink-2); font-size: var(--step-0); line-height: 1.35; }
-        .hero-btns { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-end; }
+        .hero-btns { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+        /* Narrower: the name takes the full width again and the sentence
+           and buttons sit in a row beneath it. */
+        @media (max-width: 1180px) {
+          .hero-head { grid-template-columns: minmax(0, 1fr); gap: clamp(1rem, 3.5svh, 2.5rem); }
+          .hero-bottom {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr);
+            align-items: end;
+            padding: 0;
+          }
+          .hero-lede { font-size: clamp(1.3rem, min(3.1vw, 4.4svh), 3rem); }
+          .hero-ctas { justify-items: end; }
+          .hero-btns { justify-content: flex-end; }
+        }
         .hero-btns .btn { padding: min(0.95em, 1.6svh) 1.5em; }
 
         /* ---- the console ---- */
@@ -494,7 +417,7 @@ const Hero = () => {
 
         @media (max-width: 860px) {
           .hero-bottom { grid-template-columns: minmax(0, 1fr); }
-          .hero-ctas { justify-items: start; text-align: left; }
+          .hero-ctas { justify-items: start; }
           .hero-btns { justify-content: flex-start; }
           .hero-row--b { padding-left: 0; }
           .cs-body { grid-template-columns: minmax(0, 1fr); }

@@ -45,54 +45,94 @@ const LAYERS = [
   },
 ];
 
-/* Deterministic scatter, so a layout never jumps between renders. */
-const rand = (seed) => {
-  const x = Math.sin(seed * 9301 + 49297) * 233280;
-  return x - Math.floor(x);
-};
-
 /* ------------------------------------------------------------------
-   Layer — one row of the stack.
+   Band — one layer of the stack, as a strip of type running the full
+   width of the page.
 
-   The tools are keycaps: square-ish keys with a raised edge, the
-   first filled with the row's accent. As the row arrives they drop
-   onto the board one after another and bounce as they land; hovering
-   a key presses it down, so the whole section reads as something you
-   build with rather than a list of names.
+   The tool names are set huge and roll sideways forever, odd layers one
+   way and even layers the other, with the logo's full stop between
+   them. Scrolling the page winds them faster in the direction you are
+   scrolling, then they ease back to a drift. Pointing at a band stops
+   it so a name can be read; pointing at a name inks it in the layer's
+   accent. The layer's own name sits pinned at the left edge over the
+   moving type, on a paper tab, so you always know which shelf you are
+   looking at.
    ------------------------------------------------------------------ */
-const Layer = ({ l, i }) => {
-  const rowRef = useRef(null);
+const Band = ({ l, i }) => {
+  const bandRef = useRef(null);
+  const runRef = useRef(null);
 
   useEffect(() => {
-    if (reduced()) return undefined;
-    const row = rowRef.current;
-    const keys = row.querySelectorAll('.st-key');
-    const title = row.querySelector('.st-title');
-    const tl = gsap.timeline({
-      scrollTrigger: { trigger: row, start: 'top 82%', toggleActions: 'play none none reverse' },
-    });
-    tl.fromTo(title, { xPercent: -8, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.9, ease: 'power3.out' }, 0)
-      .fromTo(keys,
-        { y: -140, opacity: 0, rotate: (j) => (rand(i * 31 + j) - 0.5) * 30 },
-        { y: 0, opacity: 1, rotate: 0, duration: 0.9, ease: 'bounce.out', stagger: 0.06 }, 0.1);
-    return () => { tl.scrollTrigger?.kill(); tl.kill(); };
+    const band = bandRef.current;
+    const run = runRef.current;
+    const dir = i % 2 ? 1 : -1;
+    let x = 0;
+    let boost = 0;
+    let held = false;
+    let lastY = window.scrollY;
+    let visible = false;
+
+    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; }, { rootMargin: '100px' });
+    io.observe(band);
+
+    const tick = (_t, delta) => {
+      if (!visible || reduced()) return;
+      const dt = Math.min(delta / 16.667, 3);
+      const y = window.scrollY;
+      const v = y - lastY;
+      lastY = y;
+      boost += (gsap.utils.clamp(-40, 40, v * 0.6) - boost) * 0.12 * dt;
+      const speed = held ? 0 : (0.6 + Math.abs(boost)) * (boost < 0 ? -1 : 1);
+      const half = run.scrollWidth / 2;
+      x += dir * speed * dt;
+      if (x <= -half) x += half;
+      if (x > 0) x -= half;
+      run.style.transform = `translate3d(${x}px, 0, 0)`;
+    };
+    const on = () => { held = true; };
+    const off = () => { held = false; };
+    band.addEventListener('pointerenter', on);
+    band.addEventListener('pointerleave', off);
+    gsap.ticker.add(tick);
+
+    // Arrival: the band unrolls from a thin line to its full height.
+    let st;
+    if (!reduced()) {
+      st = gsap.fromTo(band, { clipPath: 'inset(48% 0% 48% 0% round 999px)' }, {
+        clipPath: 'inset(0% 0% 0% 0% round 0px)', duration: 1.1, ease: 'power3.inOut',
+        scrollTrigger: { trigger: band, start: 'top 88%', toggleActions: 'play none none reverse' },
+      });
+    }
+    return () => {
+      gsap.ticker.remove(tick);
+      io.disconnect();
+      band.removeEventListener('pointerenter', on);
+      band.removeEventListener('pointerleave', off);
+      st?.scrollTrigger?.kill(); st?.kill();
+    };
   }, [i]);
 
+  // Two copies so the strip can wrap without a seam.
+  const words = [...l.items, ...l.items, ...l.items];
   return (
-    <li className="st-row" ref={rowRef} data-acc={l.acc}>
-      <div className="st-left">
+    <li className="st-band" ref={bandRef} data-acc={l.acc}>
+      <div className="st-tab">
         <span className="num st-n">{l.n}</span>
-        <h3 className="display st-title">{l.title}<Glyph kind={l.glyph} acc={l.acc} /></h3>
-        <p className="st-blurb">{l.blurb}</p>
+        <span className="display st-name">{l.title}</span>
+        <Glyph kind={l.glyph} acc={l.acc} />
       </div>
-      <ul className="st-keys">
-        {l.items.map((it, j) => (
-          <li key={it} className={`st-key${j === 0 ? ' is-lead' : ''}`}>
-            <span className="num st-key-n">{String(j + 1).padStart(2, '0')}</span>
-            <span className="display st-key-t">{it}</span>
-          </li>
+      <div className="st-run" ref={runRef} aria-label={`${l.title}: ${l.items.join(', ')}`}>
+        {[0, 1].map((copy) => (
+          <span className="st-set" key={copy} aria-hidden={copy === 1}>
+            {words.map((w, k) => (
+              <span className="st-item" key={k}>
+                <span className="display st-word">{w}</span>
+                <i className="st-stop" />
+              </span>
+            ))}
+          </span>
         ))}
-      </ul>
+      </div>
     </li>
   );
 };
@@ -123,55 +163,75 @@ const Stack = () => {
           <span className="ln"><span className="ln-in">layer by<Glyph kind="stack" acc="lime" />layer.</span></span>
         </h2>
 
-        <ol className="st-rows">
-          {LAYERS.map((l, i) => <Layer key={l.n} l={l} i={i} />)}
-        </ol>
       </div>
+
+      <ol className="st-bands">
+        {LAYERS.map((l, i) => <Band key={l.n} l={l} i={i} />)}
+      </ol>
 
       <style>{`
         .stack { overflow: hidden; }
         .st-note { color: var(--ink-3); white-space: nowrap; }
         .st-head { margin-bottom: clamp(2rem, 7vh, 4rem); }
 
-        .st-rows { display: grid; }
-        .st-row {
-          display: grid;
-          grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-          gap: clamp(1.25rem, 4vw, 4rem);
-          align-items: center;
-          padding-block: clamp(1.5rem, 4vh, 2.5rem);
-          border-top: 1px solid var(--line);
-        }
-        .st-row:last-child { border-bottom: 1px solid var(--line); }
-        .st-left { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); column-gap: 0.75rem; align-items: baseline; }
-        .st-n { color: var(--ink-3); font-size: var(--step--1); }
-        .st-title { font-size: clamp(2rem, 4.6vw, 4rem); letter-spacing: -0.05em; }
-        .st-blurb { grid-column: 2; margin-top: 0.6rem; color: var(--ink-2); font-size: var(--step--1); max-width: 40ch; }
-
-        .st-keys { display: flex; flex-wrap: wrap; gap: 0.7rem 0.6rem; padding-bottom: 6px; }
-        .st-key {
+        .st-bands { display: grid; border-top: 1px solid var(--line); }
+        .st-band {
+          position: relative;
           display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          min-width: 6.2rem;
-          height: clamp(4.4rem, 6.4vw, 5.4rem);
-          padding: 0.6rem 0.85rem 0.65rem;
-          border-radius: 18px;
-          background: var(--paper);
-          border: 1.5px solid var(--ink);
-          box-shadow: 0 6px 0 var(--ink);
-          cursor: default;
-          will-change: transform;
-          transition: translate 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), background 0.3s, color 0.3s;
+          align-items: center;
+          height: clamp(6rem, 15vh, 9.5rem);
+          border-bottom: 1px solid var(--line);
+          overflow: hidden;
         }
-        .st-key:hover { translate: 0 4px; box-shadow: 0 2px 0 var(--ink); background: var(--acc); color: var(--acc-ink); }
-        .st-key:active { translate: 0 6px; box-shadow: 0 0 0 var(--ink); }
-        .st-key.is-lead { background: var(--acc); color: var(--acc-ink); }
-        .st-key-n { font-size: 0.7rem; opacity: 0.55; }
-        .st-key-t { font-size: clamp(1rem, 1.35vw, 1.3rem); font-weight: 650; letter-spacing: -0.03em; line-height: 1; white-space: nowrap; }
+        .st-tab {
+          position: absolute; left: 0; top: 50%; z-index: 2;
+          translate: 0 -50%;
+          display: flex; align-items: center; gap: 0.6rem;
+          padding: 0.7rem 1.1rem 0.7rem var(--gutter);
+          background: var(--paper);
+          border-radius: 0 999px 999px 0;
+          box-shadow: 1.2rem 0 1.4rem -0.2rem var(--paper);
+          font-size: var(--step-1);
+        }
+        .st-n { color: var(--ink-3); font-size: var(--step--1); }
+        .st-name { font-weight: 700; letter-spacing: -0.04em; }
+        .st-run { display: flex; width: max-content; will-change: transform; }
+        .st-set { display: flex; align-items: center; }
+        .st-item { display: inline-flex; align-items: center; }
+        .st-word {
+          position: relative;
+          padding: 0 0.12em;
+          font-size: clamp(2.6rem, 7.4vw, 7rem);
+          font-weight: 700;
+          letter-spacing: -0.055em;
+          line-height: 1;
+          white-space: nowrap;
+          color: var(--ink);
+          z-index: 0;
+          transition: color 0.3s var(--ease-out);
+        }
+        .st-word::after {
+          content: ""; position: absolute; z-index: -1;
+          left: 0; right: 0; top: 12%; bottom: 8%;
+          border-radius: 999px;
+          background: var(--acc);
+          transform: scaleY(0);
+          transition: transform 0.45s var(--ease-out);
+        }
+        .st-word:hover { color: var(--acc-ink); }
+        .st-word:hover::after { transform: scaleY(1); }
+        .st-stop {
+          width: clamp(0.6rem, 1.2vw, 1.05rem); height: clamp(0.6rem, 1.2vw, 1.05rem);
+          margin: 0 clamp(0.8rem, 2vw, 1.8rem);
+          border-radius: 99px;
+          background: var(--acc);
+          flex: none;
+        }
 
-        @media (max-width: 860px) {
-          .st-row { grid-template-columns: minmax(0, 1fr); }
+        @media (max-width: 700px) {
+          .st-tab { top: 0.6rem; translate: 0 0; padding-block: 0.4rem; font-size: var(--step-0); }
+          .st-tab .glyph { display: none; }
+          .st-band { align-items: flex-end; padding-bottom: 0.8rem; height: 8rem; }
         }
       `}</style>
     </section>
