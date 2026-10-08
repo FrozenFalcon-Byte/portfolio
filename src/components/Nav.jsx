@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { gsap, ScrollTrigger, EASE, reduced } from '../lib/motion';
 import ThemeToggle from './ThemeToggle';
 import { useTheme } from '../lib/theme';
+import Mark from './Mark';
 
 const LINKS = [
   { id: 'about',      n: '01', label: 'About' },
@@ -18,48 +19,184 @@ const Nav = () => {
   const [open, setOpen] = useState(false);
   const barRef = useRef(null);
   const sheetRef = useRef(null);
-  const progressRef = useRef(null);
+  const logoRef = useRef(null);
+  const ringRef = useRef(null);
+  const jumpRef = useRef(null);
+  const pillRef = useRef(null);
+  const blobRef = useRef(null);
+  const hopRef = useRef(null);
+  const hopAt = useRef(null);
+  const [active, setActive] = useState(null);
+  const busy = useRef(false);
 
-  /* The bar adopts the tone of whatever block is passing under it, so a
-     dark section gets light chrome without a second set of styles. */
+  /* ------------------------------------------------------------------
+     Jump. A section link never scrolls the page through everything in
+     between — with pinned scenes on the way that is a long, juddering
+     ride. Instead a sheet rises with the destination's name on it, the
+     page is moved underneath while it is covered, and the sheet lifts
+     away again with the visitor already there.
+     ------------------------------------------------------------------ */
+  const jump = React.useCallback((id) => {
+    const target = id === 'top' ? null : document.getElementById(id);
+    if (id !== 'top' && !target) return;
+    const place = () => {
+      const y = target ? target.getBoundingClientRect().top + window.scrollY - 70 : 0;
+      if (window.lenis) window.lenis.scrollTo(y, { immediate: true, force: true });
+      else window.scrollTo(0, y);
+      ScrollTrigger.update();
+    };
+    const sheet = jumpRef.current;
+    if (reduced() || !sheet || busy.current) { place(); return; }
+    busy.current = true;
+    const word = sheet.querySelector('.jump-word');
+    const link = LINKS.find((l) => l.id === id);
+    sheet.querySelector('.jump-t').textContent = link ? link.label : 'Ajinkya';
+    sheet.querySelector('.jump-n').textContent = link ? link.n : '00';
+    gsap.timeline({ onComplete: () => { busy.current = false; } })
+      .set(sheet, { pointerEvents: 'auto', visibility: 'visible' })
+      .fromTo(sheet,
+        { clipPath: 'inset(100% 0% 0% 0% round 64px 64px 0px 0px)' },
+        { clipPath: 'inset(0% 0% 0% 0% round 0px 0px 0px 0px)', duration: 0.6, ease: EASE.glide })
+      .fromTo(word, { yPercent: 110 }, { yPercent: 0, duration: 0.55, ease: EASE.swift }, 0.18)
+      .add(place, 0.62)
+      .to(word, { yPercent: -110, duration: 0.45, ease: 'power2.in' }, 0.85)
+      .to(sheet, { clipPath: 'inset(0% 0% 100% 0% round 0px 0px 64px 64px)', duration: 0.7, ease: EASE.glide }, 0.95)
+      .set(sheet, { pointerEvents: 'none', visibility: 'hidden' });
+  }, []);
+
+  /* Every in-page anchor on the site goes through the jump, so the
+     hero's buttons and the footer behave exactly like the menu. */
+  useEffect(() => {
+    const onClick = (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey) return;
+      const a = e.target.closest?.('a[href^="#"]');
+      if (!a) return;
+      const id = a.getAttribute('href').slice(1);
+      if (!id) return;
+      e.preventDefault();
+      setOpen(false);
+      jump(id);
+    };
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, [jump]);
+
+  /* Which section is being read. The highlight in the pill slides to
+     its link, so the bar doubles as a map of where you are. */
+  useEffect(() => {
+    const sts = LINKS.map((l) => {
+      const el = document.getElementById(l.id);
+      if (!el) return null;
+      return ScrollTrigger.create({
+        trigger: el,
+        start: 'top 45%',
+        end: 'bottom 45%',
+        // Measured after every pinned scene has added its spacer, or
+        // the sections below a pin are read at their unpinned offsets.
+        refreshPriority: -10,
+        onToggle: (self) => { if (self.isActive) setActive(l.id); },
+        onLeaveBack: () => { if (l.id === 'about') setActive(null); },
+      });
+    }).filter(Boolean);
+    return () => sts.forEach((t) => t.kill());
+  }, []);
+
+  useEffect(() => {
+    const pill = pillRef.current;
+    const blob = blobRef.current;
+    if (!pill || !blob) return;
+    const link = active && pill.querySelector(`[data-id="${active}"]`);
+    if (!link) { gsap.to(blob, { opacity: 0, scale: 0.6, duration: 0.35, ease: EASE.swift }); return; }
+    gsap.to(blob, {
+      x: link.offsetLeft, width: link.offsetWidth, opacity: 1, scale: 1,
+      duration: 0.6, ease: EASE.swift,
+    });
+  }, [active]);
+
+  /* Hover: the logo's full stop hops along under the links. It arcs
+     from one label to the next instead of sliding, and when it lands
+     the letters above it jump in a ripple outward from the landing
+     point, as if the dot had knocked them. */
+  const hop = (e) => {
+    const link = e.currentTarget;
+    const dot = hopRef.current;
+    if (reduced() || !dot) return;
+    const x = link.offsetLeft + link.offsetWidth / 2;
+    const first = hopAt.current === null;
+    const from = first ? x : hopAt.current;
+    hopAt.current = x;
+    gsap.killTweensOf(dot);
+    if (first) gsap.set(dot, { x, y: 0, scale: 0, opacity: 1 });
+    const dist = Math.abs(x - from);
+    const tl = gsap.timeline();
+    tl.to(dot, { opacity: 1, scale: 1, duration: 0.2, ease: 'power2.out' }, 0)
+      .to(dot, { x, duration: 0.42, ease: 'power1.inOut' }, 0)
+      .to(dot, { y: -Math.min(16, 6 + dist * 0.06), scaleY: 1.2, scaleX: 0.85, duration: 0.21, ease: 'power2.out' }, 0)
+      .to(dot, { y: 0, scaleY: 1, scaleX: 1, duration: 0.21, ease: 'power2.in' }, 0.21)
+      .to(dot, { scaleX: 1.6, scaleY: 0.6, duration: 0.08, ease: 'power1.out', yoyo: true, repeat: 1 }, 0.42);
+    const chars = link.querySelectorAll('.nav-ch');
+    tl.fromTo(chars, { y: 0 }, {
+      keyframes: [{ y: -5, duration: 0.14, ease: 'power2.out' }, { y: 0, duration: 0.4, ease: 'bounce.out' }],
+      stagger: { each: 0.025, from: 'center' },
+    }, 0.38);
+  };
+  const knock = (e) => {
+    if (reduced()) return;
+    gsap.fromTo(e.currentTarget.querySelectorAll('.nav-ch'), { y: 0 }, {
+      keyframes: [{ y: -4, duration: 0.14, ease: 'power2.out' }, { y: 0, duration: 0.4, ease: 'bounce.out' }],
+      stagger: { each: 0.03, from: 'end' },
+    });
+  };
+  const unhop = () => {
+    hopAt.current = null;
+    gsap.to(hopRef.current, { scale: 0, duration: 0.3, ease: EASE.swift });
+  };
+
+  /* Out of the way while reading down, back the moment you scroll up. */
+  useEffect(() => {
+    const bar = barRef.current;
+    let hidden = false;
+    const st = ScrollTrigger.create({
+      start: 0,
+      end: 'max',
+      onUpdate: (self) => {
+        const hide = self.direction === 1 && self.scroll() > window.innerHeight * 0.8;
+        if (hide === hidden || open) return;
+        hidden = hide;
+        gsap.to(bar, { yPercent: hide ? -160 : 0, duration: 0.6, ease: EASE.swift, overwrite: 'auto' });
+      },
+    });
+    return () => st.kill();
+  }, [open]);
+
+  /* The bar floats as a pill and only grows its backing once the page
+     has moved — over the hero it should be furniture, not chrome. */
   useEffect(() => {
     const bar = barRef.current;
     if (!bar) return undefined;
-
-    // While the sheet is up it is the only thing behind the bar.
-    if (open) {
-      bar.dataset.tone = 'ink';
-      return undefined;
-    }
-
-    const blocks = Array.from(document.querySelectorAll('.block[data-tone]'));
-    const triggers = blocks.map((block) =>
-      ScrollTrigger.create({
-        trigger: block,
-        start: 'top 64px',
-        end: 'bottom 64px',
-        onToggle: (self) => { if (self.isActive) bar.dataset.tone = block.dataset.tone; },
-      })
-    );
-
-    if (blocks[0]) bar.dataset.tone = blocks[0].dataset.tone;
-    return () => triggers.forEach((t) => t.kill());
-  }, [open]);
-
-  /* Read-position hairline. */
-  useEffect(() => {
-    const el = progressRef.current;
-    if (!el) return undefined;
     const st = ScrollTrigger.create({
-      trigger: document.body,
-      start: 'top top',
-      end: 'bottom bottom',
-      onUpdate: (self) => gsap.set(el, { scaleX: self.progress }),
+      start: 'top -40',
+      onToggle: (self) => bar.classList.toggle('is-stuck', self.isActive),
     });
     return () => st.kill();
   }, []);
 
-  /* Sheet: a colour block wipes down, then the links come up behind it. */
+  /* The ring around the logo closes as the page is read, so the mark
+     doubles as a read-position indicator. */
+  useEffect(() => {
+    if (reduced()) return undefined;
+    const st = ScrollTrigger.create({
+      trigger: document.body,
+      start: 'top top',
+      end: 'bottom bottom',
+      onUpdate: (self) => {
+        gsap.set(ringRef.current, { strokeDashoffset: 1 - self.progress });
+      },
+    });
+    return () => st.kill();
+  }, []);
+
+  /* Sheet: a dark panel wipes down, the links come up behind it. */
   useEffect(() => {
     const sheet = sheetRef.current;
     if (!sheet) return undefined;
@@ -71,16 +208,16 @@ const Nav = () => {
       window.lenis?.stop();
       if (reduced()) {
         gsap.set(sheet, { clipPath: 'inset(0% 0% 0% 0%)', pointerEvents: 'auto' });
-        gsap.set([links, meta], { y: 0, opacity: 1 });
+        gsap.set([links, meta], { yPercent: 0, y: 0, opacity: 1 });
       } else {
         gsap.set(sheet, { pointerEvents: 'auto' });
         gsap.timeline()
           .fromTo(sheet,
             { clipPath: 'inset(0% 0% 100% 0%)' },
-            { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.75, ease: EASE.glide })
+            { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.78, ease: EASE.glide })
           .fromTo(links,
             { yPercent: 115 },
-            { yPercent: 0, duration: 0.85, stagger: 0.06, ease: EASE.swift }, 0.25)
+            { yPercent: 0, duration: 0.9, stagger: 0.055, ease: EASE.swift }, 0.22)
           .fromTo(meta,
             { y: 18, opacity: 0 },
             { y: 0, opacity: 1, duration: 0.6, stagger: 0.06, ease: EASE.swift }, 0.5);
@@ -92,7 +229,7 @@ const Nav = () => {
       } else {
         gsap.to(sheet, {
           clipPath: 'inset(0% 0% 100% 0%)',
-          duration: 0.55,
+          duration: 0.58,
           ease: EASE.glide,
           onComplete: () => gsap.set(sheet, { pointerEvents: 'none' }),
         });
@@ -111,191 +248,311 @@ const Nav = () => {
   const go = (e, id) => {
     e.preventDefault();
     setOpen(false);
-    const target = document.getElementById(id);
-    if (!target) return;
-    // Let the sheet start closing before the page moves underneath it.
-    setTimeout(() => {
-      if (window.lenis) window.lenis.scrollTo(target, { offset: -20, duration: 1.4 });
-      else target.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth' });
-    }, 120);
+    jump(id);
   };
+  const top = (e) => go(e, 'top');
 
   return (
     <>
-      <span className="nav-progress" ref={progressRef} aria-hidden="true" />
-
       <header className="nav" ref={barRef}>
-        <a className="nav-mark" href="#top" onClick={(e) => go(e, 'top')}>
-          <span className="nav-mark-initials">AC</span>
-          <span className="nav-mark-name">Ajinkya Chavan</span>
+        <a href="#top" className="nav-logo" onClick={top} aria-label="Ajinkya Chavan — back to top">
+          <span className="nav-logo-spin" ref={logoRef}><Mark /></span>
+          <svg className="nav-logo-ring" viewBox="0 0 44 44" aria-hidden="true">
+            <circle
+              ref={ringRef}
+              cx="22" cy="22" r="20"
+              pathLength="1"
+              strokeDasharray="1"
+              strokeDashoffset="1"
+            />
+          </svg>
         </a>
 
-        <div className="nav-cluster">
+        <nav className="nav-links" aria-label="Sections" ref={pillRef} onMouseLeave={unhop}>
+          <span className="nav-blob" ref={blobRef} aria-hidden="true" />
+          <span className="nav-hop" ref={hopRef} aria-hidden="true" />
+          {LINKS.map((l) => (
+            <a key={l.id} href={`#${l.id}`} onClick={(e) => go(e, l.id)} onMouseEnter={hop} data-id={l.id} aria-label={l.label} className={`nav-link${active === l.id ? ' is-on' : ''}`}>
+              <span className="nav-link-t" aria-hidden="true">
+                {l.label.split('').map((c, k) => <span className="nav-ch" key={k}>{c === ' ' ? '\u00a0' : c}</span>)}
+              </span>
+            </a>
+          ))}
+        </nav>
+
+        <div className="nav-right">
           <ThemeToggle theme={theme} onToggle={toggle} />
+          <a href="#contact" className="nav-cta" onClick={(e) => go(e, 'contact')} onMouseEnter={knock} data-cursor-label="Say hi" aria-label="Say hello">
+            <span className="nav-cta-t" aria-hidden="true">
+              {'Say hello'.split('').map((c, k) => <span className="nav-ch" key={k}>{c === ' ' ? '\u00a0' : c}</span>)}
+            </span>
+            <i className="nav-cta-dot" aria-hidden="true" />
+          </a>
           <button
-            className={`nav-menu ${open ? 'is-open' : ''}`}
+            className={`nav-burger${open ? ' is-open' : ''}`}
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
-            aria-controls="nav-sheet"
+            aria-label={open ? 'Close menu' : 'Open menu'}
           >
-            <span className="nav-menu-word">{open ? 'Close' : 'Menu'}</span>
-            <span className="nav-menu-bars" aria-hidden="true"><i /><i /></span>
+            <span /><span />
           </button>
         </div>
       </header>
 
-      <nav id="nav-sheet" className="sheet" ref={sheetRef} data-tone="ink" aria-label="Sections">
-        <div className="shell sheet-inner">
-          <ul className="sheet-list">
+      <div className="jump" ref={jumpRef} data-surface="ink" data-acc="yellow" aria-hidden="true">
+        <span className="jump-box">
+          <span className="jump-word display"><span className="num jump-n" /><span className="jump-t" /><i className="jump-dot" /></span>
+        </span>
+      </div>
+
+      <div className="sheet" ref={sheetRef} data-acc="yellow">
+        <div className="shell sheet-in">
+          <ol className="sheet-links">
             {LINKS.map((l) => (
-              <li key={l.id} className="sheet-link">
-                <a href={`#${l.id}`} onClick={(e) => go(e, l.id)}>
+              <li key={l.id} className="sheet-link-box">
+                <a href={`#${l.id}`} onClick={(e) => go(e, l.id)} className="sheet-link">
                   <span className="sheet-link-inner">
-                    <span className="num sheet-n">{l.n}</span>
-                    <span className="display sheet-word">{l.label}</span>
+                    <span className="num sheet-link-n">{l.n}</span>
+                    <span className="display sheet-link-label">{l.label}</span>
                   </span>
                 </a>
               </li>
             ))}
-          </ul>
+          </ol>
 
           <div className="sheet-meta">
-            <a href="mailto:frozenfalcon8494@gmail.com" className="mono">frozenfalcon8494@gmail.com</a>
-            <a href="https://www.linkedin.com/in/ajinkyachavan4829/" target="_blank" rel="noreferrer" className="mono">LinkedIn</a>
-            <a href="https://github.com/FrozenFalcon-Byte" target="_blank" rel="noreferrer" className="mono">GitHub</a>
+            <a className="mono" href="mailto:frozenfalcon8494@gmail.com">frozenfalcon8494@gmail.com</a>
+            <a className="mono" href="https://github.com/FrozenFalcon-Byte" target="_blank" rel="noreferrer">GitHub</a>
+            <a className="mono" href="https://www.linkedin.com/in/ajinkyachavan4829/" target="_blank" rel="noreferrer">LinkedIn</a>
+            <a className="mono" href="/resume.pdf" download>Résumé</a>
           </div>
         </div>
-      </nav>
+      </div>
 
       <style>{`
-        .nav-progress {
-          position: fixed;
-          top: 0; left: 0;
-          z-index: 9001;
-          width: 100%;
-          height: 2px;
-          background: var(--violet);
-          transform: scaleX(0);
-          transform-origin: left;
-        }
-        [data-theme="dark"] .nav-progress { background: var(--acid); }
-
         .nav {
           position: fixed;
-          top: 0; left: 0; right: 0;
-          z-index: 9000;
+          top: clamp(0.6rem, 1.6vh, 1.1rem);
+          left: 50%;
+          translate: -50% 0;
+          z-index: 900;
+          width: calc(100% - var(--gutter) * 2);
+          max-width: var(--shell);
           display: flex;
           align-items: center;
-          justify-content: space-between;
           gap: 1rem;
-          padding: clamp(0.7rem, 1.6vh, 1.1rem) var(--gutter);
+          padding: 0.5rem 0.5rem 0.5rem 0.65rem;
+          border-radius: var(--r-pill);
+          border: 1px solid transparent;
+          background: transparent;
+          transition:
+            background 0.5s var(--ease-out),
+            border-color 0.5s var(--ease-out),
+            backdrop-filter 0.5s var(--ease-out),
+            padding 0.5s var(--ease-out);
+        }
+        .nav.is-stuck {
+          background: color-mix(in srgb, var(--paper) 78%, transparent);
+          border-color: var(--line-2);
+          backdrop-filter: blur(16px) saturate(1.4);
+        }
+
+        .nav-logo {
+          position: relative;
+          display: grid;
+          place-items: center;
+          width: 44px; height: 44px;
+          flex: none;
+          color: var(--ink);
+        }
+        .nav-logo-spin { display: block; width: 24px; height: 24px; }
+        /* Hovering the logo re-drops the full stop. */
+        .nav-logo:hover .mark-dot { animation: nav-dot 0.8s var(--ease-out); }
+        @keyframes nav-dot {
+          0% { transform: translateY(0) scale(1, 1); }
+          30% { transform: translateY(-38px) scale(0.9, 1.1); }
+          62% { transform: translateY(0) scale(1.25, 0.75); }
+          80% { transform: translateY(-8px) scale(1, 1); }
+          100% { transform: translateY(0) scale(1, 1); }
+        }
+        .nav-logo-spin .mark { width: 100%; height: 100%; }
+        .nav-logo-ring { position: absolute; inset: 0; }
+        .nav-logo-ring circle {
+          fill: none;
+          stroke: var(--acc);
+          stroke-width: 2;
+          transform: rotate(-90deg);
+          transform-origin: 50% 50%;
+        }
+
+        /* The links live in their own pill, centred on the bar; the
+           highlight is one element that slides between them. */
+        .nav-links {
+          position: absolute;
+          left: 50%;
+          translate: -50% 0;
+          display: flex;
+          align-items: center;
+          gap: 0;
+          padding: 4px;
+          border-radius: var(--r-pill);
+          background: color-mix(in srgb, var(--paper-2) 82%, transparent);
+          border: 1px solid var(--line-2);
+          backdrop-filter: blur(14px) saturate(1.4);
+        }
+        .nav-blob {
+          position: absolute;
+          left: 0; top: 4px; bottom: 4px;
+          width: 0;
+          border-radius: var(--r-pill);
+          background: var(--ink);
+          opacity: 0;
           pointer-events: none;
         }
-        .nav[data-tone] { background: transparent; }
-        .nav > * { pointer-events: auto; }
+        .nav-hop {
+          position: absolute;
+          left: -3.5px; bottom: 3px;
+          width: 7px; height: 7px;
+          border-radius: 99px;
+          background: var(--acc);
+          transform: scale(0);
+          pointer-events: none;
+          z-index: 2;
+        }
+        .nav-link {
+          position: relative;
+          display: block;
+          padding: 0.55rem 0.95rem;
+          border-radius: var(--r-pill);
+          font-size: var(--step--1);
+          font-weight: 550;
+          color: var(--ink-2);
+          transition: color 0.3s var(--ease-out);
+        }
+        .nav-link:hover { color: var(--ink); }
+        .nav-link.is-on { color: var(--paper); }
+        .nav-link-t { display: block; line-height: 1.25em; white-space: nowrap; }
+        .nav-ch { display: inline-block; will-change: transform; }
 
-        .nav-mark {
+        /* The CTA ends in the logo's full stop. On hover the stop swells
+           until it has swallowed the button, turning it ink, and the
+           letters jump as it passes under them. */
+        .nav-cta {
+          position: relative;
+          display: inline-flex; align-items: center; gap: 0.5em;
+          padding: 0.7em 1.05em 0.7em 1.3em;
+          border-radius: var(--r-pill);
+          background: var(--acc); color: var(--acc-ink);
+          font-family: var(--font-display); font-weight: 650; font-size: var(--step--1); letter-spacing: -0.02em;
+          overflow: hidden; isolation: isolate;
+          transition: color 0.35s var(--ease-out);
+        }
+        .nav-cta-t { position: relative; z-index: 1; white-space: nowrap; }
+        .nav-cta-dot {
+          width: 7px; height: 7px; flex: none;
+          border-radius: 99px;
+          background: var(--acc-ink);
+          transition: transform 0.6s var(--ease-out), background 0.3s;
+          z-index: 0;
+        }
+        .nav-cta:hover { color: var(--paper); }
+        .nav-cta:hover .nav-cta-dot { transform: scale(34); background: var(--ink); }
+
+        /* ---- jump sheet ---- */
+        .jump {
+          position: fixed;
+          inset: 0;
+          z-index: 9500;
+          display: grid;
+          place-items: center;
+          background: var(--paper);
+          color: var(--ink);
+          visibility: hidden;
+          pointer-events: none;
+          clip-path: inset(100% 0% 0% 0%);
+        }
+        .jump-box { overflow: hidden; padding: 0.1em var(--gutter) 0.2em; }
+        .jump-word {
           display: inline-flex;
           align-items: baseline;
-          gap: 0.6rem;
-          padding: 0.5rem 0.95rem 0.55rem;
-          border-radius: 999px;
-          background: var(--paper);
-          border: 1px solid var(--line);
-          font-family: var(--font-display);
+          gap: 0.25em;
+          font-size: clamp(3rem, 11vw, 10rem);
           font-weight: 800;
-          letter-spacing: -0.02em;
-          transition: background 0.4s var(--ease-out), border-color 0.4s var(--ease-out);
+          letter-spacing: -0.06em;
+          line-height: 1;
         }
-        .nav-mark-initials { font-size: 1rem; }
-        .nav-mark-name { font-size: 0.78rem; font-weight: 600; color: var(--ink-2); letter-spacing: 0; }
-        .nav-mark:hover { border-color: var(--ink-3); }
+        .jump-n { font-size: 0.28em; color: var(--ink-3); letter-spacing: 0; align-self: flex-start; margin-top: 0.4em; }
+        .jump-dot { width: 0.17em; height: 0.17em; margin-left: -0.2em; border-radius: 99px; background: var(--acc); }
 
-        .nav-cluster {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.28rem;
-          border-radius: 999px;
-          background: var(--paper);
+        .nav-right { display: flex; align-items: center; gap: 0.5rem; flex: none; margin-left: auto; }
+
+        .nav-burger {
+          display: none;
+          width: 42px; height: 42px;
+          place-items: center;
+          gap: 5px;
+          border-radius: var(--r-pill);
           border: 1px solid var(--line);
-          transition: background 0.4s var(--ease-out), border-color 0.4s var(--ease-out);
-        }
-
-        .nav-menu {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.6rem;
-          height: 30px;
-          padding: 0 0.85rem 0 1rem;
-          border-radius: 999px;
-          background: var(--ink);
-          color: var(--paper);
-          font-size: 0.82rem;
-          font-weight: 600;
+          background: var(--paper-2);
           cursor: pointer;
         }
-        .nav-menu-word { min-width: 3.1em; text-align: left; }
-        .nav-menu-bars { display: grid; gap: 4px; width: 15px; }
-        .nav-menu-bars i {
-          display: block; height: 1.8px; width: 100%;
-          background: currentColor; border-radius: 2px;
-          transition: transform 0.4s var(--ease-out);
+        .nav-burger span {
+          display: block;
+          width: 16px; height: 1.6px;
+          border-radius: 2px;
+          background: var(--ink);
+          transition: transform 0.45s var(--ease-out);
         }
-        .nav-menu.is-open .nav-menu-bars i:first-child { transform: translateY(2.9px) rotate(45deg); }
-        .nav-menu.is-open .nav-menu-bars i:last-child  { transform: translateY(-2.9px) rotate(-45deg); }
+        .nav-burger.is-open span:first-child { transform: translateY(3.3px) rotate(45deg); }
+        .nav-burger.is-open span:last-child  { transform: translateY(-3.3px) rotate(-45deg); }
+
+        @media (max-width: 1180px) {
+          .nav-links { display: none; }
+          .nav-cta { display: none; }
+          .nav-burger { display: grid; }
+          .nav-right { margin-left: auto; }
+        }
 
         /* ---- sheet ---- */
         .sheet {
           position: fixed;
           inset: 0;
-          z-index: 8900;
-          display: flex;
-          align-items: flex-start;
+          z-index: 880;
+          background: #0E0E0D;
+          color: #FAFAF7;
           clip-path: inset(0% 0% 100% 0%);
           pointer-events: none;
-          overflow-y: auto;
-          overscroll-behavior: contain;
-        }
-        .sheet-inner {
           display: flex;
-          flex-direction: column;
-          gap: clamp(1.5rem, 5vh, 3rem);
-          margin-block: auto;
-          padding-block: clamp(5.5rem, 12vh, 7.5rem) clamp(2rem, 6vh, 3.5rem);
+          align-items: center;
         }
-        .sheet-list { display: flex; flex-direction: column; }
-        .sheet-link a { display: block; overflow: hidden; }
+        .sheet-in { width: 100%; padding-block: clamp(5rem, 12vh, 8rem); }
+        .sheet-links { margin-bottom: clamp(2rem, 6vh, 3.5rem); }
+        .sheet-link-box { overflow: hidden; }
+        .sheet-link { display: block; }
         .sheet-link-inner {
           display: flex;
           align-items: baseline;
-          gap: clamp(0.8rem, 2vw, 1.8rem);
-          padding-block: clamp(0.1rem, 0.4vh, 0.3rem);
+          gap: 1rem;
+          padding-block: clamp(0.3rem, 1.2vh, 0.6rem);
+          transition: transform 0.5s var(--ease-out), color 0.5s var(--ease-out);
         }
-        .sheet-n { font-size: 0.72rem; color: var(--ink-2); flex: none; }
-        .sheet-word {
-          font-size: clamp(1.9rem, 6.4vw, 4.4rem);
-          line-height: 1.04;
-          color: var(--ink);
-          transition: color 0.35s var(--ease-out), transform 0.45s var(--ease-out);
+        .sheet-link:hover .sheet-link-inner { transform: translateX(1.2rem); color: var(--yellow); }
+        .sheet-link-n { color: #6B6B66; font-size: var(--step--1); }
+        .sheet-link-label {
+          font-size: clamp(2rem, 7.5vw, 5.5rem);
+          font-weight: 700;
+          line-height: 1;
+          letter-spacing: -0.045em;
         }
-        .sheet-link a:hover .sheet-word { color: var(--mark); transform: translateX(0.18em); }
-
         .sheet-meta {
           display: flex;
           flex-wrap: wrap;
-          gap: 0.6rem 1.6rem;
-          padding-top: clamp(1.2rem, 4vh, 2rem);
-          border-top: 1px solid var(--line);
+          gap: 0.6rem 2rem;
+          padding-top: clamp(1.5rem, 4vh, 2.5rem);
+          border-top: 1px solid rgba(250, 250, 247, 0.16);
         }
-        .sheet-meta a { color: var(--ink-2); transition: color 0.3s var(--ease-out); }
-        .sheet-meta a:hover { color: var(--mark); }
-
-        @media (max-width: 520px) {
-          .nav-mark-name { display: none; }
-          .nav-menu-word { display: none; }
-          .nav-menu { padding-inline: 0.72rem; }
-        }
+        .sheet-meta a { color: #A2A29C; transition: color 0.35s var(--ease-out); }
+        .sheet-meta a:hover { color: var(--yellow); }
       `}</style>
     </>
   );

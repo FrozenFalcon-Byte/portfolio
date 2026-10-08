@@ -123,7 +123,7 @@ const Shell = () => {
       <RouteEffects />
 
       <RouteCurtain>
-        <main>
+        <main className="page">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/experience/pmo" element={<ExperienceDetail />} />

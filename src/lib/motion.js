@@ -50,9 +50,9 @@ export function splitChars(el, opts = {}) {
     charsClass: 'split-char',
   });
 
-  const scope = el.closest('[data-tone]') || el;
+  const scope = el.closest('[data-acc], [data-surface]') || el;
   const dim = token('--ink-3', scope) || '#908C99';
-  const hot = token('--mark', scope) || '#5B3DF5';
+  const hot = token('--acc', scope) || '#E61A66';
   const lit = token('--ink', scope) || '#16151A';
 
   const tween = gsap.fromTo(
@@ -280,3 +280,510 @@ export function countTo(el, value, opts = {}) {
 export const cleanup = (fns) => () => fns.forEach((f) => typeof f === 'function' && f());
 
 export { gsap, ScrollTrigger, SplitText };
+
+/* ==================================================================
+   The additions below are the vocabulary the rebuilt sections share.
+   Each one is scroll- or pointer-driven and cleans itself up, so a
+   section only ever has to say what it wants, never how to tear it down.
+   ================================================================== */
+
+/* ------------------------------------------------------------------
+   clipReveal — a block wipes up from nothing behind a moving edge.
+
+   Used where riseIn would be too soft: the element is not sliding into
+   place, it is being uncovered.
+   ------------------------------------------------------------------ */
+export function clipReveal(targets, opts = {}) {
+  if (!targets) return null;
+  const { stagger = 0.08, duration = 1.1, start = 'top 88%', trigger, from = 'bottom' } = opts;
+
+  if (reduced()) { gsap.set(targets, { clipPath: 'inset(0%)', opacity: 1 }); return null; }
+
+  const shut = {
+    bottom: 'inset(100% 0% 0% 0%)',
+    top: 'inset(0% 0% 100% 0%)',
+    left: 'inset(0% 100% 0% 0%)',
+    right: 'inset(0% 0% 0% 100%)',
+  }[from];
+
+  const tween = gsap.fromTo(
+    targets,
+    { clipPath: shut, opacity: 0 },
+    {
+      clipPath: 'inset(0% 0% 0% 0%)',
+      opacity: 1,
+      duration,
+      stagger,
+      ease: EASE.swift,
+      scrollTrigger: { trigger: trigger || targets, start, once: true },
+    }
+  );
+  return () => { tween.scrollTrigger?.kill(); tween.kill(); };
+}
+
+/* ------------------------------------------------------------------
+   scrubWords — the statement reveal, word by word, on the scrollbar.
+
+   splitChars heats characters through token colours, which go stale
+   after a theme switch. This one only animates opacity and y, so it
+   survives a theme change and reads calmer at display sizes.
+   ------------------------------------------------------------------ */
+export function scrubWords(el, opts = {}) {
+  if (!el) return null;
+  const { start = 'top 80%', end = 'bottom 65%' } = opts;
+
+  const split = new SplitText(el, { type: 'words', wordsClass: 'scrub-word' });
+
+  if (reduced()) {
+    gsap.set(split.words, { opacity: 1, y: 0 });
+    return () => split.revert();
+  }
+
+  const tween = gsap.fromTo(
+    split.words,
+    { opacity: 0.12, y: '0.12em' },
+    {
+      opacity: 1,
+      y: 0,
+      ease: 'none',
+      stagger: { each: 0.4, from: 'start' },
+      scrollTrigger: { trigger: el, start, end, scrub: 0.5 },
+    }
+  );
+
+  return () => {
+    tween.scrollTrigger?.kill();
+    tween.kill();
+    split.revert();
+  };
+}
+
+/* ------------------------------------------------------------------
+   marquee — a seamless loop that also answers to the scrollbar.
+
+   The track holds two identical runs and is wrapped with modulus, so
+   there is no snap at the seam. Scroll velocity is added to the base
+   drift, which ties the strip to the page instead of letting it run on
+   its own clock.
+   ------------------------------------------------------------------ */
+export function marquee(track, opts = {}) {
+  if (!track || reduced()) return null;
+  const { speed = 38, direction = -1 } = opts;   // px/second
+
+  let half = track.scrollWidth / 2;
+  let x = 0;
+  let boost = 0;
+  const measure = () => { half = track.scrollWidth / 2; };
+
+  const onScroll = (e) => {
+    // Lenis reports velocity in px/frame; a short-lived boost reads as
+    // the strip being dragged along by the page.
+    const v = typeof e?.velocity === 'number' ? e.velocity : 0;
+    boost = gsap.utils.clamp(-26, 26, v * 2.2);
+  };
+
+  const tick = (_t, delta) => {
+    const dt = delta / 1000;
+    boost *= 0.92;
+    x += (speed * direction + boost) * dt;
+    if (half > 0) x = ((x % half) + half) % half - half;
+    track.style.transform = `translate3d(${x}px, 0, 0)`;
+  };
+
+  gsap.ticker.add(tick);
+  window.addEventListener('resize', measure);
+  window.lenis?.on?.('scroll', onScroll);
+  const raf = requestAnimationFrame(measure);
+
+  return () => {
+    cancelAnimationFrame(raf);
+    gsap.ticker.remove(tick);
+    window.removeEventListener('resize', measure);
+    window.lenis?.off?.('scroll', onScroll);
+  };
+}
+
+/* ------------------------------------------------------------------
+   scramble — a value that decodes into place when it arrives.
+
+   Deliberately short: at this length it reads as a readout settling,
+   and any longer it reads as a gimmick.
+   ------------------------------------------------------------------ */
+const GLYPHS = '▚▞░▒█/\\|<>-_=+*#%@0123456789';
+
+export function scramble(el, opts = {}) {
+  if (!el) return null;
+  const text = opts.text ?? el.textContent;
+  if (reduced()) { el.textContent = text; return null; }
+
+  const state = { p: 0 };
+  el.textContent = '';
+
+  const write = () => {
+    const cut = Math.floor(state.p * text.length);
+    let out = text.slice(0, cut);
+    for (let i = cut; i < text.length; i += 1) {
+      // Spaces are left alone so the word shape is legible throughout.
+      out += text[i] === ' ' ? ' ' : GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+    }
+    el.textContent = out;
+  };
+
+  const tween = gsap.to(state, {
+    p: 1,
+    duration: 0.9 + Math.min(text.length, 40) * 0.016,
+    ease: 'power2.inOut',
+    onUpdate: write,
+    onComplete: () => { el.textContent = text; },
+    scrollTrigger: { trigger: opts.trigger || el, start: opts.start || 'top 92%', once: true },
+  });
+
+  return () => {
+    tween.scrollTrigger?.kill();
+    tween.kill();
+    el.textContent = text;
+  };
+}
+
+/* ------------------------------------------------------------------
+   tilt — a panel leans towards the pointer.
+
+   Rotation is capped low on purpose: enough for the surface to catch
+   the light, not enough to turn a readable panel into a diorama.
+   ------------------------------------------------------------------ */
+export function tilt(el, opts = {}) {
+  if (!el || reduced() || !fine()) return null;
+  const { max = 7, scale = 1.012, perspective = 1200 } = opts;
+
+  gsap.set(el, { transformPerspective: perspective, transformOrigin: '50% 50%' });
+
+  const rx = gsap.quickTo(el, 'rotateX', { duration: 0.6, ease: EASE.swift });
+  const ry = gsap.quickTo(el, 'rotateY', { duration: 0.6, ease: EASE.swift });
+  const sc = gsap.quickTo(el, 'scale', { duration: 0.6, ease: EASE.swift });
+
+  const move = (e) => {
+    const r = el.getBoundingClientRect();
+    const px = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+    const py = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+    ry(gsap.utils.clamp(-max, max, px * max));
+    rx(gsap.utils.clamp(-max, max, -py * max));
+    sc(scale);
+  };
+  const leave = () => { rx(0); ry(0); sc(1); };
+
+  el.addEventListener('pointermove', move);
+  el.addEventListener('pointerleave', leave);
+
+  return () => {
+    el.removeEventListener('pointermove', move);
+    el.removeEventListener('pointerleave', leave);
+    gsap.set(el, { rotateX: 0, rotateY: 0, scale: 1 });
+  };
+}
+
+/* ------------------------------------------------------------------
+   drawPath — an SVG path draws itself.
+
+   Expects pathLength="1" on the path so one unit of dash offset is the
+   whole line, whatever the geometry.
+   ------------------------------------------------------------------ */
+export function drawPath(paths, opts = {}) {
+  if (!paths) return null;
+  const { duration = 1.4, stagger = 0.12, start = 'top 88%', trigger, scrub = false, end } = opts;
+
+  if (reduced()) { gsap.set(paths, { strokeDashoffset: 0 }); return null; }
+
+  const tween = gsap.fromTo(
+    paths,
+    { strokeDasharray: 1, strokeDashoffset: 1 },
+    {
+      strokeDashoffset: 0,
+      duration,
+      stagger,
+      ease: scrub ? 'none' : EASE.glide,
+      scrollTrigger: scrub
+        ? { trigger: trigger || paths, start, end: end || 'bottom 60%', scrub: 0.6 }
+        : { trigger: trigger || paths, start, once: true },
+    }
+  );
+  return () => { tween.scrollTrigger?.kill(); tween.kill(); };
+}
+
+/* ------------------------------------------------------------------
+   floatY — a slow idle drift, so a static panel is never quite still.
+   ------------------------------------------------------------------ */
+export function floatY(el, opts = {}) {
+  if (!el || reduced()) return null;
+  const { distance = 9, duration = 4.2, delay = 0 } = opts;
+  const tween = gsap.to(el, {
+    y: distance,
+    duration,
+    delay,
+    ease: 'sine.inOut',
+    repeat: -1,
+    yoyo: true,
+  });
+  return () => tween.kill();
+}
+
+/* ------------------------------------------------------------------
+   scrubTo — the general scroll-linked tween: whatever the section
+   needs, driven by the scrollbar between two markers.
+   ------------------------------------------------------------------ */
+export function scrubTo(targets, from, to, opts = {}) {
+  if (!targets || reduced()) return null;
+  const { trigger, start = 'top bottom', end = 'bottom top', scrub = 0.6 } = opts;
+  const tween = gsap.fromTo(targets, from, {
+    ...to,
+    ease: 'none',
+    scrollTrigger: { trigger: trigger || targets, start, end, scrub },
+  });
+  return () => { tween.scrollTrigger?.kill(); tween.kill(); };
+}
+
+/* ------------------------------------------------------------------
+   scrambleHover — the headline effect.
+
+   The heading is rebuilt as per-character spans. On entry the whole
+   line decodes once; after that, moving the pointer across it scrambles
+   only the characters the pointer is near, which resolve a beat later.
+   The reader is effectively running a finger through wet type.
+
+   Symbols only in the glyph pool: swapping a letter for another letter
+   reads as a typo, swapping it for a symbol reads as a machine.
+   ------------------------------------------------------------------ */
+const SYMBOLS = '*/<>+=#%&$!?~^|\\';
+
+const pick = () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+
+export function scrambleHover(el, opts = {}) {
+  if (!el) return null;
+  const {
+    radius = 72,        // px from the pointer that a character reacts within
+    settle = 420,       // ms a disturbed character stays scrambled
+    intro = true,       // decode once when the heading first arrives
+    start = 'top 86%',
+  } = opts;
+
+  const label = el.textContent.replace(/\s+/g, ' ').trim();
+  if (!label) return null;
+
+  /* Only text nodes are rebuilt. Anything else inside the heading — an
+     animated glyph, a line wrapper, a <br> — is walked into or left
+     alone, so React's own elements survive and the originals can be put
+     back exactly on cleanup. */
+  const swaps = [];                 // [originalTextNode, [replacement nodes]]
+  const chars = [];
+  const walk = (node) => {
+    Array.from(node.childNodes).forEach((child) => {
+      if (child.nodeType === 3) {
+        if (!child.textContent.trim()) return;
+        const made = [];
+        child.textContent.split(/(\s+)/).forEach((chunk) => {
+          if (!chunk) return;
+          if (/^\s+$/.test(chunk)) { made.push(document.createTextNode(chunk)); return; }
+          const word = document.createElement('span');
+          word.className = 'sc-word';
+          word.setAttribute('aria-hidden', 'true');
+          chunk.split('').forEach((c) => {
+            const span = document.createElement('span');
+            span.className = 'sc-ch';
+            span.textContent = c;
+            span.dataset.c = c;
+            word.appendChild(span);
+            chars.push(span);
+          });
+          made.push(word);
+        });
+        made.forEach((m) => child.parentNode.insertBefore(m, child));
+        child.parentNode.removeChild(child);
+        swaps.push([child, made]);
+      } else if (child.nodeType === 1 && !child.classList.contains('glyph')) {
+        walk(child);
+      }
+    });
+  };
+  walk(el);
+  // The scrambled copy is noise to a screen reader; the real line is here.
+  el.setAttribute('aria-label', label);
+
+  const fns = [];
+  const until = new WeakMap();      // char -> timestamp it resolves at
+
+  if (!reduced()) {
+    const tick = () => {
+      const now = performance.now();
+      for (const c of chars) {
+        const t = until.get(c);
+        if (!t) continue;
+        if (now >= t) { c.textContent = c.dataset.c; until.delete(c); }
+        else if (Math.random() < 0.5) c.textContent = pick();
+      }
+    };
+    gsap.ticker.add(tick);
+    fns.push(() => gsap.ticker.remove(tick));
+
+    const disturb = (c, ms) => until.set(c, performance.now() + ms);
+
+    if (fine()) {
+      const move = (e) => {
+        for (const c of chars) {
+          const r = c.getBoundingClientRect();
+          const dx = e.clientX - (r.left + r.width / 2);
+          const dy = e.clientY - (r.top + r.height / 2);
+          // Nearer characters hold their scramble longer, so the
+          // disturbance has a soft edge rather than a hard circle.
+          const d = Math.hypot(dx, dy);
+          if (d < radius) disturb(c, settle * (1 - d / radius) + 90);
+        }
+      };
+      el.addEventListener('pointermove', move);
+      fns.push(() => el.removeEventListener('pointermove', move));
+    }
+
+    if (intro) {
+      const tween = gsap.to({}, {
+        duration: 0.01,
+        scrollTrigger: {
+          trigger: opts.trigger || el,
+          start,
+          once: true,
+          onEnter: () => chars.forEach((c, i) => disturb(c, 220 + i * 22)),
+        },
+      });
+      fns.push(() => { tween.scrollTrigger?.kill(); tween.kill(); });
+    }
+  }
+
+  return () => {
+    fns.forEach((f) => f());
+    swaps.forEach(([orig, made]) => {
+      const first = made[0];
+      if (first?.parentNode) first.parentNode.insertBefore(orig, first);
+      made.forEach((m) => m.parentNode && m.parentNode.removeChild(m));
+    });
+    el.removeAttribute('aria-label');
+  };
+}
+
+/* ------------------------------------------------------------------
+   linesIn — a heading built as .ln > .ln-in rises line by line out of
+   its own clipping windows. Written by hand in the JSX rather than by
+   SplitText, so glyphs inside a line ride up with their words.
+   ------------------------------------------------------------------ */
+export function linesIn(el, opts = {}) {
+  if (!el) return null;
+  const lines = el.querySelectorAll('.ln-in');
+  if (!lines.length) return null;
+  const { start = 'top 86%', stagger = 0.09, duration = 1.1, delay = 0, trigger, play } = opts;
+  if (reduced()) { gsap.set(lines, { yPercent: 0 }); return null; }
+
+  gsap.set(lines, { yPercent: 112, rotate: 2.5 });
+  const tl = gsap.timeline({
+    paused: !!play,
+    delay,
+    scrollTrigger: play ? undefined : { trigger: trigger || el, start, once: true },
+  });
+  tl.to(lines, { yPercent: 0, rotate: 0, duration, stagger, ease: EASE.swift });
+  if (play) play(() => tl.play());
+  return () => { tl.scrollTrigger?.kill(); tl.kill(); };
+}
+
+/* ------------------------------------------------------------------
+   glyphsOpen — the in-text motion graphics open as the heading scrolls
+   through, pushing the words apart to make room for themselves. The
+   width is a CSS variable, so the type reflows naturally around it.
+   ------------------------------------------------------------------ */
+export function glyphsOpen(root, opts = {}) {
+  if (!root) return null;
+  const glyphs = root.querySelectorAll('.glyph');
+  if (!glyphs.length) return null;
+  if (reduced()) { gsap.set(glyphs, { '--open': 1 }); return null; }
+  const { start = 'top 92%', end = 'top 45%', scrub = 0.7, trigger } = opts;
+  const tweens = Array.from(glyphs).map((g, i) => gsap.fromTo(
+    g,
+    { '--open': 0 },
+    {
+      '--open': 1,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: trigger || g,
+        start,
+        end,
+        scrub: scrub + i * 0.05,
+      },
+    }
+  ));
+  return () => tweens.forEach((t) => { t.scrollTrigger?.kill(); t.kill(); });
+}
+
+/* ------------------------------------------------------------------
+   heading — the full treatment for a section title: lines rise, glyphs
+   open on the scrollbar, and the pointer scrambles what it passes.
+   ------------------------------------------------------------------ */
+export function heading(el, opts = {}) {
+  if (!el) return null;
+  return cleanup([
+    linesIn(el, opts),
+    glyphsOpen(el, opts.glyphs || {}),
+    scrambleHover(el, { intro: false, ...(opts.scramble || {}) }),
+  ]);
+}
+
+/* ------------------------------------------------------------------
+   charsIn — per-character entrance for display type.
+
+   maskLines() clips whole lines, which is right for a paragraph-shaped
+   heading. This is for the short ones, where the characters should
+   arrive individually.
+   ------------------------------------------------------------------ */
+export function charsIn(el, opts = {}) {
+  if (!el) return null;
+  const { stagger = 0.028, duration = 1, start = 'top 86%', trigger, delay = 0 } = opts;
+
+  const split = new SplitText(el, { type: 'chars,words', charsClass: 'sc-ch' });
+
+  if (reduced()) {
+    gsap.set(split.chars, { yPercent: 0, opacity: 1 });
+    return () => split.revert();
+  }
+
+  const tween = gsap.fromTo(
+    split.chars,
+    { yPercent: 115, opacity: 0, rotate: 5 },
+    {
+      yPercent: 0,
+      opacity: 1,
+      rotate: 0,
+      duration,
+      delay,
+      stagger,
+      ease: EASE.swift,
+      scrollTrigger: trigger === false ? undefined : { trigger: trigger || el, start, once: true },
+    }
+  );
+
+  return () => { tween.scrollTrigger?.kill(); tween.kill(); split.revert(); };
+}
+
+/* ------------------------------------------------------------------
+   stickyScale — a block shrinks and dims as the next one rides over it.
+
+   The deck behaviour, pulled out of the sections that used to own it so
+   Work, the record deck and the stack all recede identically.
+   ------------------------------------------------------------------ */
+export function stickyScale(el, opts = {}) {
+  if (!el || reduced()) return null;
+  const { scale = 0.92, start = 'top 16%', end = 'bottom 30%' } = opts;
+  const tween = gsap.fromTo(
+    el,
+    { scale: 1, opacity: 1 },
+    {
+      scale,
+      opacity: 0.55,
+      ease: 'none',
+      scrollTrigger: { trigger: opts.trigger || el, start, end, scrub: 0.6 },
+    }
+  );
+  return () => { tween.scrollTrigger?.kill(); tween.kill(); };
+}

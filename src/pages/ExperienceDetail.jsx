@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { TransitionLink } from '../components/RouteCurtain';
-import { gsap, maskLines, riseIn, drawRule, reduced, cleanup } from '../lib/motion';
+import { gsap, heading, riseIn, drawRule, reduced, cleanup } from '../lib/motion';
+import Glyph from '../components/Glyph';
 
 /* This page is deliberately shallow on content and deep on structure.
    The work is Emerson's; the architecture is the part that is mine to
@@ -190,27 +191,27 @@ const SnopDiagram = () => {
   );
 };
 
-const Chapter = ({ n, name, sub, lead, notes, diagram, tone }) => {
+const Chapter = ({ n, name, sub, lead, notes, diagram, acc }) => {
   const rootRef = useRef(null);
   const nameRef = useRef(null);
   const notesRef = useRef(null);
 
   useEffect(() => {
     const fns = [
-      maskLines(nameRef.current, { trigger: rootRef.current, start: 'top 80%', stagger: 0.08 }),
+      heading(nameRef.current),
       riseIn(notesRef.current?.children, { trigger: notesRef.current, start: 'top 88%', stagger: 0.09, y: 24 }),
     ];
     return cleanup(fns);
   }, []);
 
   return (
-    <section ref={rootRef} className={`block cs-chapter cs-chapter--${n}`} data-tone={tone}>
+    <section ref={rootRef} className={`block cs-chapter cs-chapter--${n}`} data-acc={acc}>
       <div className="shell">
         <div className="cs-chapter-head">
           <span className="num cs-chapter-n">{n}</span>
           <div>
-            <h2 ref={nameRef} className="display cs-chapter-name">{name}</h2>
-            <span className="mono cs-chapter-sub">{sub}</span>
+            <h2 ref={nameRef} className="display cs-chapter-name"><span className="ln"><span className="ln-in">{name}</span></span></h2>
+            <span className="cs-chapter-sub">{sub}</span>
           </div>
         </div>
 
@@ -219,8 +220,9 @@ const Chapter = ({ n, name, sub, lead, notes, diagram, tone }) => {
         {diagram}
 
         <ul className="cs-notes" ref={notesRef}>
-          {notes.map((x) => (
+          {notes.map((x, i) => (
             <li key={x.k} className="cs-note">
+              <span className="num cs-note-n">{String(i + 1).padStart(2, '0')}</span>
               <h3 className="cs-note-k">{x.k}</h3>
               <p className="body cs-note-v">{x.v}</p>
             </li>
@@ -238,7 +240,7 @@ const ExperienceDetail = () => {
 
   useEffect(() => {
     const fns = [
-      maskLines(headRef.current, { trigger: headRef.current, start: 'top 92%', stagger: 0.09 }),
+      heading(headRef.current, { start: 'top 98%' }),
       drawRule(ruleRef.current, { start: 'top 95%' }),
       riseIn(footRef.current?.children, { trigger: footRef.current, start: 'top 88%', stagger: 0.07, y: 20 }),
     ];
@@ -247,7 +249,7 @@ const ExperienceDetail = () => {
 
   return (
     <article className="cs">
-      <header className="block cs-hero" data-tone="paper">
+      <header className="block cs-hero" data-acc="blue">
         <div className="shell">
           <TransitionLink to="/#experience" className="cs-back">
             <ArrowLeft size={15} strokeWidth={2.4} />
@@ -257,11 +259,12 @@ const ExperienceDetail = () => {
           <div className="cs-hero-meta">
             <span className="eyebrow">Emerson · PMO AI/ML</span>
             <span className="rule" ref={ruleRef} />
-            <span className="mono">Dec 2025 — Present</span>
+            <span className="cs-dates">Dec 2025 — Present</span>
           </div>
 
           <h1 ref={headRef} className="display display--hero cs-title">
-            Two graphs,<br />one footprint.
+            <span className="ln"><span className="ln-in">Two graphs<Glyph kind="graph" acc="blue" /></span></span>
+            <span className="ln"><span className="ln-in">one footprint.</span></span>
           </h1>
 
           <p className="lead cs-standfirst">
@@ -279,7 +282,7 @@ const ExperienceDetail = () => {
 
       <Chapter
         n="01"
-        tone="paper"
+        acc="blue"
         name="PMO Command Centre"
         sub="POR / PPR · one agent graph serving two reporting products"
         lead="Two reporting products had grown two codebases that did nearly the same thing. Rebuilding them as one configurable graph removed the duplication without flattening the differences between them."
@@ -289,7 +292,7 @@ const ExperienceDetail = () => {
 
       <Chapter
         n="02"
-        tone="paper"
+        acc="pink"
         name="S&OP Agent"
         sub="Sales & Operations Planning · natural language to validated SQL"
         lead="A planning question in plain English, turned into a query that has been checked before it runs, and answered with the reasoning attached rather than a bare number."
@@ -297,7 +300,7 @@ const ExperienceDetail = () => {
         diagram={<SnopDiagram />}
       />
 
-      <footer className="block cs-foot" data-tone="ink">
+      <footer className="block cs-foot" data-surface="ink" data-acc="yellow">
         <div className="shell cs-foot-in">
           <h2 className="display display--m cs-foot-head">
             The architecture travels;<br />the data does not.
@@ -307,9 +310,9 @@ const ExperienceDetail = () => {
             validation sits, and what happens when a generation is wrong. The
             queries, the schema and the business content stay inside Emerson.
           </p>
-          <TransitionLink to="/#experience" className="btn btn--mark cs-foot-cta">
+          <TransitionLink to="/#experience" className="btn btn--acc cs-foot-cta">
             Back to portfolio
-            <span className="arrow" aria-hidden="true">→</span>
+            <ArrowLeft size={17} strokeWidth={2.4} className="arrow" />
           </TransitionLink>
         </div>
       </footer>
@@ -324,7 +327,7 @@ const ExperienceDetail = () => {
           align-items: center;
           gap: 0.5rem;
           color: var(--ink-2);
-          font-family: var(--font-mono);
+          font-family: var(--font-body);
           font-size: var(--step--1);
           transition: color 0.35s var(--ease-out), gap 0.35s var(--ease-out);
         }
@@ -349,123 +352,69 @@ const ExperienceDetail = () => {
           margin-top: clamp(2rem, 5vh, 3rem);
         }
 
-        /* ---- chapters ----
-           Every chapter is on the same neutral tone now, so the block
-           stacking no longer separates them. A hairline does it instead. */
-        .cs-chapter { border-top: 1px solid var(--line); }
-        .cs-chapter-head {
-          display: flex;
-          align-items: flex-start;
-          gap: clamp(0.9rem, 2.5vw, 1.75rem);
-        }
+        .cs-dates { color: var(--ink-3); white-space: nowrap; }
+
+        /* ---- chapters ---- */
+        .cs-chapter-head { display: flex; align-items: flex-start; gap: clamp(0.9rem, 2.5vw, 1.75rem); }
         .cs-chapter-n {
-          color: var(--mark);
-          font-size: clamp(1rem, 1.8vw, 1.25rem);
-          font-weight: 600;
-          padding-top: 0.45em;
+          flex: none;
+          display: grid; place-items: center;
+          width: clamp(2.6rem, 4vw, 3.4rem); height: clamp(2.6rem, 4vw, 3.4rem);
+          border-radius: 99px;
+          background: var(--acc); color: var(--acc-ink);
+          font-size: var(--step-0);
+          margin-top: 0.3rem;
         }
-        .cs-chapter-name {
-          margin: 0;
-          font-size: clamp(2rem, 5.5vw, 4rem);
-          letter-spacing: -0.045em;
-        }
-        .cs-chapter-sub {
-          display: block;
-          margin-top: 0.7rem;
-          color: var(--ink-3);
-          font-size: var(--step--1);
-        }
-        .cs-chapter-lead {
-          max-width: 58ch;
-          margin-top: clamp(1.25rem, 3.5vh, 2rem);
-        }
+        .cs-chapter-name { margin: 0; font-size: clamp(2.2rem, 6.4vw, 5.6rem); letter-spacing: -0.055em; }
+        .cs-chapter-sub { display: block; margin-top: 0.7rem; color: var(--ink-2); font-size: var(--step-0); }
+        .cs-chapter-lead { max-width: 52ch; margin-top: clamp(1.25rem, 3.5vh, 2rem); font-size: var(--step-1); line-height: 1.4; letter-spacing: -0.015em; }
 
         /* ---- diagram ---- */
         .dg {
           margin-top: clamp(2rem, 6vh, 3.5rem);
-          padding: clamp(1rem, 3vw, 2.25rem);
-          border-radius: clamp(18px, 2.2vw, 28px);
-          border: 1px solid var(--line);
+          padding: clamp(1.25rem, 3.5vw, 3rem);
+          border-radius: var(--r-xl);
           background: var(--paper-2);
           overflow-x: auto;
         }
         .dg svg { width: 100%; min-width: 580px; height: auto; overflow: visible; }
-
-        .dg-rect {
-          fill: var(--paper);
-          stroke: var(--line);
-          stroke-width: 1.25;
-        }
-        .dg-rect--strong {
-          fill: color-mix(in srgb, var(--mark) 12%, var(--paper));
-          stroke: var(--mark);
-          stroke-width: 1.75;
-        }
-        .dg-label {
-          fill: var(--ink);
-          font-family: var(--font-mono);
-          font-size: 15px;
-          letter-spacing: 0.01em;
-        }
-        .dg-note {
-          fill: var(--ink-3);
-          font-family: var(--font-mono);
-          font-size: 12px;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-        .dg-line {
-          fill: none;
-          stroke: var(--line);
-          stroke-width: 1.5;
-          stroke-dasharray: 1;
-        }
+        .dg-rect { fill: var(--paper); stroke: none; rx: 23px; }
+        .dg-rect--strong { fill: var(--acc); rx: 28px; }
+        .dg-rect--strong + .dg-label { fill: var(--acc-ink); font-weight: 700; }
+        .dg-label { fill: var(--ink); font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: -0.02em; }
+        .dg-note { fill: var(--ink-2); font-family: var(--font-body); font-weight: 600; font-size: 12px; }
+        .dg-line { fill: none; stroke: var(--ink-3); stroke-width: 2; stroke-dasharray: 1; opacity: 0.5; }
         /* A short dash chasing the same route — the charge. */
-        .dg-pulse {
-          fill: none;
-          stroke: var(--mark);
-          stroke-width: 2.25;
-          stroke-linecap: round;
-          stroke-dasharray: 0.07 0.93;
-          opacity: 0.85;
-        }
+        .dg-pulse { fill: none; stroke: var(--acc); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 0.06 0.94; }
 
         /* ---- notes ---- */
         .cs-notes {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-          gap: 1px;
-          margin-top: clamp(2rem, 5vh, 3rem);
-          background: var(--line);
-          border: 1px solid var(--line);
-          border-radius: clamp(16px, 2vw, 24px);
-          overflow: hidden;
+          grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+          gap: 0.75rem;
+          margin-top: 0.75rem;
         }
         .cs-note {
-          padding: clamp(1.2rem, 2.4vw, 1.9rem);
-          background: var(--paper);
-          transition: background 0.4s var(--ease-out);
+          display: grid; align-content: start; gap: 0.7rem;
+          padding: clamp(1.3rem, 2.4vw, 2rem);
+          border-radius: var(--r-l);
+          background: var(--paper-2);
+          transition: background 0.45s var(--ease-out), color 0.45s, transform 0.5s var(--ease-out);
         }
-        .cs-note:hover { background: var(--paper-2); }
-        .cs-note-k {
-          font-family: var(--font-display);
-          font-size: var(--step-1);
-          font-weight: 700;
-          letter-spacing: -0.02em;
-          line-height: 1.15;
-        }
-        .cs-note-v { margin-top: 0.7rem; font-size: var(--step--1); }
+        .cs-note:hover { background: var(--acc); color: var(--acc-ink); transform: translateY(-4px) rotate(-0.6deg); }
+        .cs-note:hover .cs-note-v { color: inherit; }
+        .cs-note-n { color: var(--ink-3); font-size: var(--step--1); }
+        .cs-note:hover .cs-note-n { color: inherit; }
+        .cs-note-k { font-family: var(--font-display); font-size: var(--step-1); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+        .cs-note-v { font-size: var(--step--1); color: var(--ink-2); line-height: 1.6; }
 
         /* ---- foot ---- */
-        .cs-foot { padding-block: clamp(4rem, 11vh, 7rem); }
+        .cs-foot { margin-top: var(--bay); padding-block: clamp(4rem, 11vh, 7rem); border-radius: var(--r-xl) var(--r-xl) 0 0; background: var(--paper); color: var(--ink); }
         .cs-foot-in { display: flex; flex-direction: column; align-items: flex-start; gap: 1.25rem; }
-        .cs-foot-head { margin: 0; letter-spacing: -0.04em; }
-        .cs-foot-note { max-width: 54ch; }
+        .cs-foot-head { margin: 0; letter-spacing: -0.045em; }
+        .cs-foot-note { max-width: 54ch; color: var(--ink-2); }
         .cs-foot-cta { margin-top: 0.75rem; }
 
-        @media (max-width: 640px) {
-          .cs-chapter-n { padding-top: 0.2em; }
-        }
       `}</style>
     </article>
   );

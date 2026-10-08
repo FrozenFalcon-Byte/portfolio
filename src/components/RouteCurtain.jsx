@@ -70,9 +70,9 @@ export const RouteCurtain = ({ children }) => {
     <Ctx.Provider value={go}>
       {children}
 
-      <div className="curtain" ref={veilRef} data-tone="ink" aria-hidden="true">
+      <div className="curtain" ref={veilRef} data-surface="ink" data-acc="yellow" aria-hidden="true">
         <span className="curtain-box">
-          <span className="curtain-word display" ref={wordRef}>Ajinkya Chavan</span>
+          <span className="curtain-word display" ref={wordRef}>ajinkya<i className="curtain-dot" /></span>
         </span>
       </div>
 
@@ -85,14 +85,24 @@ export const RouteCurtain = ({ children }) => {
           place-items: center;
           clip-path: inset(100% 0% 0% 0%);
           pointer-events: none;
+          background: var(--paper);
         }
         .curtain-box { display: block; overflow: hidden; padding-inline: var(--gutter); }
         .curtain-word {
           display: block;
-          font-size: clamp(1.6rem, 6vw, 4rem);
-          letter-spacing: -0.04em;
+          font-size: clamp(3rem, 12vw, 9rem);
+          font-weight: 800;
+          line-height: 1;
+          letter-spacing: -0.06em;
           color: var(--ink);
           transform: translateY(120%);
+        }
+        .curtain-dot {
+          display: inline-block;
+          width: 0.17em; height: 0.17em;
+          margin-left: 0.06em;
+          border-radius: 99px;
+          background: var(--acc);
         }
       `}</style>
     </Ctx.Provider>

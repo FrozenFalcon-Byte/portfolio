@@ -1,195 +1,177 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { gsap, ScrollTrigger, reduced, riseIn, cleanup } from '../lib/motion';
+import React, { useEffect, useRef } from 'react';
+import { gsap, heading, drawRule, reduced, cleanup } from '../lib/motion';
+import Glyph from './Glyph';
 
 const LAYERS = [
   {
     n: '01',
     title: 'Languages',
+    acc: 'yellow',
+    glyph: 'type',
     blurb: 'The base layer. Typed, compiled or scripted — whatever the problem is actually shaped like.',
     items: ['Python', 'Java', 'C++', 'JavaScript', 'SQL'],
   },
   {
     n: '02',
     title: 'GenAI & ML',
+    acc: 'pink',
+    glyph: 'graph',
     blurb: 'Where most of the work happens now: agent graphs, retrieval, and the evaluation loops around them.',
     items: ['LangGraph', 'LangChain', 'RAG', 'MCP', 'A2A', 'Azure OpenAI', 'TimeGPT', 'Scikit-Learn', 'TensorFlow', 'Keras'],
   },
   {
     n: '03',
     title: 'Web',
+    acc: 'blue',
+    glyph: 'click',
     blurb: 'Models are useless behind a bad interface. Front to back, so the system ships whole.',
     items: ['React', 'TypeScript', 'FastAPI', 'Supabase', 'PostgreSQL', 'Streamlit'],
   },
   {
     n: '04',
     title: 'Cloud',
+    acc: 'teal',
+    glyph: 'cloud',
     blurb: 'Where it runs when it stops running on a laptop.',
     items: ['Azure', 'Azure AI', 'Azure App Service', 'AWS S3', 'AWS EC2', 'Vercel', 'Render', 'Firebase'],
   },
   {
     n: '05',
     title: 'Tooling',
+    acc: 'violet',
+    glyph: 'git',
     blurb: 'Reproducible environments and version control, because "works on my machine" is not a deployment.',
     items: ['Git', 'GitHub', 'GitHub Actions', 'Docker', 'Hugging Face'],
   },
 ];
 
-const Stack = () => {
-  const rootRef = useRef(null);
-  const stageRef = useRef(null);
-  const progressRef = useRef(null);
-  const listRef = useRef(null);
-  const [active, setActive] = useState(0);
-  const [pinned, setPinned] = useState(false);
+/* Deterministic scatter, so a layout never jumps between renders. */
+const rand = (seed) => {
+  const x = Math.sin(seed * 9301 + 49297) * 233280;
+  return x - Math.floor(x);
+};
+
+/* ------------------------------------------------------------------
+   Layer — one row of the stack.
+
+   The tools are keycaps: square-ish keys with a raised edge, the
+   first filled with the row's accent. As the row arrives they drop
+   onto the board one after another and bounce as they land; hovering
+   a key presses it down, so the whole section reads as something you
+   build with rather than a list of names.
+   ------------------------------------------------------------------ */
+const Layer = ({ l, i }) => {
+  const rowRef = useRef(null);
 
   useEffect(() => {
-    const canPin = window.matchMedia('(min-width: 861px)').matches && !reduced();
-    setPinned(canPin);
-
-    if (!canPin) {
-      return cleanup([
-        riseIn(listRef.current?.querySelectorAll('.layer'), {
-          trigger: listRef.current,
-          start: 'top 85%',
-          stagger: 0.1,
-          y: 32,
-        }),
-      ]);
-    }
-
-    const ctx = gsap.context(() => {
-      const st = ScrollTrigger.create({
-        trigger: rootRef.current,
-        start: 'top top',
-        end: () => `+=${LAYERS.length * 62}%`,
-        pin: stageRef.current,
-        scrub: 0.4,
-        invalidateOnRefresh: true,
-        anticipatePin: 1,
-        onUpdate: (self) => {
-          const i = Math.min(LAYERS.length - 1, Math.floor(self.progress * LAYERS.length));
-          setActive(i);
-          gsap.set(progressRef.current, { scaleY: self.progress });
-        },
-      });
-      return () => st.kill();
-    }, rootRef);
-
-    return () => ctx.revert();
-  }, []);
+    if (reduced()) return undefined;
+    const row = rowRef.current;
+    const keys = row.querySelectorAll('.st-key');
+    const title = row.querySelector('.st-title');
+    const tl = gsap.timeline({
+      scrollTrigger: { trigger: row, start: 'top 82%', toggleActions: 'play none none reverse' },
+    });
+    tl.fromTo(title, { xPercent: -8, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.9, ease: 'power3.out' }, 0)
+      .fromTo(keys,
+        { y: -140, opacity: 0, rotate: (j) => (rand(i * 31 + j) - 0.5) * 30 },
+        { y: 0, opacity: 1, rotate: 0, duration: 0.9, ease: 'bounce.out', stagger: 0.06 }, 0.1);
+    return () => { tl.scrollTrigger?.kill(); tl.kill(); };
+  }, [i]);
 
   return (
-    <section ref={rootRef} id="stack" className={`block stack ${pinned ? 'is-pinned' : ''}`} data-tone="lilac">
-      <div ref={stageRef} className="stack-stage">
-        <div className="shell stack-inner">
-          <div className="sec-head">
-            <span className="eyebrow">05 — The stack</span>
-            <span className="rule stack-rule" />
-          </div>
+    <li className="st-row" ref={rowRef} data-acc={l.acc}>
+      <div className="st-left">
+        <span className="num st-n">{l.n}</span>
+        <h3 className="display st-title">{l.title}<Glyph kind={l.glyph} acc={l.acc} /></h3>
+        <p className="st-blurb">{l.blurb}</p>
+      </div>
+      <ul className="st-keys">
+        {l.items.map((it, j) => (
+          <li key={it} className={`st-key${j === 0 ? ' is-lead' : ''}`}>
+            <span className="num st-key-n">{String(j + 1).padStart(2, '0')}</span>
+            <span className="display st-key-t">{it}</span>
+          </li>
+        ))}
+      </ul>
+    </li>
+  );
+};
 
-          <div className="stack-body">
-            <div className="stack-rail" aria-hidden="true">
-              <span className="stack-rail-track">
-                <span className="stack-rail-fill" ref={progressRef} />
-              </span>
-            </div>
+const Stack = () => {
+  const rootRef = useRef(null);
+  const ruleRef = useRef(null);
+  const headRef = useRef(null);
 
-            <ol className="stack-list" ref={listRef}>
-              {LAYERS.map((l, i) => (
-                <li
-                  key={l.n}
-                  className={`layer ${pinned ? 'is-stacked' : ''} ${i === active ? 'is-active' : ''}`}
-                >
-                  <h3 className="layer-title display">
-                    <span className="num layer-num">{l.n}</span>
-                    {l.title}
-                  </h3>
-                  <div className="layer-detail">
-                    <div className="layer-detail-in">
-                      <p className="body layer-blurb">{l.blurb}</p>
-                      <ul className="layer-items">
-                        {l.items.map((it) => <li key={it} className="tag">{it}</li>)}
-                      </ul>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
+  useEffect(() => cleanup([
+    drawRule(ruleRef.current, { trigger: rootRef.current, start: 'top 84%' }),
+    heading(headRef.current),
+  ]), []);
+
+  const total = LAYERS.reduce((n, l) => n + l.items.length, 0);
+
+  return (
+    <section ref={rootRef} id="stack" className="block stack" data-acc="lime">
+      <div className="shell">
+        <div className="sec-head">
+          <span className="eyebrow"><b>05</b>Stack</span>
+          <span className="rule" ref={ruleRef} />
+          <span className="mono st-note">{total} tools · 5 layers</span>
         </div>
+
+        <h2 ref={headRef} className="display display--l st-head">
+          <span className="ln"><span className="ln-in">Assembled</span></span>
+          <span className="ln"><span className="ln-in">layer by<Glyph kind="stack" acc="lime" />layer.</span></span>
+        </h2>
+
+        <ol className="st-rows">
+          {LAYERS.map((l, i) => <Layer key={l.n} l={l} i={i} />)}
+        </ol>
       </div>
 
       <style>{`
-        .stack.is-pinned { padding-block: 0; }
-        .stack-stage { display: flex; align-items: center; min-height: 100svh; }
-        .stack:not(.is-pinned) .stack-stage { min-height: 0; display: block; }
-        .stack-inner { width: 100%; }
-        .stack.is-pinned .stack-rule { transform: scaleX(1); }
+        .stack { overflow: hidden; }
+        .st-note { color: var(--ink-3); white-space: nowrap; }
+        .st-head { margin-bottom: clamp(2rem, 7vh, 4rem); }
 
-        .stack-body {
+        .st-rows { display: grid; }
+        .st-row {
           display: grid;
-          grid-template-columns: auto 1fr;
-          gap: clamp(1.5rem, 4vw, 3.5rem);
+          grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+          gap: clamp(1.25rem, 4vw, 4rem);
+          align-items: center;
+          padding-block: clamp(1.5rem, 4vh, 2.5rem);
+          border-top: 1px solid var(--line);
         }
+        .st-row:last-child { border-bottom: 1px solid var(--line); }
+        .st-left { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); column-gap: 0.75rem; align-items: baseline; }
+        .st-n { color: var(--ink-3); font-size: var(--step--1); }
+        .st-title { font-size: clamp(2rem, 4.6vw, 4rem); letter-spacing: -0.05em; }
+        .st-blurb { grid-column: 2; margin-top: 0.6rem; color: var(--ink-2); font-size: var(--step--1); max-width: 40ch; }
 
-        .stack-rail { display: grid; }
-        .stack-rail-track { position: relative; width: 2px; border-radius: 2px; background: var(--line); }
-        .stack-rail-fill {
-          position: absolute;
-          inset: 0;
-          border-radius: 2px;
-          background: var(--mark);
-          transform: scaleY(0);
-          transform-origin: top;
+        .st-keys { display: flex; flex-wrap: wrap; gap: 0.7rem 0.6rem; padding-bottom: 6px; }
+        .st-key {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          min-width: 6.2rem;
+          height: clamp(4.4rem, 6.4vw, 5.4rem);
+          padding: 0.6rem 0.85rem 0.65rem;
+          border-radius: 18px;
+          background: var(--paper);
+          border: 1.5px solid var(--ink);
+          box-shadow: 0 6px 0 var(--ink);
+          cursor: default;
+          will-change: transform;
+          transition: translate 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), background 0.3s, color 0.3s;
         }
-
-        .stack-list { display: flex; flex-direction: column; gap: 0.1rem; }
-
-        .layer-title {
-          margin: 0;
-          font-size: clamp(2rem, 6vw, 4.4rem);
-          letter-spacing: -0.04em;
-          color: var(--ink-3);
-          transition: color 0.5s var(--ease-out);
-        }
-        .layer.is-active .layer-title { color: var(--ink); }
-        .layer-num {
-          font-size: clamp(0.66rem, 1.2vw, 0.8rem);
-          color: var(--ink-3);
-          margin-right: 0.9em;
-          vertical-align: 0.95em;
-          font-weight: 500;
-          transition: color 0.45s var(--ease-out);
-        }
-        .layer.is-active .layer-num,
-        .layer:not(.is-stacked) .layer-num { color: var(--mark); }
-
-        /* One child, one explicit row. With two children the second landed
-           in an implicit auto row, so every collapsed layer still reserved
-           the full height of its tag list — five of those overflowed the
-           pinned viewport and the last layers were unreachable. */
-        .layer-detail {
-          display: grid;
-          grid-template-rows: 0fr;
-          opacity: 0;
-          transition: grid-template-rows 0.6s var(--ease-out), opacity 0.45s var(--ease-out);
-        }
-        .layer-detail-in { overflow: hidden; min-height: 0; }
-        .layer.is-active .layer-detail { grid-template-rows: 1fr; opacity: 1; }
-
-        .layer-blurb { padding-block: 0.9rem 0.1rem; max-width: 50ch; }
-        .layer-items { display: flex; flex-wrap: wrap; gap: 0.4rem; padding-block: 0.9rem 1.4rem; }
-
-        /* Un-pinned (phone / reduced motion): every layer reads open. */
-        .layer:not(.is-stacked) .layer-title { color: var(--ink); }
-        .layer:not(.is-stacked) .layer-detail { grid-template-rows: 1fr; opacity: 1; }
-        .layer:not(.is-stacked) { padding-block: 1.1rem; border-bottom: 1px solid var(--line-2); }
-        .layer:not(.is-stacked):last-child { border-bottom: 0; }
+        .st-key:hover { translate: 0 4px; box-shadow: 0 2px 0 var(--ink); background: var(--acc); color: var(--acc-ink); }
+        .st-key:active { translate: 0 6px; box-shadow: 0 0 0 var(--ink); }
+        .st-key.is-lead { background: var(--acc); color: var(--acc-ink); }
+        .st-key-n { font-size: 0.7rem; opacity: 0.55; }
+        .st-key-t { font-size: clamp(1rem, 1.35vw, 1.3rem); font-weight: 650; letter-spacing: -0.03em; line-height: 1; white-space: nowrap; }
 
         @media (max-width: 860px) {
-          .stack-body { grid-template-columns: 1fr; }
-          .stack-rail { display: none; }
-          .layer-title { font-size: clamp(1.7rem, 8vw, 2.6rem); }
+          .st-row { grid-template-columns: minmax(0, 1fr); }
         }
       `}</style>
     </section>

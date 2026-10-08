@@ -1,291 +1,266 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  gsap, maskLines, riseIn, drawRule, countTo, reduced, cleanup,
-} from '../lib/motion';
+import React, { useEffect, useRef, useState } from 'react';
+import { gsap, ScrollTrigger, heading, countTo, drawRule, reduced, cleanup } from '../lib/motion';
+import Glyph from './Glyph';
 
 /* Separate from Experience on purpose: a degree, a paper and a club role
-   are not jobs, and collapsing them into the internship would misread the
-   résumé. They share this section because they share a register — the
-   things that are on the record rather than in production. */
-const RECORDS = [
-  {
-    id: 'education',
-    kind: 'Education',
-    date: '2023 — 2027',
-    title: 'B.Tech, Computer Science & Engineering (AI/ML)',
-    org: 'Vishwakarma Institute of Information Technology, Pune',
-    desc: 'Four-year engineering degree specialising in artificial intelligence and machine learning.',
-    stat: { k: 'CGPA', v: '9.55', count: 9.55, decimals: 2 },
-  },
-  {
-    id: 'publication',
-    kind: 'Publication',
-    date: 'ICICIS 2026',
-    title: 'Intrinsic Uncertainty Modeling for Pre-Output Truthfulness Control in Large Language Models',
-    org: 'Co-author · IEEE',
-    desc: 'On reading a model’s own uncertainty before it commits to an answer, and using that signal to govern truthfulness at generation time rather than auditing it afterwards.',
-    stat: { k: 'Venue', v: 'IEEE' },
-  },
-  {
-    id: 'aimss',
-    kind: 'Extra-curricular',
-    date: '2024 — 2026',
-    title: 'Tech Lead, AIMSS Club',
-    org: 'Vishwakarma Institute of Information Technology',
-    desc: 'Leading the club’s technical initiatives: running AI/ML workshops, mentoring juniors, and shipping the club’s own machine-learning projects.',
-    stat: { k: 'Scope', v: 'Club-wide' },
-  },
-];
-
-const COURSES = [
-  'CISCO CCNAv7 — Introduction to Networks',
-  'Machine Learning & Deep Learning in Python and R',
-];
+   are not jobs. They share this section because they share a register —
+   the things that are on the record rather than in production. */
+const YEARS = [2023, 2024, 2025, 2026, 2027];
 
 /* ------------------------------------------------------------------
-   Plate — one record, stacked.
-
-   Each plate sticks just below the one before it and is pushed back as
-   the next slides over it, so the three arrive as a deck being dealt
-   rather than a list scrolling by. The offsets are driven off the index
-   so the stacked edges stay visible underneath the top card.
+   Each record is drawn as the object it is, not as a generic card:
+   the degree is a counter and a run of years, the paper is a page,
+   the club role is a roster, the certificates are stamped.
    ------------------------------------------------------------------ */
-const Plate = ({ r, i, last }) => {
-  const rootRef = useRef(null);
-  const cardRef = useRef(null);
-  const ghostRef = useRef(null);
-  const statRef = useRef(null);
-
-  useEffect(() => {
-    const fns = [
-      riseIn(cardRef.current, { trigger: rootRef.current, start: 'top 92%', y: 40 }),
-    ];
-    if (r.stat.count !== undefined) {
-      fns.push(countTo(statRef.current, r.stat.count, {
-        trigger: rootRef.current,
-        start: 'top 82%',
-        decimals: r.stat.decimals ?? 0,
-      }));
-    }
-    return cleanup(fns);
-  }, [r]);
-
-  /* The plate recedes as the next one covers it. The last has nothing
-     coming over it, so it is left alone. */
-  useEffect(() => {
-    if (last || reduced()) return undefined;
-    const tween = gsap.fromTo(
-      cardRef.current,
-      { scale: 1, filter: 'brightness(1)' },
-      {
-        scale: 0.93,
-        filter: 'brightness(0.94)',
-        ease: 'none',
-        scrollTrigger: {
-          trigger: rootRef.current,
-          start: 'top 18%',
-          end: 'bottom 32%',
-          scrub: 0.6,
-        },
-      }
-    );
-    return () => { tween.scrollTrigger?.kill(); tween.kill(); };
-  }, [last]);
-
-  /* The numeral behind the text drifts against the scroll — depth, not
-     decoration, and far enough back that it never competes to be read. */
-  useEffect(() => {
-    if (reduced()) return undefined;
-    // Opacity is tweened to the same faint value the stylesheet holds —
-    // animating it to 1 would turn the backdrop into a foreground.
-    const tween = gsap.fromTo(
-      ghostRef.current,
-      { yPercent: 14, opacity: 0 },
-      {
-        yPercent: -14,
-        opacity: 0.05,
-        ease: 'none',
-        scrollTrigger: { trigger: rootRef.current, start: 'top 95%', end: 'bottom 45%', scrub: 0.9 },
-      }
-    );
-    return () => { tween.scrollTrigger?.kill(); tween.kill(); };
-  }, []);
-
+const Degree = () => {
+  const ref = useRef(null);
+  useEffect(() => cleanup([countTo(ref.current, 9.55, { trigger: ref.current, start: 'top 95%', decimals: 2 })]), []);
+  const now = new Date().getFullYear();
   return (
-    <div ref={rootRef} className="rec-slot" style={{ '--i': i }}>
-      <article ref={cardRef} className="rec-plate">
-        <span className="num rec-ghost" ref={ghostRef} aria-hidden="true">
-          {String(i + 1).padStart(2, '0')}
-        </span>
-
-        <div className="rec-plate-top">
-          <span className="tag rec-kind">{r.kind}</span>
-          <span className="mono rec-date">{r.date}</span>
-        </div>
-
-        <div className="rec-plate-main">
-          <h3 className="display rec-title">{r.title}</h3>
-          <span className="rec-org">{r.org}</span>
-          <p className="body rec-desc">{r.desc}</p>
-        </div>
-
-        <div className="rec-stat">
-          <span className="mono rec-stat-k">{r.stat.k}</span>
-          <span className="display rec-stat-v" ref={statRef}>{r.stat.v}</span>
-        </div>
-      </article>
-    </div>
+    <article className="rc rc--degree" data-acc="yellow">
+      <span className="eyebrow"><b>01</b>Education</span>
+      <div className="rc-big">
+        <span className="display rc-num" ref={ref}>9.55</span>
+        <span className="rc-unit">CGPA<br />out of 10</span>
+      </div>
+      <h3 className="display rc-title">B.Tech, Computer Science &amp; Engineering (AI/ML)</h3>
+      <p className="rc-org">Vishwakarma Institute of Information Technology, Pune</p>
+      <ol className="rc-years" aria-label="2023 to 2027">
+        {YEARS.map((y) => (
+          <li key={y} className={y < now ? 'is-done' : y === now ? 'is-now' : ''}>
+            <i /><span>{y === now ? 'now' : `’${String(y).slice(2)}`}</span>
+          </li>
+        ))}
+      </ol>
+    </article>
   );
 };
+
+const Paper = () => (
+  <article className="rc rc--paper" data-acc="pink">
+    <span className="eyebrow"><b>02</b>Publication</span>
+    <div className="rc-page">
+      <div className="rc-page-top">
+        <span className="rc-venue">IEEE · ICICIS 2026</span>
+        <Glyph kind="doc" acc="pink" />
+      </div>
+      <h3 className="display rc-page-title">
+        Intrinsic Uncertainty Modeling for Pre-Output Truthfulness Control in Large Language Models
+      </h3>
+      <p className="rc-page-abs">
+        Reading a model’s own uncertainty before it commits to an answer — and using that signal to
+        govern truthfulness at generation time, rather than auditing it afterwards.
+      </p>
+      <span className="rc-lines" aria-hidden="true"><i /><i /><i /><i /></span>
+    </div>
+    <p className="rc-org">Co-author</p>
+  </article>
+);
+
+const Club = () => (
+  <article className="rc rc--club" data-acc="teal" data-surface="ink">
+    <span className="eyebrow"><b>03</b>Leadership</span>
+    <h3 className="display rc-title rc-title--xl">Tech Lead,<br />AIMSS Club</h3>
+    <p className="rc-org">VIIT Pune · 2024 — 2026</p>
+    <ul className="rc-does">
+      <li><Glyph kind="spark" acc="teal" />Runs the AI/ML workshops</li>
+      <li><Glyph kind="chat" acc="teal" />Mentors the juniors</li>
+      <li><Glyph kind="ship" acc="teal" />Ships the club’s own ML projects</li>
+    </ul>
+  </article>
+);
+
+const Certs = () => (
+  <article className="rc rc--certs" data-acc="violet">
+    <span className="eyebrow"><b>04</b>Certified</span>
+    <ul className="rc-stamps">
+      <li>
+        <span className="rc-stamp" aria-hidden="true"><Glyph kind="check" acc="violet" /></span>
+        <strong className="display">CISCO CCNAv7</strong>
+        <span>Introduction to Networks</span>
+      </li>
+      <li>
+        <span className="rc-stamp" aria-hidden="true"><Glyph kind="check" acc="violet" /></span>
+        <strong className="display">Machine &amp; Deep Learning</strong>
+        <span>in Python and R</span>
+      </li>
+    </ul>
+  </article>
+);
+
+const CARDS = [Degree, Paper, Club, Certs];
 
 const Leadership = () => {
   const rootRef = useRef(null);
   const ruleRef = useRef(null);
   const headRef = useRef(null);
-  const courseRef = useRef(null);
+  const sceneRef = useRef(null);
+  const trackRef = useRef(null);
+  const [wide, setWide] = useState(() => typeof window !== 'undefined'
+    && window.matchMedia('(min-width: 961px)').matches && !reduced());
 
   useEffect(() => {
-    const fns = [
-      drawRule(ruleRef.current, { trigger: rootRef.current, start: 'top 82%' }),
-      maskLines(headRef.current, { trigger: rootRef.current, start: 'top 76%', stagger: 0.08 }),
-      riseIn(courseRef.current?.children, { trigger: courseRef.current, start: 'top 94%', stagger: 0.07, y: 18 }),
-    ];
-    return cleanup(fns);
+    const mq = window.matchMedia('(min-width: 961px)');
+    const on = () => setWide(mq.matches && !reduced());
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
   }, []);
 
+  useEffect(() => cleanup([
+    drawRule(ruleRef.current, { trigger: rootRef.current, start: 'top 84%' }),
+    heading(headRef.current),
+  ]), []);
+
+  /* The records slide past on a pinned rail. Each card leans as it
+     travels and straightens as it reaches the middle of the screen, so
+     the one being read is always the one standing up. */
+  useEffect(() => {
+    const track = trackRef.current;
+    const scene = sceneRef.current;
+    if (!track || !scene) return undefined;
+    const cards = Array.from(track.children);
+    if (!wide) {
+      const t = gsap.from(cards, {
+        y: 60, opacity: 0, rotate: (i) => (i % 2 ? 3 : -3), duration: 1, stagger: 0.1, ease: 'back.out(1.3)',
+        scrollTrigger: { trigger: track, start: 'top 85%', once: true },
+      });
+      return () => { t.scrollTrigger?.kill(); t.kill(); };
+    }
+
+    const dist = () => track.scrollWidth - scene.clientWidth;
+    const lean = () => {
+      const mid = window.innerWidth / 2;
+      cards.forEach((c) => {
+        const r = c.getBoundingClientRect();
+        const d = (r.left + r.width / 2 - mid) / window.innerWidth;
+        c.style.transform = `rotate(${(d * 9).toFixed(2)}deg) translateY(${(Math.abs(d) * 70).toFixed(1)}px)`;
+      });
+    };
+    const tween = gsap.to(track, {
+      x: () => -dist(),
+      ease: 'none',
+      scrollTrigger: {
+        trigger: scene,
+        start: 'top top',
+        end: () => `+=${dist()}`,
+        pin: true,
+        scrub: 0.7,
+        invalidateOnRefresh: true,
+        onUpdate: lean,
+        onRefresh: lean,
+      },
+    });
+    lean();
+    return () => { tween.scrollTrigger?.kill(); tween.kill(); cards.forEach((c) => { c.style.transform = ''; }); };
+  }, [wide]);
+
   return (
-    <section ref={rootRef} id="leadership" className="block record" data-tone="paper">
+    <section ref={rootRef} id="leadership" className="block record" data-acc="teal">
       <div className="shell">
         <div className="sec-head">
-          <span className="eyebrow">06 — On the record</span>
+          <span className="eyebrow"><b>06</b>On the record</span>
           <span className="rule" ref={ruleRef} />
-          <span className="mono rec-count">Degree · Paper · Club</span>
         </div>
-
-        <h2 ref={headRef} className="display display--l rec-lede">
-          The paperwork<br />behind the practice.
+        <h2 ref={headRef} className="display display--l rec-head">
+          <span className="ln"><span className="ln-in">The paperwork</span></span>
+          <span className="ln"><span className="ln-in">behind it<Glyph kind="doc" acc="teal" /></span></span>
         </h2>
+      </div>
 
-        <div className="rec-deck">
-          {RECORDS.map((r, i) => (
-            <Plate key={r.id} r={r} i={i} last={i === RECORDS.length - 1} />
-          ))}
-        </div>
-
-        <div className="rec-courses">
-          <span className="mono rec-courses-k">Certifications</span>
-          <ul ref={courseRef}>
-            {COURSES.map((c) => <li key={c} className="tag">{c}</li>)}
-          </ul>
+      <div className={wide ? 'rec-scene' : 'shell'} ref={sceneRef}>
+        <div className="rec-track" ref={trackRef}>
+          {CARDS.map((C, i) => <C key={i} />)}
         </div>
       </div>
 
       <style>{`
-        .rec-count { color: var(--ink-3); white-space: nowrap; }
-        .rec-lede {
-          margin: 0 0 clamp(2.5rem, 7vh, 4rem);
-          max-width: 14ch;
-          letter-spacing: -0.04em;
+        .record { overflow: clip; }
+        .rec-head { margin-bottom: clamp(2rem, 6vh, 3.5rem); }
+
+        .rec-scene { height: 100svh; display: flex; align-items: center; overflow: hidden; }
+        .rec-track {
+          display: flex;
+          gap: clamp(1rem, 2vw, 1.75rem);
+          padding-inline: max(var(--gutter), calc((100vw - var(--shell)) / 2 + var(--gutter)));
+          will-change: transform;
         }
+        .shell .rec-track { flex-direction: column; padding-inline: 0; }
 
-        /* ---- the deck ---- */
-        .rec-deck { display: flex; flex-direction: column; }
-        .rec-slot {
-          position: sticky;
-          /* Each plate parks a little lower than the last, so the stack
-             underneath stays visible as an edge. */
-          top: calc(clamp(5rem, 13vh, 7.5rem) + var(--i) * 16px);
-          padding-bottom: clamp(1.25rem, 3vh, 2rem);
-        }
-
-        .rec-plate {
-          position: relative;
-          display: grid;
-          grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) auto;
-          gap: clamp(1rem, 3vw, 2.5rem);
-          align-items: start;
-          padding: clamp(1.5rem, 3.5vw, 2.75rem);
-          overflow: hidden;
-          border-radius: clamp(18px, 2.2vw, 28px);
-          border: 1px solid var(--line);
-          background: var(--paper-2);
-          transform-origin: center top;
-        }
-
-        /* Bottom-left, where the kind/date column runs out of content —
-           the stat on the right stays legible. */
-        .rec-ghost {
-          position: absolute;
-          left: clamp(0.75rem, 2vw, 1.75rem);
-          bottom: -1.75rem;
-          z-index: 0;
-          font-size: clamp(5rem, 10vw, 8.5rem);
-          font-weight: 500;
-          line-height: 0.8;
-          letter-spacing: -0.06em;
-          color: var(--ink);
-          opacity: 0.05;
-          pointer-events: none;
-        }
-
-        .rec-plate-top,
-        .rec-plate-main,
-        .rec-stat { position: relative; z-index: 1; }
-
-        .rec-plate-top { display: flex; flex-direction: column; align-items: flex-start; gap: 0.55rem; }
-        .rec-kind {
-          background: color-mix(in srgb, var(--mark) 14%, transparent);
-          border-color: transparent;
-          color: var(--mark);
-          font-weight: 500;
-        }
-        .rec-date { color: var(--ink-3); white-space: nowrap; }
-
-        .rec-plate-main { min-width: 0; }
-        .rec-title {
-          margin: 0;
-          font-size: clamp(1.25rem, 2.4vw, 1.85rem);
-          letter-spacing: -0.03em;
-          line-height: 1.12;
-          text-wrap: balance;
-        }
-        .rec-org { display: block; margin-top: 0.55rem; color: var(--ink-2); font-size: var(--step--1); font-weight: 500; }
-        .rec-desc { margin-top: 0.9rem; max-width: 56ch; font-size: var(--step--1); }
-
-        .rec-stat {
+        .rc {
+          flex: none;
+          width: clamp(20rem, 34vw, 31rem);
+          min-height: clamp(26rem, 68svh, 36rem);
           display: flex;
           flex-direction: column;
-          align-items: flex-end;
-          gap: 0.3rem;
-          text-align: right;
+          gap: 1.1rem;
+          padding: clamp(1.4rem, 2.4vw, 2.1rem);
+          border-radius: var(--r-xl);
+          background: var(--paper-2);
+          color: var(--ink);
+          transform-origin: 50% 100%;
+          will-change: transform;
         }
-        .rec-stat-k { color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.12em; font-size: var(--step--2); }
-        .rec-stat-v { font-size: clamp(1.5rem, 3vw, 2.4rem); letter-spacing: -0.03em; }
+        .shell .rc { width: 100%; min-height: 0; }
+        .rc-title { font-size: clamp(1.4rem, 2vw, 1.9rem); letter-spacing: -0.035em; line-height: 1.05; }
+        .rc-title--xl { font-size: clamp(2.4rem, 4.4vw, 4rem); letter-spacing: -0.055em; line-height: 0.95; margin-top: auto; }
+        .rc-org { color: var(--ink-2); }
 
-        .rec-courses {
-          display: flex;
-          flex-wrap: wrap;
+        /* degree */
+        .rc--degree { background: var(--acc); color: var(--acc-ink); }
+        .rc--degree .eyebrow, .rc--degree .eyebrow b, .rc--degree .rc-org { color: inherit; }
+        .rc--degree .eyebrow::after { background: var(--acc-ink); }
+        .rc-big { display: flex; align-items: flex-end; gap: 0.8rem; margin-top: auto; }
+        .rc-num { font-size: clamp(5rem, 10vw, 9rem); font-weight: 800; line-height: 0.8; letter-spacing: -0.07em; font-variant-numeric: tabular-nums; }
+        .rc-unit { font-weight: 600; line-height: 1.15; padding-bottom: 0.4rem; }
+        .rc-years { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 0.4rem; }
+        .rc-years li { display: grid; gap: 0.4rem; font-size: var(--step--1); font-weight: 600; }
+        .rc-years i { height: 10px; border-radius: 99px; border: 1.5px solid currentColor; }
+        .rc-years .is-done i { background: currentColor; }
+        .rc-years i { position: relative; overflow: hidden; }
+        .rc-years .is-now i::after { content: ""; position: absolute; inset: 0; width: 55%; background: currentColor; animation: rc-fill 2.4s var(--ease-in-out) infinite alternate; }
+        @keyframes rc-fill { from { width: 35%; } to { width: 70%; } }
+
+        /* paper */
+        .rc-page {
+          position: relative;
+          flex: 1;
+          display: flex; flex-direction: column; gap: 0.9rem;
+          padding: 1.4rem 1.4rem 1.6rem;
+          border-radius: var(--r-m);
+          background: var(--paper);
+          box-shadow: 0 30px 50px -36px var(--shadow);
+          rotate: -1.5deg;
+        }
+        .rc-page-top { display: flex; justify-content: space-between; align-items: center; }
+        .rc-venue { font-weight: 700; color: var(--acc); }
+        .rc-page-top .glyph { --open: 1; font-size: 2.2rem; }
+        .rc-page-title { font-size: clamp(1.3rem, 1.7vw, 1.65rem); line-height: 1.08; letter-spacing: -0.035em; }
+        .rc-page-abs { color: var(--ink-2); font-size: var(--step--1); line-height: 1.55; }
+        .rc-lines { display: grid; gap: 7px; margin-top: auto; }
+        .rc-lines i { height: 6px; border-radius: 6px; background: var(--paper-3); }
+        .rc-lines i:nth-child(2) { width: 88%; } .rc-lines i:nth-child(3) { width: 94%; } .rc-lines i:nth-child(4) { width: 52%; }
+
+        /* club */
+        .rc--club { background: var(--paper); }
+        .rc-does { display: grid; gap: 0.7rem; margin-top: 0.6rem; }
+        .rc-does li { display: flex; align-items: center; gap: 0.7rem; font-weight: 550; font-size: var(--step-0); }
+        .rc-does .glyph { --open: 1; font-size: 1.6rem; flex: none; }
+
+        /* certs */
+        .rc-stamps { display: grid; gap: 1rem; margin-top: auto; }
+        .rc-stamps li {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          column-gap: 1rem;
           align-items: center;
-          gap: 0.75rem 1.25rem;
-          margin-top: clamp(2rem, 5vh, 3rem);
+          padding: 1.1rem;
+          border-radius: var(--r-l);
+          background: var(--paper);
         }
-        .rec-courses-k { color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.12em; font-size: var(--step--2); }
-        .rec-courses ul { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-
-        @media (max-width: 900px) {
-          .rec-plate { grid-template-columns: minmax(0, 1fr) auto; row-gap: 1rem; }
-          .rec-plate-top { grid-column: 1; flex-direction: row; align-items: center; gap: 0.7rem; }
-          .rec-plate-main { grid-column: 1 / -1; }
-          .rec-stat { grid-column: 2; grid-row: 1; }
-        }
-        @media (max-width: 560px) {
-          /* Stacking needs headroom the viewport does not have; below
-             this the deck reads better as plain stacked cards. */
-          .rec-slot { position: static; }
-          .rec-plate { grid-template-columns: minmax(0, 1fr); }
-          .rec-stat { grid-column: 1; grid-row: auto; align-items: flex-start; text-align: left; }
-          .rec-ghost { font-size: 4.5rem; bottom: -1.25rem; }
-        }
+        .rc-stamp { grid-row: span 2; font-size: 2.6rem; }
+        .rc-stamp .glyph { --open: 1; }
+        .rc-stamps strong { font-size: var(--step-1); letter-spacing: -0.03em; line-height: 1.05; }
+        .rc-stamps li > span:last-child { color: var(--ink-2); font-size: var(--step--1); }
       `}</style>
     </section>
   );
