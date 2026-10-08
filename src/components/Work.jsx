@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Plus, X } from 'lucide-react';
-import { gsap, ScrollTrigger, EASE, heading, drawRule, riseIn, reduced, cleanup, canBlur, fx, fx0 } from '../lib/motion';
+import { gsap, ScrollTrigger, EASE, heading, drawRule, riseIn, reduced, cleanup, canBlur, fx, fx0, stepSnap } from '../lib/motion';
 import { PROJECTS } from '../data/projects';
 import Glyph from './Glyph';
 
@@ -214,7 +214,6 @@ const Reel = ({ onOpen }) => {
       end: () => `+=${window.innerHeight * 0.6 * (N - 1)}`,
       pin: true,
       scrub: true,
-      snap: { snapTo: 1 / (N - 1), duration: { min: 0.25, max: 0.6 }, delay: 0.08, ease: 'power2.inOut' },
       onUpdate: (self) => {
         const f = self.progress * (N - 1);
         paint(f);
@@ -223,7 +222,8 @@ const Reel = ({ onOpen }) => {
       },
     });
     stRef.current = st;
-    return () => st.kill();
+    const unsnap = stepSnap(st, N);
+    return () => { unsnap(); st.kill(); };
   }, []);
 
   // The copy is re-set word by word: each word rises out of its own
@@ -257,7 +257,6 @@ const Reel = ({ onOpen }) => {
       <div className="shell wk-stage">
         <div className="wk-col">
         <div className="wk-reel">
-          <span className="wk-line" aria-hidden="true" />
           <ol className="wk-track" ref={trackRef}>
             {PROJECTS.map((x, i) => (
               <li key={x.id} className={`wk-pill${i === active ? ' is-on' : ''}`} data-acc={x.acc}>
@@ -424,12 +423,6 @@ const Work = () => {
           /* The reading line sits a third of the way down: the active
              pill is near the top of the column, with the queue below. */
           --rl: 34%;
-        }
-        .wk-line {
-          position: absolute;
-          left: 0; right: 0;
-          top: var(--rl);
-          border-top: 1px dashed var(--line);
         }
         .wk-track {
           position: absolute;

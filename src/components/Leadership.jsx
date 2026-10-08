@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { gsap, ScrollTrigger, heading, countTo, drawRule, reduced, cleanup } from '../lib/motion';
+import { gsap, ScrollTrigger, heading, countTo, drawRule, reduced, cleanup, canBlur, fx, fx0 } from '../lib/motion';
 import Glyph from './Glyph';
 
 /* Separate from Experience on purpose: a degree, a paper and a club role
@@ -120,8 +120,8 @@ const Leadership = () => {
     if (!track || !scene) return undefined;
     const cards = Array.from(track.children);
     if (!wide) {
-      const t = gsap.from(cards, {
-        y: 60, opacity: 0, rotate: (i) => (i % 2 ? 3 : -3), duration: 1, stagger: 0.1, ease: 'back.out(1.3)',
+      const t = gsap.fromTo(cards, { y: 60, opacity: 0, rotate: (i) => (i % 2 ? 3 : -3), ...fx(10) }, {
+        y: 0, opacity: 1, rotate: 0, ...fx0(), duration: 1, stagger: 0.1, ease: 'back.out(1.3)',
         scrollTrigger: { trigger: track, start: 'top 85%', once: true },
       });
       return () => { t.scrollTrigger?.kill(); t.kill(); };
@@ -136,6 +136,19 @@ const Leadership = () => {
         c.style.transform = `rotate(${(d * 9).toFixed(2)}deg) translateY(${(Math.abs(d) * 70).toFixed(1)}px)`;
       });
     };
+    /* Motion blur along the travel: the faster the shelf is being
+       wound, the more the cards smear sideways; it clears as it stops. */
+    const blur = canBlur();
+    let smear = 0;
+    const streak = (self) => {
+      if (!blur) return;
+      const want = Math.min(5, Math.abs(self.getVelocity()) / 700);
+      if (Math.abs(want - smear) < 0.2) return;
+      smear = want;
+      track.style.filter = smear > 0.3 ? `blur(${smear.toFixed(1)}px)` : '';
+    };
+    const settle = () => { smear = 0; track.style.filter = ''; };
+    ScrollTrigger.addEventListener('scrollEnd', settle);
     const tween = gsap.to(track, {
       x: () => -dist(),
       ease: 'none',
@@ -146,12 +159,12 @@ const Leadership = () => {
         pin: true,
         scrub: 0.7,
         invalidateOnRefresh: true,
-        onUpdate: lean,
+        onUpdate: (self) => { lean(); streak(self); },
         onRefresh: lean,
       },
     });
     lean();
-    return () => { tween.scrollTrigger?.kill(); tween.kill(); cards.forEach((c) => { c.style.transform = ''; }); };
+    return () => { ScrollTrigger.removeEventListener('scrollEnd', settle); settle(); tween.scrollTrigger?.kill(); tween.kill(); cards.forEach((c) => { c.style.transform = ''; }); };
   }, [wide]);
 
   return (

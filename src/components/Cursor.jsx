@@ -42,17 +42,33 @@ const ARROW = 'M4.6 20.2 L3.9 6.5 C3.8 4.7 5.8 3.5 7.3 4.5 L18.8 11.9 '
   + 'C20.7 13.2 19.8 16.1 17.6 16.0 L13.0 15.9 C12.2 15.9 11.4 16.3 11.0 17.1 '
   + 'L8.8 21.1 C7.8 23.1 4.8 22.4 4.6 20.2 Z';
 
-/* The hand: an index finger up, three knuckles, a palm and a thumb. */
-const HAND = [
-  { x: 9, y: 1, w: 7, h: 22, r: 3.5 },
-  { x: 15.5, y: 11.5, w: 6.5, h: 12, r: 3.25 },
-  { x: 21.5, y: 13, w: 6.5, h: 11, r: 3.25 },
-  { x: 27, y: 15, w: 5.5, h: 9.5, r: 2.75 },
-  { x: 6, y: 17, w: 26.5, h: 19, r: 8 },
-  { x: 1.5, y: 17, w: 7, h: 14, r: 3.5, rot: 'rotate(-35 6 28)' },
+/* The hand: one drawn outline, index finger up with its tip on the
+   hotspot, three folded fingers stepping down to the right, the thumb
+   reaching in from the left. Creases between the knuckles are drawn on
+   top so it reads as a hand at 30px. */
+const HAND = 'M9 3 C9 1.3 10.3 0 12 0 C13.7 0 15 1.3 15 3 V11.2 '
+  + 'C15.4 10.4 16.2 9.9 17.1 9.9 C18.4 9.9 19.4 10.9 19.4 12.2 V12.9 '
+  + 'C19.8 12.1 20.6 11.6 21.5 11.6 C22.8 11.6 23.8 12.6 23.8 13.9 V14.6 '
+  + 'C24.2 13.9 25 13.4 25.9 13.4 C27.1 13.4 28.1 14.4 28.1 15.6 V22 '
+  + 'C28.1 27.2 24.1 31 19 31 H16.4 C13.4 31 10.8 29.6 9.2 27.2 L3.6 19.2 '
+  + 'C2.8 18 3 16.4 4.2 15.6 C5.4 14.8 7 15.1 7.8 16.3 L9 18 Z';
+const CREASES = 'M15 11.2 V16 M19.4 12.9 V16.6 M23.8 14.6 V17.4';
+
+/* The text beam, built from the same rounded bars as everything else. */
+const BEAM = [
+  { x: 6.5, y: 2.5, w: 3, h: 23, r: 1.5 },
+  { x: 2, y: 1, w: 12, h: 3, r: 1.5 },
+  { x: 2, y: 24, w: 12, h: 3, r: 1.5 },
 ];
-/* Pressed: the finger has come down and the hand has closed a little. */
-const PRESS = HAND.map((s, i) => (i === 0 ? { ...s, y: 6, h: 17 } : s));
+
+/* Plain words count as text only where the pointer is on the element
+   that holds them, not on the padding of some box around them. */
+const PROSE = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, figcaption, dd, dt, span, em, strong, small, label, time';
+const hasOwnText = (el) => {
+  if (!el.matches?.(PROSE)) return false;
+  for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) return true;
+  return false;
+};
 
 const Layers = ({ children }) => (
   <>
@@ -63,7 +79,7 @@ const Layers = ({ children }) => (
 );
 
 const rects = (list) => list.map((s, i) => (
-  <rect key={i} x={s.x} y={s.y} width={s.w} height={s.h} rx={s.r} transform={s.rot} />
+  <rect key={i} x={s.x} y={s.y} width={s.w} height={s.h} rx={s.r} />
 ));
 
 const Cursor = () => {
@@ -89,7 +105,7 @@ const Cursor = () => {
     const ptr = { x: innerWidth / 2, y: innerHeight / 2 };
     const last = { x: ptr.x, y: ptr.y };
     const tilt = { a: 0, v: 0 };
-    const s = { scale: 1 };
+    const s = { scale: 1, sx: 1 };
 
     let state = 'arrow';
     let hot = false;
@@ -103,7 +119,11 @@ const Cursor = () => {
       // Each swap lands with a small pop so the change is felt, not
       // just seen.
       if (still) return;
-      gsap.fromTo(s, { scale: next === 'press' ? 0.86 : 0.8 }, { scale: 1, duration: 0.45, ease: 'back.out(3)', overwrite: true });
+      if (next === 'beam') {
+        gsap.fromTo(s, { scale: 1, sx: 0.15 }, { sx: 1, duration: 0.42, ease: 'back.out(2.4)', overwrite: true });
+      } else {
+        gsap.fromTo(s, { scale: next === 'press' ? 0.86 : 0.78, sx: 1 }, { scale: 1, duration: 0.45, ease: 'back.out(3)', overwrite: true });
+      }
     };
 
     const recolour = (el) => {
@@ -125,15 +145,16 @@ const Cursor = () => {
     let arrow = null;
     const sizeTo = (text, withArrow) => {
       measure.textContent = text;
-      const w = Math.ceil(measure.offsetWidth) + 24 + (withArrow ? 16 : 0);
+      const w = text !== '' ? Math.ceil(measure.offsetWidth) + 24 + (withArrow ? 16 : 0) : 28;
       chip.style.width = `${w}px`;
     };
     const say = (text, withArrow) => {
-      const next = text || YOU;
+      const next = text || (withArrow ? '' : YOU);
       if (next === said && withArrow === arrow) return;
-      const first = !said;
+      const first = said === '';
       said = next; arrow = withArrow;
       chip.toggleAttribute('data-arrow', withArrow);
+      chip.toggleAttribute('data-bare', !next);
       sizeTo(next, withArrow);
       label.textContent = next;
       if (first || still) return;
@@ -141,7 +162,7 @@ const Cursor = () => {
       void label.offsetWidth;          // restart the roll
       label.classList.add('is-roll');
     };
-    const setChip = (text, el) => say(text, !!text && !!el?.matches?.('a, [data-cursor-arrow]'));
+    const setChip = (text, el) => say(text, !!el?.matches?.('a, button, [data-cursor-arrow], [data-cursor="hot"]'));
     /* State is read off whatever is actually under the hotspot, every
        few frames and on every scroll — content moves under a still
        pointer, sheets close, buttons unmount — so the cursor can never
@@ -157,8 +178,13 @@ const Cursor = () => {
       if (el.closest?.(TEXT)) { hot = false; setState('beam'); setChip(''); return; }
       const h = el.closest?.(HOT);
       hot = !!h;
+      if (!hot && hasOwnText(el)) { setState('beam'); setChip(''); return; }
       setState(hot ? (down ? 'press' : 'hand') : 'arrow');
-      setChip(h ? labelFor(h) : '', h);
+      // A tag that only repeats the words already on the button says
+      // nothing; it shrinks to just the arrow instead.
+      let text = h ? labelFor(h) : '';
+      if (h && text && text.trim().toLowerCase() === h.textContent.trim().toLowerCase()) text = '';
+      setChip(text, h);
     };
     const probe = () => evaluate(document.elementFromPoint(ptr.x, ptr.y));
 
@@ -179,8 +205,21 @@ const Cursor = () => {
     const onMove = (e) => { ptr.x = e.clientX; ptr.y = e.clientY; show(true); };
     const onOver = (e) => evaluate(e.target);
     const onScroll = () => { under = undefined; probe(); };
+    /* A click leaves a mark where it landed: a ring opens and four
+       short strokes fly out from the tip, in the section's colour. */
+    const burst = () => {
+      if (still) return;
+      const b = document.createElement('span');
+      b.className = 'cur-burst';
+      b.style.left = `${ptr.x}px`;
+      b.style.top = `${ptr.y}px`;
+      b.innerHTML = '<i></i><b></b><b></b><b></b><b></b><b></b><b></b>';
+      document.body.appendChild(b);
+      setTimeout(() => b.remove(), 650);
+    };
     const onDown = () => {
       down = true;
+      burst();
       if (hot) setState('press');
       else gsap.to(s, { scale: 0.82, duration: 0.12, ease: 'power2.out', overwrite: true });
     };
@@ -211,7 +250,7 @@ const Cursor = () => {
       tilt.a += tilt.v;
 
       root.style.transform = `translate3d(${ptr.x}px, ${ptr.y}px, 0)`;
-      tiltEl.style.transform = `rotate(${state === 'beam' ? tilt.a * 0.3 : tilt.a}deg) scale(${s.scale})`;
+      tiltEl.style.transform = `rotate(${state === 'beam' ? tilt.a * 0.3 : tilt.a}deg) scale(${s.scale * s.sx}, ${s.scale})`;
     };
 
     gsap.ticker.add(tick);
@@ -246,16 +285,18 @@ const Cursor = () => {
         <svg className="cur-shape cur-arrow" width="26" height="28" viewBox="0 0 26 28">
           <Layers><path d={ARROW} /></Layers>
         </svg>
-        <svg className="cur-shape cur-hand" width="36" height="40" viewBox="-1 -1 36 40">
-          <Layers>{rects(HAND)}</Layers>
+        <svg className="cur-shape cur-hand" width="32" height="34" viewBox="0 0 32 34">
+          <Layers><path d={HAND} /></Layers>
+          <path className="cur-crease" d={CREASES} />
         </svg>
-        <svg className="cur-shape cur-press" width="36" height="40" viewBox="-1 -1 36 40">
-          <Layers>{rects(PRESS)}</Layers>
-          <circle className="cur-ring" cx="12.5" cy="4" r="6" />
+        <svg className="cur-shape cur-press" width="32" height="34" viewBox="0 0 32 34">
+          <g transform="translate(16 31) scale(1.04 0.9) translate(-16 -31)">
+            <Layers><path d={HAND} /></Layers>
+            <path className="cur-crease" d={CREASES} />
+          </g>
         </svg>
-        <svg className="cur-shape cur-beam" width="16" height="30" viewBox="0 0 16 30">
-          <path className="cur-beam-rim" d="M8 3 V27 M3.5 3 H12.5 M3.5 27 H12.5" />
-          <path className="cur-beam-line" d="M8 3 V27 M3.5 3 H12.5 M3.5 27 H12.5" />
+        <svg className="cur-shape cur-beam" width="16" height="28" viewBox="0 0 16 28">
+          <Layers>{rects(BEAM)}</Layers>
         </svg>
       </div>
 

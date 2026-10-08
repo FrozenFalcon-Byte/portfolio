@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, ArrowUp, Copy, Check } from 'lucide-react';
-import { gsap, heading, magnetic, reduced, cleanup } from '../lib/motion';
+import { gsap, heading, magnetic, reduced, cleanup, fx, fx0 } from '../lib/motion';
 import Glyph from './Glyph';
 import Mark from './Mark';
 
@@ -31,7 +31,7 @@ const Contact = () => {
     const tl = gsap.timeline({
       scrollTrigger: { trigger: word, start: 'top bottom', end: 'bottom bottom', scrub: 0.8 },
     });
-    tl.fromTo(chars, { yPercent: 105, rotate: 8 }, { yPercent: 0, rotate: 0, stagger: 0.08, ease: 'power3.out' })
+    tl.fromTo(chars, { yPercent: 105, rotate: 8, ...fx(10) }, { yPercent: 0, rotate: 0, ...fx0(), stagger: 0.08, ease: 'power3.out' })
       .fromTo(dot, { y: '-2.4em', scale: 0 }, { y: 0, scale: 1, ease: 'bounce.out', duration: 0.6 }, '-=0.2');
     return () => { tl.scrollTrigger?.kill(); tl.kill(); };
   }, []);

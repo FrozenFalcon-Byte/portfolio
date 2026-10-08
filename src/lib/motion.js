@@ -829,3 +829,38 @@ export function stickyScale(el, opts = {}) {
   );
   return () => { tween.scrollTrigger?.kill(); tween.kill(); };
 }
+
+/* ------------------------------------------------------------------
+   stepSnap — for a pinned scene told in steps. When the scroll comes
+   to rest inside the pin, it is carried to a step: the next one in
+   the direction it was travelling once it is a fifth of the way there,
+   otherwise back to the one it left. A fast flick therefore lands on a
+   step instead of sailing past several, and the reader is never left
+   between two. Returns a disposer.
+   ------------------------------------------------------------------ */
+export const stepSnap = (st, steps) => {
+  let from = 0;
+  let busy = false;
+  const n = steps - 1;
+  const onStart = () => { if (!busy) from = Math.round(st.progress * n); };
+  const onEnd = () => {
+    if (busy || !st.isActive) return;
+    const f = st.progress * n;
+    let k = from;
+    if (f - from > 0.2) k = Math.min(n, Math.max(from + 1, Math.round(f - 0.3)));
+    else if (from - f > 0.2) k = Math.max(0, Math.min(from - 1, Math.round(f + 0.3)));
+    const y = st.start + (st.end - st.start) * (k / n);
+    from = k;
+    if (Math.abs(y - window.scrollY) < 2) return;
+    busy = true;
+    const done = () => { busy = false; };
+    if (window.lenis) window.lenis.scrollTo(y, { duration: 0.7, easing: (t) => 1 - (1 - t) ** 3, onComplete: done });
+    else { window.scrollTo({ top: y, behavior: 'smooth' }); setTimeout(done, 700); }
+  };
+  ScrollTrigger.addEventListener('scrollStart', onStart);
+  ScrollTrigger.addEventListener('scrollEnd', onEnd);
+  return () => {
+    ScrollTrigger.removeEventListener('scrollStart', onStart);
+    ScrollTrigger.removeEventListener('scrollEnd', onEnd);
+  };
+};

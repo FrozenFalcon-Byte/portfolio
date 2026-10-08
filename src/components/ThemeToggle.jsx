@@ -50,7 +50,7 @@ const ThemeToggle = ({ theme, onToggle }) => (
       }
       [data-theme="dark"] .theme-toggle-knob {
         transform: translateX(22px);
-        background: var(--acid);
+        background: var(--yellow);
         color: #101403;
       }
       .theme-toggle:hover .theme-toggle-track { border-color: var(--ink-3); }

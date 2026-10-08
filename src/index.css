@@ -511,8 +511,19 @@ html.lenis, html.lenis body { height: auto; }
      fingertip, lands exactly on the pointer; the tilt pivots there. */
   .cur-shape { position: absolute; overflow: visible; display: none; max-width: none; max-height: none; }
   .cur-arrow { left: -4px; top: -4.5px; }
-  .cur-hand, .cur-press { left: -13.5px; top: -2px; }
-  .cur-beam { left: -8px; top: -15px; }
+  .cur-hand, .cur-press { left: -12px; top: -1px; }
+  .cur-beam { left: -8px; top: -14px; }
+  .cur-crease { fill: none; stroke: var(--cur-on-acc); stroke-width: 1.4; stroke-linecap: round; opacity: 0.55; }
+  .cur-chip[data-bare] { padding: 0; justify-content: center; }
+  .cur-chip[data-bare] .cur-chip-label { display: none; }
+  .cur-chip[data-bare] .cur-chip-arrow { margin: 0; }
+  .cur-burst { position: fixed; z-index: 99999; width: 0; height: 0; pointer-events: none; }
+  .cur-burst i { position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 99px; border: 2px solid var(--acc, #E61A66); animation: cur-burst-ring 0.55s var(--ease-out) forwards; }
+  .cur-burst b { position: absolute; left: -1.5px; top: -5px; width: 3px; height: 10px; border-radius: 3px; background: var(--acc, #E61A66); opacity: 0; animation: cur-burst-ray 0.5s var(--ease-out) forwards; }
+  .cur-burst b:nth-of-type(1) { --r: 0deg; } .cur-burst b:nth-of-type(2) { --r: 60deg; } .cur-burst b:nth-of-type(3) { --r: 120deg; }
+  .cur-burst b:nth-of-type(4) { --r: 180deg; } .cur-burst b:nth-of-type(5) { --r: 240deg; } .cur-burst b:nth-of-type(6) { --r: 300deg; }
+  @keyframes cur-burst-ring { from { transform: scale(0.2); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+  @keyframes cur-burst-ray { 0% { opacity: 1; transform: rotate(var(--r)) translateY(-8px) scaleY(1); } 100% { opacity: 0; transform: rotate(var(--r)) translateY(-24px) scaleY(0.3); } }
   .cur[data-state="arrow"] .cur-arrow,
   .cur[data-state="hand"] .cur-hand,
   .cur[data-state="press"] .cur-press,
@@ -522,15 +533,13 @@ html.lenis, html.lenis body { height: auto; }
   .cur-l2 > * { fill: var(--cur-paper); stroke: var(--cur-paper); stroke-width: 4; stroke-linejoin: round; }
   .cur-l3 > * { fill: var(--cur-acc); transition: fill 0.35s var(--ease-out); }
 
-  .cur-ring {
+  .cur-ring-unused {
     fill: none; stroke: var(--cur-acc); stroke-width: 2.5;
     transform-box: fill-box; transform-origin: center;
     animation: cur-ring 0.5s var(--ease-out) forwards;
   }
   @keyframes cur-ring { from { transform: scale(0.3); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
 
-  .cur-beam-rim { fill: none; stroke: var(--cur-paper); stroke-width: 6; stroke-linecap: round; }
-  .cur-beam-line { fill: none; stroke: var(--cur-ink); stroke-width: 2.2; stroke-linecap: round; }
 
   /* plnty's tag: pinned under the tip, squared at the corner that
      meets the pointer, ink on paper with a hairline rim so it holds on

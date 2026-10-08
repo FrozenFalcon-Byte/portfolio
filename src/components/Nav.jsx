@@ -27,8 +27,7 @@ const Nav = () => {
   const pillRef = useRef(null);
   const blobRef = useRef(null);
   const hopRef = useRef(null);
-  const hopAt = useRef(null);
-  const [active, setActive] = useState(null);
+    const [active, setActive] = useState(null);
   const busy = useRef(false);
   const { pathname } = useLocation();
   const route = useRouteTransition();
@@ -131,50 +130,51 @@ const Nav = () => {
     });
   }, [active]);
 
-  /* Hover: the logo's full stop hops along under the links. It arcs
-     from one label to the next instead of sliding, and when it lands
-     the letters above it jump in a ripple outward from the landing
-     point, as if the dot had knocked them. */
-  const hop = (e) => {
+  /* Hover: a soft pill glides under whichever link the pointer is on,
+     separate from the ink one that marks the section being read. It
+     appears in place on the first link and slides between the rest. */
+  const hoverAt = useRef(false);
+  const hover = (e) => {
     const link = e.currentTarget;
-    const dot = hopRef.current;
-    if (reduced() || !dot) return;
-    const x = link.offsetLeft + link.offsetWidth / 2;
-    const first = hopAt.current === null;
-    const from = first ? x : hopAt.current;
-    hopAt.current = x;
-    gsap.killTweensOf(dot);
-    if (first) gsap.set(dot, { x, y: 0, scale: 0, opacity: 1 });
-    const dist = Math.abs(x - from);
-    const tl = gsap.timeline();
-    tl.to(dot, { opacity: 1, scale: 1, duration: 0.2, ease: 'power2.out' }, 0)
-      .to(dot, { x, duration: 0.42, ease: 'power1.inOut' }, 0)
-      .to(dot, { y: -Math.min(16, 6 + dist * 0.06), scaleY: 1.2, scaleX: 0.85, duration: 0.21, ease: 'power2.out' }, 0)
-      .to(dot, { y: 0, scaleY: 1, scaleX: 1, duration: 0.21, ease: 'power2.in' }, 0.21)
-      .to(dot, { scaleX: 1.6, scaleY: 0.6, duration: 0.08, ease: 'power1.out', yoyo: true, repeat: 1 }, 0.42);
-    const chars = link.querySelectorAll('.nav-ch');
-    tl.fromTo(chars, { y: 0 }, {
-      keyframes: [{ y: -5, duration: 0.14, ease: 'power2.out' }, { y: 0, duration: 0.4, ease: 'bounce.out' }],
-      stagger: { each: 0.025, from: 'center' },
-    }, 0.38);
+    const pill = hopRef.current;
+    if (!pill) return;
+    const to = { x: link.offsetLeft, width: link.offsetWidth };
+    if (!hoverAt.current || reduced()) {
+      gsap.set(pill, to);
+      gsap.to(pill, { opacity: 1, scale: 1, duration: 0.25, ease: 'power2.out', overwrite: 'auto' });
+    } else {
+      gsap.to(pill, { ...to, opacity: 1, scale: 1, duration: 0.45, ease: EASE.swift, overwrite: 'auto' });
+    }
+    hoverAt.current = true;
   };
-  const unhop = () => {
-    hopAt.current = null;
-    gsap.to(hopRef.current, { scale: 0, duration: 0.3, ease: EASE.swift });
+  const unhover = () => {
+    hoverAt.current = false;
+    gsap.to(hopRef.current, { opacity: 0, scale: 0.92, duration: 0.25, ease: 'power2.out', overwrite: 'auto' });
   };
 
-  /* Out of the way while reading down, back the moment you scroll up. */
+  /* Out of the way while reading down, back the moment you scroll up.
+     Small reversals (a trackpad settling, a snap) are ignored, and a
+     jump never toggles it, so the bar does not flicker. */
   useEffect(() => {
     const bar = barRef.current;
+    let anchor = window.scrollY;
     let hidden = false;
+    if (open) bar.classList.remove('is-away');
     const st = ScrollTrigger.create({
       start: 0,
       end: 'max',
       onUpdate: (self) => {
-        const hide = self.direction === 1 && self.scroll() > window.innerHeight * 0.8;
-        if (hide === hidden || open) return;
+        const y = self.scroll();
+        if (open || busy.current) { anchor = y; return; }
+        const d = y - anchor;
+        let hide = hidden;
+        if (y < window.innerHeight * 0.6) hide = false;
+        else if (d > 24) hide = true;
+        else if (d < -24) hide = false;
+        if (Math.abs(d) > 24) anchor = y;
+        if (hide === hidden) return;
         hidden = hide;
-        gsap.to(bar, { yPercent: hide ? -160 : 0, duration: 0.6, ease: EASE.swift, overwrite: 'auto' });
+        bar.classList.toggle('is-away', hide);
       },
     });
     return () => st.kill();
@@ -279,13 +279,14 @@ const Nav = () => {
           </svg>
         </a>
 
-        <nav className="nav-links" aria-label="Sections" ref={pillRef} onMouseLeave={unhop}>
+        <nav className="nav-links" aria-label="Sections" ref={pillRef} onMouseLeave={unhover}>
+          <span className="nav-hover" ref={hopRef} aria-hidden="true" />
           <span className="nav-blob" ref={blobRef} aria-hidden="true" />
-          <span className="nav-hop" ref={hopRef} aria-hidden="true" />
           {LINKS.map((l) => (
-            <a key={l.id} href={`#${l.id}`} onClick={(e) => go(e, l.id)} onMouseEnter={hop} data-id={l.id} aria-label={l.label} className={`nav-link${active === l.id ? ' is-on' : ''}`}>
-              <span className="nav-link-t" aria-hidden="true">
-                {l.label.split('').map((c, k) => <span className="nav-ch" key={k}>{c === ' ' ? '\u00a0' : c}</span>)}
+            <a key={l.id} href={`#${l.id}`} onClick={(e) => go(e, l.id)} onMouseEnter={hover} data-id={l.id} aria-label={l.label} className={`nav-link${active === l.id ? ' is-on' : ''}`}>
+              <span className="nav-roll" aria-hidden="true">
+                <span>{l.label}</span>
+                <span>{l.label}</span>
               </span>
             </a>
           ))}
@@ -365,8 +366,10 @@ const Nav = () => {
             background 0.5s var(--ease-out),
             border-color 0.5s var(--ease-out),
             backdrop-filter 0.5s var(--ease-out),
-            padding 0.5s var(--ease-out);
+            padding 0.5s var(--ease-out),
+            transform 0.55s var(--ease-out);
         }
+        .nav.is-away { transform: translateY(calc(-100% - 2rem)); }
         .nav.is-stuck {
           background: color-mix(in srgb, var(--paper) 78%, transparent);
           border-color: var(--line-2);
@@ -416,25 +419,16 @@ const Nav = () => {
           border: 1px solid var(--line-2);
           backdrop-filter: blur(14px) saturate(1.4);
         }
-        .nav-blob {
+        .nav-blob, .nav-hover {
           position: absolute;
           left: 0; top: 4px; bottom: 4px;
           width: 0;
           border-radius: var(--r-pill);
-          background: var(--ink);
           opacity: 0;
           pointer-events: none;
         }
-        .nav-hop {
-          position: absolute;
-          left: -3.5px; bottom: 3px;
-          width: 7px; height: 7px;
-          border-radius: 99px;
-          background: var(--acc);
-          transform: scale(0);
-          pointer-events: none;
-          z-index: 2;
-        }
+        .nav-hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+        .nav-blob { background: var(--ink); }
         .nav-link {
           position: relative;
           display: block;
@@ -443,12 +437,17 @@ const Nav = () => {
           font-size: var(--step--1);
           font-weight: 550;
           color: var(--ink-2);
-          transition: color 0.3s var(--ease-out);
+          transition: color 0.35s var(--ease-out);
         }
         .nav-link:hover { color: var(--ink); }
         .nav-link.is-on { color: var(--paper); }
-        .nav-link-t { display: block; line-height: 1.25em; white-space: nowrap; }
-        .nav-ch { display: inline-block; will-change: transform; }
+        /* The label rolls over to a copy of itself: one clean motion,
+           no letters jumping about. */
+        .nav-roll { display: grid; height: 1.25em; line-height: 1.25em; overflow: hidden; white-space: nowrap; }
+        .nav-roll > span { grid-area: 1 / 1; transition: transform 0.5s var(--ease-out); }
+        .nav-roll > span:last-child { transform: translateY(100%); }
+        .nav-link:hover .nav-roll > span:first-child { transform: translateY(-100%); }
+        .nav-link:hover .nav-roll > span:last-child { transform: translateY(0); }
 
         /* The CTA is a status line you can press: a live dot says the
            door is open, and on hover the words roll over to say what

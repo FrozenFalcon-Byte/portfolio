@@ -85,6 +85,7 @@ const useDiagram = (rootRef) => {
     if (reduced()) {
       gsap.set([...boxes, ...lines], { opacity: 1, strokeDashoffset: 0 });
       gsap.set(pulses, { opacity: 0 });
+      gsap.set(root.querySelectorAll('.dg-socket'), { opacity: 1 });
       return undefined;
     }
 
@@ -97,15 +98,18 @@ const useDiagram = (rootRef) => {
     })
       .fromTo(lines, { strokeDashoffset: 1 }, {
         strokeDashoffset: 0, duration: 0.7, stagger: 0.05, ease: 'glide',
-      }, 0.25);
+      }, 0.25)
+      .fromTo(root.querySelectorAll('.dg-socket'), { opacity: 0 }, {
+        opacity: 1, duration: 0.3, stagger: 0.05, ease: 'power2.out',
+      }, 0.6);
 
     // The charge keeps running after the draw, on its own clock.
     const charge = gsap.fromTo(
       pulses,
       { strokeDashoffset: 1 },
       {
-        strokeDashoffset: -1,
-        duration: 2.6,
+        strokeDashoffset: 0,
+        duration: 1.8,
         ease: 'none',
         repeat: -1,
         stagger: { each: 0.12, repeat: -1 },
@@ -152,12 +156,43 @@ const Node = ({ x, y, w, label, strong, hl, id }) => {
   );
 };
 
-const Edge = ({ d }) => (
-  <>
-    <path d={d} className="dg-line" pathLength="1" />
-    <path d={d} className="dg-pulse" pathLength="1" />
-  </>
-);
+/* Edges are written as orthogonal routes ("M x y V y H x ...") and
+   drawn with every elbow rounded, so the wiring reads as one cable
+   bending rather than lines meeting at corners. The end gets a small
+   socket where it plugs into the next node. */
+const R = 14;
+const route = (d) => {
+  const pts = [];
+  let x = 0; let y = 0;
+  d.trim().split(/\s+(?=[MVH])/).forEach((tok) => {
+    const c = tok[0];
+    const v = tok.slice(1).trim().split(/\s+/).map(Number);
+    if (c === 'M') { [x, y] = v; } else if (c === 'V') { [y] = v; } else { [x] = v; }
+    pts.push([x, y]);
+  });
+  let out = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length - 1; i += 1) {
+    const [ax, ay] = pts[i - 1]; const [bx, by] = pts[i]; const [cx, cy] = pts[i + 1];
+    const l1 = Math.hypot(bx - ax, by - ay); const l2 = Math.hypot(cx - bx, cy - by);
+    const r = Math.min(R, l1 / 2, l2 / 2);
+    const p1 = [bx - ((bx - ax) / l1) * r, by - ((by - ay) / l1) * r];
+    const p2 = [bx + ((cx - bx) / l2) * r, by + ((cy - by) / l2) * r];
+    out += ` L${p1[0]} ${p1[1]} Q${bx} ${by} ${p2[0]} ${p2[1]}`;
+  }
+  const end = pts[pts.length - 1];
+  return { d: `${out} L${end[0]} ${end[1]}`, end };
+};
+
+const Edge = ({ d }) => {
+  const { d: path, end } = route(d);
+  return (
+    <>
+      <path d={path} className="dg-line" pathLength="1" />
+      <path d={path} className="dg-pulse" pathLength="1" />
+      <circle cx={end[0]} cy={end[1]} r="4" className="dg-socket" />
+    </>
+  );
+};
 
 const CommandCentreDiagram = ({ hl }) => {
   const ref = useRef(null);
@@ -166,7 +201,7 @@ const CommandCentreDiagram = ({ hl }) => {
 
   return (
     <div className="dg" ref={ref}>
-      <svg viewBox="0 0 920 626" role="img" aria-label="Architecture of the PMO Command Centre: two configuration modules feed a config-driven loader, which assembles one shared agent graph; the graph fans out to an extraction agent and a SQL agent, both of which report to a validator that can send work back to the SQL agent before a report is produced.">
+      <svg viewBox="90 10 820 600" role="img" aria-label="Architecture of the PMO Command Centre: two configuration modules feed a config-driven loader, which assembles one shared agent graph; the graph fans out to an extraction agent and a SQL agent, both of which report to a validator that can send work back to the SQL agent before a report is produced.">
         <Shadows id="por" />
         <Edge d="M260 74 V101 H460 V128" />
         <Edge d="M660 74 V101 H460 V128" />
@@ -176,7 +211,7 @@ const CommandCentreDiagram = ({ hl }) => {
         <Edge d="M230 404 V440 H460 V468" />
         <Edge d="M690 404 V440 H460 V468" />
         <Edge d="M460 514 V558" />
-        <Edge d="M580 491 H862 V381 H810" />
+        <Edge d="M580 491 H870 V381 H810" />
 
         <Node {...n} x={150} y={28} w={220} label="POR module" />
         <Node {...n} x={550} y={28} w={220} label="PPR module" />
@@ -187,7 +222,7 @@ const CommandCentreDiagram = ({ hl }) => {
         <Node {...n} x={340} y={468} w={240} label="Validator" />
         <Node {...n} x={370} y={558} w={180} label="Report" />
 
-        <text x={872} y={430} className="dg-note" textAnchor="middle" transform="rotate(90 872 430)">
+        <text x={886} y={436} className="dg-note" textAnchor="middle" transform="rotate(90 886 436)">
           self-correcting retry
         </text>
       </svg>
@@ -531,7 +566,7 @@ const ExperienceDetail = () => {
 
         .cs-ch-body {
           display: grid;
-          grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+          grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
           gap: clamp(1.5rem, 4vw, 4.5rem);
           margin-top: clamp(2.5rem, 7vh, 4.5rem);
         }
@@ -542,24 +577,24 @@ const ExperienceDetail = () => {
           padding: clamp(1rem, 2.6vw, 2.25rem);
           border-radius: var(--r-xl);
           background: var(--paper-2);
-          /* the board is a recessed tray: light from above, occluded
-             at its top edge */
-          box-shadow: inset 0 10px 22px -12px rgba(0,0,0,0.22), inset 0 -1px 0 rgba(255,255,255,0.35);
+          /* the board is a recessed tray, occluded at its top edge */
+          box-shadow: inset 0 0 0 1px var(--line-2), inset 0 10px 22px -12px rgba(0,0,0,0.22);
         }
-        .dg svg { display: block; width: 100%; height: auto; max-height: 64vh; overflow: visible; }
+        .dg svg { display: block; width: 100%; height: auto; max-height: 70vh; overflow: visible; }
         .dg-box { cursor: default; }
         .dg-lift { transition: transform 0.6s var(--ease-out); }
-        .dg-rect { fill: var(--paper); stroke: none; transition: fill 0.45s var(--ease-out); }
-        .dg-rect--strong { fill: var(--ink); }
+        .dg-rect { fill: var(--paper); stroke: var(--line); stroke-width: 1.5; transition: fill 0.45s var(--ease-out), stroke 0.45s; }
+        .dg-rect--strong { fill: var(--ink); stroke: var(--ink); }
         .dg-rect--strong + .dg-label { fill: var(--paper); font-weight: 700; }
         .dg-label { fill: var(--ink); font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: -0.02em; transition: fill 0.45s; }
-        .dg-box.is-hl .dg-lift { transform: translateY(-6px) scale(1.04); }
-        .dg-box.is-hl .dg-rect { fill: var(--acc); }
+        .dg-box.is-hl .dg-lift { transform: translateY(-4px) scale(1.03); }
+        .dg-box.is-hl .dg-rect { fill: var(--acc); stroke: var(--acc); }
         .dg-box.is-hl .dg-label { fill: var(--acc-ink); font-weight: 700; }
-        .dg-note { fill: var(--ink-2); font-family: var(--font-body); font-weight: 600; font-size: 12px; }
-        .dg-line { fill: none; stroke: var(--ink-3); stroke-width: 2; stroke-dasharray: 1; opacity: 0.5; }
-        /* A short dash chasing the same route — the charge. */
-        .dg-pulse { fill: none; stroke: var(--acc); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 0.06 0.94; }
+        .dg-note { fill: var(--ink-3); font-family: var(--font-body); font-weight: 600; font-size: 12px; letter-spacing: 0.02em; }
+        .dg-line { fill: none; stroke: var(--ink-3); stroke-width: 1.75; stroke-dasharray: 1; opacity: 0.55; stroke-linecap: round; }
+        .dg-socket { fill: var(--paper-2); stroke: var(--ink-3); stroke-width: 1.75; }
+        /* A bead riding the same cable — the charge. */
+        .dg-pulse { fill: none; stroke: var(--acc); stroke-width: 7; stroke-linecap: round; stroke-dasharray: 0 1; }
 
         .cs-ch-read { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; padding-inline: 0.5rem; }
         .cs-ch-dots { display: flex; gap: 0.35rem; }
@@ -609,7 +644,8 @@ const ExperienceDetail = () => {
              chapter body, not just its own box */
           .cs-ch-stage { display: contents; }
           .cs-ch-pin { position: sticky; top: 4.75rem; z-index: 2; padding-bottom: 0.75rem; background: var(--paper); box-shadow: 0 18px 24px -18px rgba(0,0,0,0.25); border-radius: 0 0 var(--r-l) var(--r-l); }
-          .dg svg { max-height: 30vh; }
+          .dg { overflow-x: auto; overscroll-behavior-x: contain; }
+          .dg svg { min-width: 600px; max-height: none; }
           .cs-note, .cs-note:first-child { min-height: 46vh; align-items: flex-start; }
           .cs-notes { padding-bottom: 0; }
         }

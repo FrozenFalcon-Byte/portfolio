@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowUp, Loader2 } from 'lucide-react';
-import { gsap, heading, reduced, cleanup } from '../lib/motion';
+import { gsap, heading, reduced, cleanup, fx, fx0 } from '../lib/motion';
 import Glyph from './Glyph';
 import Mark from './Mark';
 
@@ -28,7 +28,7 @@ const Sources = ({ sources, busy, asked }) => {
     const list = listRef.current;
     if (!list || !sources.length || reduced()) return undefined;
     const tl = gsap.timeline()
-      .fromTo(list.children, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.07, ease: 'swift' })
+      .fromTo(list.children, { opacity: 0, y: 10, ...fx(6) }, { opacity: 1, y: 0, ...fx0(), duration: 0.5, stagger: 0.07, ease: 'swift' })
       .fromTo(list.querySelectorAll('.src-bar i'), { scaleX: 0 }, {
         scaleX: (i, el) => Number(el.dataset.score) || 0.05, duration: 0.9, stagger: 0.07, ease: 'glide',
       }, 0.1);
@@ -94,9 +94,9 @@ const Assistant = () => {
         scrollTrigger: { trigger: rootRef.current, start: 'top 95%', end: 'top 20%', scrub: 0.6 },
       });
     const t2 = gsap.fromTo(steps,
-      { opacity: 0.25, y: 20 },
+      { opacity: 0.25, y: 20, ...fx(6) },
       {
-        opacity: 1, y: 0, stagger: 0.4, ease: 'none',
+        opacity: 1, y: 0, ...fx0(), stagger: 0.4, ease: 'none',
         scrollTrigger: { trigger: howRef.current, start: 'top 88%', end: 'bottom 60%', scrub: 0.6 },
       });
     return () => [t1, t2].forEach((t) => { t.scrollTrigger?.kill(); t.kill(); });
@@ -124,10 +124,16 @@ const Assistant = () => {
     return () => feed.removeEventListener('wheel', onWheel);
   }, []);
 
-  /* Keep the newest turn in view without yanking the whole page. */
+  /* Keep the newest turn in view without yanking the whole page, and
+     let it arrive out of focus, rising into place. */
   useEffect(() => {
     const feed = feedRef.current;
-    if (feed) feed.scrollTop = feed.scrollHeight;
+    if (!feed) return;
+    feed.scrollTop = feed.scrollHeight;
+    const last = feed.lastElementChild;
+    if (last && thread.length > 1 && !reduced()) {
+      gsap.fromTo(last, { y: 14, opacity: 0, ...fx(8) }, { y: 0, opacity: 1, ...fx0(), duration: 0.5, ease: 'swift' });
+    }
   }, [thread, busy]);
 
   const ask = useCallback(async (question) => {

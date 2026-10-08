@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { gsap, ScrollTrigger, EASE, heading, drawRule, reduced, cleanup, fx, fx0 } from '../lib/motion';
+import { gsap, ScrollTrigger, EASE, heading, drawRule, reduced, cleanup, fx, fx0, stepSnap } from '../lib/motion';
 import Glyph from './Glyph';
 
 const LAYERS = [
@@ -100,16 +100,16 @@ const Shelf = () => {
       const st = ScrollTrigger.create({
         trigger: shelfRef.current,
         start: 'center 56%',
-        end: () => `+=${window.innerHeight * 0.55 * (n - 1)}`,
+        end: () => `+=${window.innerHeight * 0.75 * (n - 1)}`,
         pin: true,
-        snap: { snapTo: 1 / (n - 1), duration: { min: 0.2, max: 0.5 }, delay: 0.1, ease: 'power2.inOut' },
         onUpdate: (self) => {
           const k = Math.round(self.progress * (n - 1));
           setOn((cur) => (cur === k ? cur : k));
         },
       });
       stRef.current = st;
-      return () => { stRef.current = null; };
+      const unsnap = stepSnap(st, n);
+      return () => { unsnap(); stRef.current = null; };
     });
     return () => mm.revert();
   }, []);
