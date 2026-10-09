@@ -841,26 +841,34 @@ export function stickyScale(el, opts = {}) {
 export const stepSnap = (st, steps) => {
   let from = 0;
   let busy = false;
+  let moving = false;
+  let timer = 0;
   const n = steps - 1;
-  const onStart = () => { if (!busy) from = Math.round(st.progress * n); };
-  const onEnd = () => {
+  const settle = () => {
+    moving = false;
     if (busy || !st.isActive) return;
     const f = st.progress * n;
     let k = from;
     if (f - from > 0.2) k = Math.min(n, Math.max(from + 1, Math.round(f - 0.3)));
     else if (from - f > 0.2) k = Math.max(0, Math.min(from - 1, Math.round(f + 0.3)));
-    const y = st.start + (st.end - st.start) * (k / n);
     from = k;
+    const y = st.start + (st.end - st.start) * (k / n);
     if (Math.abs(y - window.scrollY) < 2) return;
     busy = true;
-    const done = () => { busy = false; };
+    const done = () => { busy = false; from = k; };
+    // A wheel during the glide can cancel it without a callback; the
+    // timeout makes sure the snap is never left stuck on.
+    setTimeout(done, 900);
     if (window.lenis) window.lenis.scrollTo(y, { duration: 0.7, easing: (t) => 1 - (1 - t) ** 3, onComplete: done });
     else { window.scrollTo({ top: y, behavior: 'smooth' }); setTimeout(done, 700); }
   };
-  ScrollTrigger.addEventListener('scrollStart', onStart);
-  ScrollTrigger.addEventListener('scrollEnd', onEnd);
-  return () => {
-    ScrollTrigger.removeEventListener('scrollStart', onStart);
-    ScrollTrigger.removeEventListener('scrollEnd', onEnd);
+  // Scroll start and rest are read off the window's own scroll events,
+  // so this works the same under Lenis, native scroll and touch.
+  const onScroll = () => {
+    if (!busy && !moving) { moving = true; from = Math.round(st.progress * n); }
+    clearTimeout(timer);
+    timer = setTimeout(settle, 160);
   };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  return () => { clearTimeout(timer); window.removeEventListener('scroll', onScroll); };
 };
