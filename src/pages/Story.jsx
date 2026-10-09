@@ -88,13 +88,19 @@ const FAR = 3000;          // beyond this a card has faded out
    dy are fractions of the stage, dz is depth in world pixels. `side`
    flips with the chapter so the road zig-zags. */
 const PARTS = {
-  card:  { dx: 0,     dy: 0,     dz: 0 },
-  big:   { dx: -0.30, dy: -0.12, dz: 600 },
-  glyph: { dx: 0.36,  dy: 0.30,  dz: -200 },
-  chip0: { dx: 0.30,  dy: -0.24, dz: 260 },
-  chip1: { dx: -0.27, dy: 0.25,  dz: 160 },
-  chip2: { dx: 0.20,  dy: 0.34,  dz: 420 },
+  card:  { dx: 0.17,  dy: 0.02,  dz: 0 },
+  big:   { dx: -0.25, dy: -0.04, dz: 600 },
+  glyph: { dx: -0.03, dy: -0.25, dz: -180 },
+  chip0: { dx: 0.30,  dy: -0.33, dz: 220 },
+  chip1: { dx: -0.30, dy: 0.32,  dz: 140 },
+  chip2: { dx: -0.10, dy: 0.36,  dz: 320 },
 };
+
+/* How far away each kind of piece is still drawn. Only the next
+   chapter's word waits in the distance; its card, stickers and glyph
+   arrive once the camera is on its way, so a held chapter is never
+   cluttered with tiny bits of the one after it. */
+const REACH = { card: 2250, big: FAR, glyph: 2150, chip0: 2150, chip1: 2150, chip2: 2150 };
 
 const side = (i) => (i === 0 ? 0 : i % 2 ? 1 : -1);
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -115,6 +121,7 @@ const Story = () => {
       el,
       i: +el.dataset.ch,
       p: PARTS[el.dataset.part],
+      far: REACH[el.dataset.part],
       card: el.dataset.part === 'card',
     }));
     const blur = canBlur();
@@ -166,7 +173,7 @@ const Story = () => {
         const y = it.p.dy * H;
         const z = Z(it.i) + it.p.dz;
         const [px, py, s, d] = proj(x, y, z);
-        const o = clamp01((FAR - d) / 1300) * clamp01((d - 260) / 380);
+        const o = clamp01((it.far - d) / (it.far === FAR ? 1300 : 700)) * clamp01((d - 260) / 380);
         if (o <= 0.002) {
           if (it.on !== false) { it.el.style.visibility = 'hidden'; it.on = false; }
           return;
@@ -227,6 +234,24 @@ const Story = () => {
     else window.scrollTo({ top: y, behavior: 'smooth' });
   };
 
+  // Arrow and page keys step through the chapters while the stage is on
+  // screen; past either end they fall back to ordinary scrolling.
+  useEffect(() => {
+    if (flat) return undefined;
+    const onKey = (ev) => {
+      const st = stRef.current;
+      if (!st?.isActive || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+      if (ev.target.closest?.('input, textarea, [contenteditable]')) return;
+      const fwd = ['ArrowDown', 'ArrowRight', 'PageDown'].includes(ev.key) || (ev.key === ' ' && !ev.shiftKey);
+      const back = ['ArrowUp', 'ArrowLeft', 'PageUp'].includes(ev.key) || (ev.key === ' ' && ev.shiftKey);
+      const now = Math.round(st.progress * (N - 1));
+      if (fwd && now < N - 1) { ev.preventDefault(); goTo(now + 1); }
+      else if (back && now > 0) { ev.preventDefault(); goTo(now - 1); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [flat]);
+
   return (
     <div className={`sy${flat ? ' is-flat' : ''}`} ref={rootRef}>
       <div className="sy-pinwrap">
@@ -235,7 +260,7 @@ const Story = () => {
 
             {CH.map((c, i) => (
               <React.Fragment key={c.when}>
-                <div className="sy-item sy-big display" data-part="big" data-ch={i} data-acc={c.acc} aria-hidden="true">{c.big}</div>
+                <div className="sy-item sy-big display" data-part="big" data-ch={i} data-acc={c.acc} style={{ '--len': Math.max(4, c.big.length) }} aria-hidden="true">{c.big}<i /></div>
                 <article
                   className={`sy-item sy-card${at === i ? ' is-on' : ''}`}
                   data-part="card" data-ch={i} data-acc={c.acc}
@@ -292,7 +317,7 @@ const Story = () => {
             </ol>
             <p className={`sy-hint${at > 0 ? ' is-gone' : ''}`}>
               <span className="sy-hint-track" aria-hidden="true"><i /></span>
-              Scroll to move the camera
+              Scroll or use the arrow keys
             </p>
           </div>
         </section>
@@ -331,13 +356,14 @@ const Story = () => {
           will-change: transform, opacity, filter;
         }
         .sy-big {
-          font-size: clamp(9rem, 26vw, 24rem);
+          font-size: min(23vw, 21rem, calc(118vw / var(--len)));
           font-weight: 800;
           letter-spacing: -0.07em;
           line-height: 0.8;
           white-space: nowrap;
           color: var(--acc);
         }
+        .sy-big i { display: inline-block; width: 0.15em; height: 0.15em; margin-left: 0.04em; border-radius: 99px; background: var(--ink); }
         .sy-card {
           width: min(28rem, 82vw);
           padding: clamp(1.25rem, 2.4vw, 1.9rem);
@@ -432,8 +458,9 @@ const Story = () => {
           background: var(--line);
           transition: width 0.5s var(--ease-out), background 0.5s var(--ease-out);
         }
-        .sy-rail-l { opacity: 0; translate: 6px 0; transition: opacity 0.4s, translate 0.5s var(--ease-out), color 0.4s; }
-        .sy-rail:hover .sy-rail-l, .sy-rail-b.is-on .sy-rail-l { opacity: 1; translate: 0 0; }
+        .sy-rail-l { opacity: 0.55; translate: 4px 0; transition: opacity 0.4s, translate 0.5s var(--ease-out), color 0.4s; }
+        .sy-rail-b:hover .sy-rail-l, .sy-rail-b.is-on .sy-rail-l { opacity: 1; translate: 0 0; }
+        .sy-rail-b.is-on .sy-rail-l { font-weight: 650; }
         .sy-rail-b.is-past i { background: var(--ink-3); }
         .sy-rail-b.is-on { color: var(--ink); }
         .sy-rail-b.is-on i { width: 2.6rem; background: var(--acc); }
@@ -471,7 +498,7 @@ const Story = () => {
 
         @media (max-width: 760px) {
           .sy-rail { display: none; }
-          .sy-big { font-size: 9rem; }
+          .sy-big { font-size: min(9rem, calc(150vw / var(--len))); }
           .sy-chip { font-size: var(--step--1); }
           .sy-hint { left: auto; right: var(--gutter); translate: 0 0; }
           .sy-hint.is-gone { translate: 0 12px; }

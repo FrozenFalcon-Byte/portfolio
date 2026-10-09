@@ -53,7 +53,9 @@ if (typeof window !== 'undefined') {
 }
 const shrink = () => (typeof window !== 'undefined' && window.innerWidth < 700 ? 0.6 : 1);
 export const fx = (px) => (canBlur() ? { filter: `blur(${(px * shrink()).toFixed(1)}px)` } : {});
-export const fx0 = () => (canBlur() ? { filter: 'blur(0px)', clearProps: 'filter' } : {});
+// Always clears, even when blur has since been switched off: the probe can
+// turn it off between the tween that set a blur and the one lifting it.
+export const fx0 = () => ({ filter: 'blur(0px)', clearProps: 'filter' });
 
 /** Read a CSS custom property off :root so JS never hardcodes a hue. */
 export const token = (name, el = document.documentElement) =>

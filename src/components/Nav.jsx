@@ -172,42 +172,45 @@ const Nav = () => {
     return () => st.kill();
   }, [pathname]);
 
-  /* The index grows out of its own button into the whole screen: the
-     sheet starts clipped to exactly the pill's outline and opens from
-     there, under the nav, so the logo and the button never move — the
-     button simply turns into Close. Closing folds it back into the pill. */
-  const btnRef = useRef(null);
+  /* The index drops in like a sheet of paper let down from the top of
+     the screen: a yellow leaf leads, the ink sheet follows a beat behind
+     with its lower edge still curled, and flattens as it lands. Then the
+     rows rise into place. Closing lifts it back the way it came, the
+     sheet first and the yellow after, so the page is uncovered in order. */
+  const leadRef = useRef(null);
   useEffect(() => {
     const panel = panelRef.current;
-    const btn = btnRef.current;
-    if (!panel || !btn) return undefined;
+    const lead = leadRef.current;
+    if (!panel || !lead) return undefined;
     const rows = panel.querySelectorAll('.ix-in');
-    const shut = () => {
-      const p = panel.getBoundingClientRect();
-      const b = btn.getBoundingClientRect();
-      const t = Math.max(0, b.top - p.top);
-      const r = Math.max(0, p.right - b.right);
-      const l = Math.max(0, b.left - p.left);
-      const h = Math.min(b.height, p.height);
-      return `inset(${t}px ${r}px ${Math.max(0, p.height - t - h)}px ${l}px round ${h / 2}px)`;
-    };
-    const full = 'inset(0px 0px 0px 0px round 0px)';
-    gsap.killTweensOf([panel, rows]);
+    const curl = '0px 0px 50% 50% / 0px 0px 140px 140px';
+    const flat = '0px 0px 0% 0% / 0px 0px 0px 0px';
+    gsap.killTweensOf([panel, lead, rows]);
     if (open) {
       window.lenis?.stop();
-      gsap.set(panel, { visibility: 'visible', pointerEvents: 'auto' });
-      if (reduced()) { gsap.set(panel, { clipPath: full }); gsap.set(rows, { opacity: 1, y: 0 }); return undefined; }
+      panel.scrollTop = 0;
+      gsap.set([panel, lead], { visibility: 'visible' });
+      gsap.set(panel, { pointerEvents: 'auto' });
+      if (reduced()) {
+        gsap.set([panel, lead], { yPercent: 0, borderRadius: flat });
+        gsap.set(rows, { opacity: 1, y: 0, rotate: 0 });
+        return undefined;
+      }
       gsap.timeline()
-        .fromTo(panel, { clipPath: shut() }, { clipPath: full, duration: 0.9, ease: EASE.glide })
+        .fromTo(lead, { yPercent: -100, borderRadius: curl }, { yPercent: 0, borderRadius: flat, duration: 0.75, ease: EASE.glide })
+        .fromTo(panel, { yPercent: -100, borderRadius: curl }, { yPercent: 0, borderRadius: flat, duration: 0.8, ease: EASE.glide }, 0.1)
         .fromTo(rows,
-          { y: 40, opacity: 0, ...fx(10) },
-          { y: 0, opacity: 1, ...fx0(), duration: 0.8, stagger: 0.035, ease: EASE.swift }, 0.22);
+          { y: 70, rotate: 2.5, opacity: 0, ...fx(8) },
+          { y: 0, rotate: 0, opacity: 1, ...fx0(), duration: 0.9, stagger: 0.04, ease: EASE.swift }, 0.48);
     } else {
       window.lenis?.start();
       if (panel.style.visibility !== 'visible') return undefined;
-      gsap.timeline({ onComplete: () => gsap.set(panel, { visibility: 'hidden', pointerEvents: 'none' }) })
-        .to(rows, { opacity: 0, y: -16, ...fx(6), duration: 0.25, stagger: 0.01, ease: 'power1.in' })
-        .to(panel, { clipPath: shut(), duration: reduced() ? 0 : 0.7, ease: EASE.glide }, 0.12);
+      gsap.set(panel, { pointerEvents: 'none' });
+      const dur = reduced() ? 0 : 1;
+      gsap.timeline({ onComplete: () => gsap.set([panel, lead], { visibility: 'hidden' }) })
+        .to(rows, { opacity: 0, y: -24, ...fx(6), duration: 0.22 * dur, stagger: 0.008, ease: 'power1.in' })
+        .to(panel, { yPercent: -100, borderRadius: curl, duration: 0.7 * dur, ease: EASE.glide }, 0.1 * dur)
+        .to(lead, { yPercent: -100, borderRadius: curl, duration: 0.7 * dur, ease: EASE.glide }, 0.22 * dur);
     }
     return undefined;
   }, [open]);
@@ -286,8 +289,7 @@ const Nav = () => {
           <ThemeToggle theme={theme} onToggle={toggle} />
           <button
             type="button"
-            ref={btnRef}
-            className={`nav-index${open ? ' is-open' : ''}`}
+                        className={`nav-index${open ? ' is-open' : ''}`}
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
             aria-controls="nav-ix"
@@ -304,6 +306,7 @@ const Nav = () => {
         </div>
       </header>
 
+      <div className="ix-lead" ref={leadRef} data-acc="yellow" aria-hidden="true" />
       <div className="ix" id="nav-ix" ref={panelRef} data-surface="ink" data-acc="yellow" role="dialog" aria-label="Index">
         <div className="ix-shell">
         <p className="ix-kick ix-in">{now ? <>You are reading <b>{now.label}</b></> : 'Where to?'}</p>
@@ -479,7 +482,13 @@ const Nav = () => {
           color: var(--ink);
           visibility: hidden;
           pointer-events: none;
-          clip-path: inset(0 0 100% 100%);
+        }
+        .ix-lead {
+          position: fixed; inset: 0;
+          z-index: 898;
+          background: var(--acc);
+          visibility: hidden;
+          pointer-events: none;
         }
         .ix-shell {
           width: calc(100% - var(--gutter) * 2);

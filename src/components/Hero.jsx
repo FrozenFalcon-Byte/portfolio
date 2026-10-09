@@ -193,7 +193,7 @@ const Side = () => {
     if (!body || reduced()) return;
     gsap.fromTo(body.children,
       { yPercent: 70, opacity: 0, ...fx(10) },
-      { yPercent: 0, opacity: 1, ...fx0(), duration: 0.7, stagger: 0.06, ease: EASE.swift });
+      { yPercent: 0, opacity: 1, ...fx0(), duration: 0.7, stagger: 0.06, ease: EASE.swift, overwrite: true });
   }, [i]);
 
   return (
