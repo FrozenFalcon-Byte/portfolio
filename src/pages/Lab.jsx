@@ -24,7 +24,7 @@ import { PROJECTS } from '../data/projects';
    ------------------------------------------------------------------ */
 
 const FH = 44;   // world height of one floor
-const GAPZ = 7;  // the seam between floors
+const GAPZ = 1.5; // the slab line between storeys
 
 /* Footprints are in world units on the ground grid; `at` is the plot's
    corner, towers are placed inside it. A floor with a label gets a
@@ -88,6 +88,10 @@ const FLOOR_GLYPH = {
 };
 
 const HUB = { x: -60, y: -60, w: 120, d: 120 };
+
+/* The town sits on a board, like a model on a table, so the map is an
+   object with edges rather than lines floating in the dark. */
+const BOARD = { x0: -660, x1: 760, y0: -680, y1: 680, h: 46 };
 const N = SITES.length + 2;      // overview, seven sites, the whole town
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -103,6 +107,28 @@ const TOWERS = (() => {
     out.push({ ...t, si, acc: s.p.acc, fh, X: s.at[0] + t.x, Y: s.at[1] + t.y });
   }));
   return out.sort((a, b) => (a.X + a.Y + a.w / 2 + a.d / 2) - (b.X + b.Y + b.w / 2 + b.d / 2));
+})();
+
+/* Trees fill the board between the plots and the streets: scattered
+   from a fixed seed so every visit grows the same town. */
+const TREES = (() => {
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const out = [];
+  const clear = (x, y) => {
+    if (Math.abs(x) < 110 && Math.abs(y) < 110) return false;
+    if (Math.abs(x) < 26 || Math.abs(y) < 26) return false;
+    return SITES.every((s) => s.towers.every((t) => {
+      const ax = s.at[0] + t.x; const ay = s.at[1] + t.y;
+      return x < ax - 60 || x > ax + t.w + 60 || y < ay - 60 || y > ay + t.d + 60;
+    }));
+  };
+  for (let i = 0; i < 400 && out.length < 46; i += 1) {
+    const x = BOARD.x0 + 40 + rnd() * (BOARD.x1 - BOARD.x0 - 80);
+    const y = BOARD.y0 + 40 + rnd() * (BOARD.y1 - BOARD.y0 - 80);
+    if (clear(x, y) && out.every((t) => Math.hypot(t.x - x, t.y - y) > 46)) out.push({ x, y, r: 11 + rnd() * 7 });
+  }
+  return out.sort((a, b) => (a.x + a.y) - (b.x + b.y));
 })();
 
 /* A plot is the towers' footprint plus a margin. */
@@ -131,12 +157,18 @@ const Lab = () => {
     const scene = sceneRef.current;
     const q = (s) => Array.from(svg.querySelectorAll(s));
     const roads = q('.lab-road');
+    const lanes = q('.lab-lane');
+    const traffic = q('.lab-traffic');
+    const board = q('.lab-board polygon');
+    const shadows = q('.lab-shadow');
+    const trees = q('.lab-tree');
     const pulses = q('.lab-pulse');
     const plots = q('.lab-plot');
     const names = q('.lab-name');
     const hub = q('.lab-hub polygon');
     const hubMark = svg.querySelector('.lab-hub-mark');
     const floors = TOWERS.map((_, ti) => q(`[data-t="${ti}"] .lab-floor`).map((g) => Array.from(g.children)));
+    const roofs = TOWERS.map((_, ti) => q(`[data-t="${ti}"] .lab-roof polygon`));
     const tags = TOWERS.map((_, ti) => tw0(ti));
     function tw0(ti) {
       return TOWERS[ti].floors.map((label, j) => (label ? {
@@ -163,7 +195,7 @@ const Lab = () => {
     const stops = () => {
       const z0 = fit();
       const ax = small ? 0.5 : 0.66;
-      const sx = small ? 0.5 : 0.6;   // a close-up sits further left so its labels fit
+      const sx = small ? 0.3 : 0.6;   // a close-up sits further left so its labels fit
       const ay = small ? 0.33 : 0.55;
       return [
         { fx: 0, fy: 0, fz: 0, zoom: z0 * 1.05, S: 0.36, ax, ay: small ? 0.36 : 0.52 },
@@ -212,10 +244,32 @@ const Lab = () => {
         const ey = Math.abs(p.cx) > Math.abs(p.cy) ? p.cy : (p.cy > 0 ? p.y0 : p.y1);
         const d = dpath(P(0, 0, 0), P(ex, 0, 0), P(ex, ey, 0));
         roads[i].setAttribute('d', d);
+        roads[i].style.strokeWidth = `${(30 * zoom).toFixed(2)}px`;
+        lanes[i].setAttribute('d', d);
+        traffic[i].setAttribute('d', d);
         pulses[i].setAttribute('d', d);
         const [nx, ny] = P(p.x1 + 18, p.y1 + 18, 0);
         names[i].setAttribute('x', nx.toFixed(1));
         names[i].setAttribute('y', ny.toFixed(1));
+      });
+
+      // The board: its top, and the two edges that face the camera.
+      const { x0: bx0, x1: bx1, y0: by0, y1: by1, h: bh } = BOARD;
+      board[0].setAttribute('points', poly(P(bx0, by1, 0), P(bx1, by1, 0), P(bx1, by1, -bh), P(bx0, by1, -bh)));
+      board[1].setAttribute('points', poly(P(bx1, by0, 0), P(bx1, by1, 0), P(bx1, by1, -bh), P(bx1, by0, -bh)));
+      board[2].setAttribute('points', poly(P(bx0, by0, 0), P(bx1, by0, 0), P(bx1, by1, 0), P(bx0, by1, 0)));
+
+      // Trees: a round crown on a short trunk, each with its own shadow.
+      TREES.forEach((tr, i) => {
+        const [gx, gy] = P(tr.x, tr.y, 0);
+        const [cx, cy] = P(tr.x, tr.y, tr.r * 1.6);
+        const r = tr.r * zoom;
+        const [shadow, trunk, crown] = trees[i].children;
+        shadow.setAttribute('cx', (gx + r * 0.7).toFixed(1)); shadow.setAttribute('cy', gy.toFixed(1));
+        shadow.setAttribute('rx', (r * 1.1).toFixed(1)); shadow.setAttribute('ry', (r * 1.1 * S).toFixed(1));
+        trunk.setAttribute('d', dpath([gx, gy], [cx, cy]));
+        trunk.style.strokeWidth = `${(3.2 * zoom).toFixed(2)}px`;
+        crown.setAttribute('cx', cx.toFixed(1)); crown.setAttribute('cy', cy.toFixed(1)); crown.setAttribute('r', r.toFixed(1));
       });
 
       // The hub: a plinth with the mark on it.
@@ -236,10 +290,11 @@ const Lab = () => {
         let z = 0;
         tw.floors.forEach((label, j) => {
           const grow = smooth(clamp01(b * n - j));
-          const [l, r, top] = floors[ti][j];
+          const [l, r, top, win, lite] = floors[ti][j];
           const tag = tags[ti][j];
           if (grow <= 0.001) {
             l.setAttribute('points', ''); r.setAttribute('points', ''); top.setAttribute('points', '');
+            win.setAttribute('d', ''); lite.setAttribute('d', '');
             if (tag) { tag.line.style.opacity = '0'; tag.el.style.opacity = '0'; }
             return;
           }
@@ -248,19 +303,65 @@ const Lab = () => {
           l.setAttribute('points', poly(P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x, y + d, z + h)));
           r.setAttribute('points', poly(P(x + w, y, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x + w, y, z + h)));
           top.setAttribute('points', poly(P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)));
+
+          /* A storey, not a slab: a row of windows along both faces, a
+             few of them lit, and a door in the middle of the ground floor. */
+          let glass = ''; let lit = '';
+          const za = z + h * 0.3; const zb = z + h * 0.78;
+          const row = (len, at, face) => {
+            const cols = Math.max(2, Math.floor(len / 24));
+            const cell = len / cols; const ww = cell * 0.5;
+            for (let c = 0; c < cols; c += 1) {
+              const u0 = cell * c + (cell - ww) / 2; const u1 = u0 + ww;
+              const door = j === 0 && face === 0 && c === Math.floor(cols / 2);
+              const z0 = door ? z + 0.5 : za; const z1 = door ? z + h * 0.82 : zb;
+              const q4 = face === 0
+                ? [P(x + u0, at, z0), P(x + u1, at, z0), P(x + u1, at, z1), P(x + u0, at, z1)]
+                : [P(at, y + u0, z0), P(at, y + u1, z0), P(at, y + u1, z1), P(at, y + u0, z1)];
+              const dd = `${dpath(...q4)}Z`;
+              if (!door && (ti * 7 + j * 3 + c * 5 + face) % 6 === 0) lit += dd; else glass += dd;
+            }
+          };
+          if (h > 6) { row(w, y + d, 0); row(d, x + w, 1); }
+          win.setAttribute('d', glass);
+          lite.setAttribute('d', lit);
           if (tag) {
             const [ax0, ay0] = P(x + w, y + d / 2, z + h / 2);
             const pl = PLOTS[tw.si];
             // Beside the plot, but never past the screen's edge.
             if (!tag.w) tag.w = tag.el.offsetWidth;
-            const tx = Math.max(ax0 + 24, Math.min(
-              Math.max(P(x + w, y, 0)[0], P(pl.x1, pl.y0, 0)[0]) + 22,
+            const tx = Math.min(W - tag.w - (small ? 10 : 30), Math.max(ax0 + (small ? 14 : 24), Math.min(
+              Math.max(P(x + w, y, 0)[0], P(pl.x1, pl.y0, 0)[0]) + (small ? 12 : 22),
               W - tag.w - 30,
-            ));
+            )));
             placed.push({ tag, ax0, ay0, tx, ly: ay0, grow, si: tw.si });
           }
           z += tw.fh * grow;
         });
+
+        // Its shadow, thrown down-right by a light from the far left.
+        {
+          const { X, Y, w, d } = tw;
+          const len = z * 0.9;
+          shadows[ti].setAttribute('points', z > 0.5
+            ? poly(P(X, Y, 0), P(X + w + len, Y, 0), P(X + w + len, Y + d, 0), P(X, Y + d, 0))
+            : '');
+        }
+
+        // A plant box on the roof once the last storey is up.
+        const rg = smooth(clamp01((b * n - n + 0.4) / 0.4));
+        const [rl, rr, rt] = roofs[ti];
+        if (rg <= 0.001 || tw.thin) {
+          rl.setAttribute('points', ''); rr.setAttribute('points', ''); rt.setAttribute('points', '');
+        } else {
+          const { X, Y, w, d } = tw;
+          const bw = Math.max(14, w * 0.32); const bd = Math.max(14, d * 0.32);
+          const bx = X + w * 0.58 - bw / 2; const by = Y + d * 0.36 - bd / 2;
+          const bz = z - GAPZ; const bh = 11 * rg;
+          rl.setAttribute('points', poly(P(bx, by + bd, bz), P(bx + bw, by + bd, bz), P(bx + bw, by + bd, bz + bh), P(bx, by + bd, bz + bh)));
+          rr.setAttribute('points', poly(P(bx + bw, by, bz), P(bx + bw, by + bd, bz), P(bx + bw, by + bd, bz + bh), P(bx + bw, by, bz + bh)));
+          rt.setAttribute('points', poly(P(bx, by, bz + bh), P(bx + bw, by, bz + bh), P(bx + bw, by + bd, bz + bh), P(bx, by + bd, bz + bh)));
+        }
       });
 
       /* Towers on one plot can put floors at the same height, so a
@@ -342,7 +443,12 @@ const Lab = () => {
       <div className="lab-pinwrap">
         <section className="lab-scene" ref={sceneRef} data-surface="ink" data-acc={accAt} data-mode={mode} aria-label="The workshop">
           <svg className="lab-map" ref={mapRef} aria-hidden="true">
+            <g className="lab-board">
+              <polygon className="lab-board-l" /><polygon className="lab-board-r" /><polygon className="lab-board-top" />
+            </g>
             {SITES.map((s, i) => <path key={`r${s.id}`} className={`lab-road${focus === i ? ' is-on' : ''}`} />)}
+            {SITES.map((s) => <path key={`l${s.id}`} className="lab-lane" />)}
+            {SITES.map((s, i) => <path key={`c${s.id}`} className="lab-traffic" style={{ animationDelay: `${-i * 0.7}s` }} />)}
             {SITES.map((s, i) => <path key={`q${s.id}`} className={`lab-pulse${focus === i ? ' is-on' : ''}`} data-acc={s.p.acc} />)}
             {SITES.map((s, i) => (
               <polygon key={`p${s.id}`} className={`lab-plot${focus === i ? ' is-on' : ''}`} data-acc={s.p.acc} />
@@ -350,6 +456,15 @@ const Lab = () => {
             {SITES.map((s, i) => (
               <text key={`n${s.id}`} className={`lab-name${focus === i ? ' is-on' : ''}`}>{s.p.title}</text>
             ))}
+
+            <g className="lab-shadows">
+              {TOWERS.map((tw, ti) => <polygon key={`s${ti}`} className="lab-shadow" />)}
+            </g>
+            <g className="lab-trees">
+              {TREES.map((tr, i) => (
+                <g key={i} className="lab-tree"><ellipse className="lab-tree-s" /><path className="lab-tree-t" /><circle className="lab-tree-c" /></g>
+              ))}
+            </g>
 
             <g className="lab-hub">
               <polygon className="lab-l" /><polygon className="lab-r" /><polygon className="lab-top" />
@@ -372,8 +487,12 @@ const Lab = () => {
                 {tw.floors.map((_, j) => (
                   <g key={j} className="lab-floor">
                     <polygon className="lab-l" /><polygon className="lab-r" /><polygon className="lab-top" />
+                    <path className="lab-win" /><path className="lab-lit" />
                   </g>
                 ))}
+                <g className="lab-roof">
+                  <polygon className="lab-l" /><polygon className="lab-r" /><polygon className="lab-top" />
+                </g>
               </g>
             ))}
 
@@ -465,7 +584,23 @@ const Lab = () => {
           width: 100%; height: 100%; max-width: none;
           overflow: visible;
         }
-        .lab-road { fill: none; stroke: var(--paper-3); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+        .lab-board-top { fill: var(--paper-2); }
+        .lab-board-l { fill: color-mix(in srgb, var(--paper-2) 60%, #000); }
+        .lab-board-r { fill: color-mix(in srgb, var(--paper-2) 40%, #000); }
+        .lab-road { fill: none; stroke: var(--paper-3); stroke-width: 6; stroke-linecap: butt; stroke-linejoin: round; }
+        .lab-lane { fill: none; stroke: var(--ink-3); stroke-width: 1.2; stroke-dasharray: 6 9; opacity: 0.55; }
+        .lab-traffic {
+          fill: none; stroke: var(--ink-2); stroke-width: 3.5; stroke-linecap: round;
+          stroke-dasharray: 0.1 90; opacity: 0.8;
+          animation: lab-drive 6s linear infinite;
+        }
+        @keyframes lab-drive { to { stroke-dashoffset: -180; } }
+        .lab-shadow { fill: #000; opacity: 0.28; }
+        .lab-tree-s { fill: #000; opacity: 0.22; }
+        .lab-tree-t { fill: none; stroke: color-mix(in srgb, var(--ink) 22%, var(--paper)); stroke-linecap: round; }
+        .lab-tree-c { fill: color-mix(in srgb, var(--ink) 20%, var(--paper-2)); stroke: color-mix(in srgb, var(--ink) 30%, var(--paper-2)); stroke-width: 1; }
+        .lab-scene[data-mode="site"] .lab-trees { opacity: 0.75; }
+        .lab-trees { transition: opacity 0.6s; }
         .lab-pulse {
           fill: none; stroke: var(--acc); stroke-width: 2.5; stroke-linecap: round;
           stroke-dasharray: 2 14; opacity: 0;
@@ -475,7 +610,7 @@ const Lab = () => {
         .lab-pulse.is-on { opacity: 1; }
         @keyframes lab-flow { to { stroke-dashoffset: -32; } }
         .lab-plot {
-          fill: var(--paper-2); stroke: var(--line); stroke-width: 1;
+          fill: var(--paper-3); stroke: var(--line); stroke-width: 1;
           transition: fill 0.6s, stroke 0.6s;
         }
         .lab-plot.is-on { fill: color-mix(in srgb, var(--acc) 14%, var(--paper)); stroke: var(--acc); }
@@ -493,6 +628,11 @@ const Lab = () => {
         .lab-tower.is-on .lab-top { fill: var(--acc); stroke: var(--acc); }
         .lab-tower.is-on .lab-l { fill: color-mix(in srgb, var(--acc) 74%, #000); stroke: color-mix(in srgb, var(--acc) 74%, #000); }
         .lab-tower.is-on .lab-r { fill: color-mix(in srgb, var(--acc) 52%, #000); stroke: color-mix(in srgb, var(--acc) 52%, #000); }
+        .lab-win, .lab-lit { stroke: none; transition: fill 0.6s; }
+        .lab-tower .lab-win { fill: color-mix(in srgb, var(--paper) 70%, #000); }
+        .lab-tower .lab-lit { fill: color-mix(in srgb, var(--ink) 55%, var(--paper)); }
+        .lab-tower.is-on .lab-win { fill: color-mix(in srgb, var(--acc) 22%, #0E0E0D); }
+        .lab-tower.is-on .lab-lit { fill: color-mix(in srgb, var(--acc) 30%, #FFFFFF); }
 
         .lab-hub .lab-top { fill: var(--ink); stroke: var(--ink); }
         .lab-hub .lab-l { fill: color-mix(in srgb, var(--ink) 70%, #000); stroke: none; }

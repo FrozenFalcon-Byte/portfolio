@@ -5,6 +5,11 @@ import { CustomEase } from 'gsap/CustomEase';
 
 gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase);
 
+// Phones resize the viewport whenever the address bar slides in or out.
+// Re-measuring every pinned scene on each of those is what made long
+// pages jump mid-scroll on mobile; only a real width change counts.
+ScrollTrigger.config({ ignoreMobileResize: true });
+
 /* Two eases carry the whole site: `swift` for anything that enters,
    `glide` for anything that travels. Defined once so every section
    moves with the same hand. */
