@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap, EASE, fine, reduced } from '../lib/motion';
+import { gsap, EASE, fine, calm } from '../lib/motion';
+import { getPrefs } from '../lib/prefs';
 
 /* ------------------------------------------------------------------
    The cursor.
@@ -93,7 +94,8 @@ const Cursor = () => {
     // Reduced motion keeps the cursor — it is the pointer, not an
     // ornament — and only drops the lean, the pops and the trailing.
     if (!fine()) return undefined;
-    const still = reduced();
+    // Calm and still motion both keep the pointer and drop the extras.
+    let still = calm();
 
     const root = rootRef.current;
     const chip = chipRef.current;
@@ -136,11 +138,17 @@ const Cursor = () => {
       st.setProperty('--cur-on-acc', cs.getPropertyValue('--acc-ink').trim() || '#FFFFFF');
       st.setProperty('--cur-ink', cs.getPropertyValue('--ink').trim() || '#0E0E0D');
       st.setProperty('--cur-paper', cs.getPropertyValue('--paper').trim() || '#FFFFFF');
+      // A colour picked in settings wins over the section's.
+      const own = getPrefs().tagAcc;
+      if (own !== 'section') {
+        st.setProperty('--cur-acc', getComputedStyle(document.documentElement).getPropertyValue(`--${own}`).trim());
+        st.setProperty('--cur-on-acc', ['yellow', 'lime', 'violet'].includes(own) ? '#0E0E0D' : '#FFFFFF');
+      }
     };
 
     /* The tag. Its width is measured off a hidden twin and eased, and
        the new words roll up from under the old ones. */
-    const YOU = 'You';
+    let YOU = getPrefs().tag;
     let said = '';
     let arrow = null;
     const sizeTo = (text, withArrow) => {
@@ -232,6 +240,14 @@ const Cursor = () => {
     const onLeave = () => { show(false); evaluate(null); };
     const onEnter = () => show(true);
     const onTheme = () => { accScope = null; under = undefined; };
+    // A new name or colour from settings shows straight away, rolling in
+    // like any other change of tag.
+    const onPrefs = () => {
+      still = calm();
+      YOU = getPrefs().tag;
+      accScope = null; under = undefined; said = null;
+      probe();
+    };
 
     let frame = 0;
     const tick = (_t, delta) => {
@@ -261,6 +277,7 @@ const Cursor = () => {
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('blur', onLeave);
     window.addEventListener('themechange', onTheme);
+    window.addEventListener('prefschange', onPrefs);
     document.documentElement.addEventListener('mouseleave', onLeave);
     document.documentElement.addEventListener('mouseenter', onEnter);
 
@@ -273,6 +290,7 @@ const Cursor = () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('blur', onLeave);
       window.removeEventListener('themechange', onTheme);
+      window.removeEventListener('prefschange', onPrefs);
       document.documentElement.removeEventListener('mouseleave', onLeave);
       document.documentElement.removeEventListener('mouseenter', onEnter);
       document.body.classList.remove('has-cursor');

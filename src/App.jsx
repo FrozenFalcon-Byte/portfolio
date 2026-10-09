@@ -10,6 +10,8 @@ import Nav from './components/Nav';
 import { RouteCurtain } from './components/RouteCurtain';
 import Cursor from './components/Cursor';
 import Loader from './components/Loader';
+import Settings from './pages/Settings';
+import { getPrefs, usePrefs } from './lib/prefs';
 
 /* Lenis drives scroll and ScrollTrigger reads from it — one clock, so
    pinned sections and scrubbed timelines never drift apart. */
@@ -23,7 +25,7 @@ const useSmoothScroll = () => {
     const lenis = new Lenis({
       duration: 1.15,
       easing: (t) => Math.min(1, 1.001 - 2 ** (-10 * t)),
-      smoothWheel: true,
+      smoothWheel: getPrefs().smooth === 'on',
       syncTouch: false,          // native momentum on touch stays native
       touchMultiplier: 1.6,
     });
@@ -116,10 +118,11 @@ const RouteEffects = () => {
 
 const Shell = () => {
   useSmoothScroll();
+  const { cursor } = usePrefs();
 
   return (
     <>
-      <Cursor />
+      {cursor === 'drawn' && <Cursor />}
       <Loader />
       <RouteEffects />
 
@@ -131,6 +134,7 @@ const Shell = () => {
             <Route path="/experience/pmo" element={<ExperienceDetail />} />
             <Route path="/story" element={<Story />} />
             <Route path="/lab" element={<Lab />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Home />} />
           </Routes>
         </main>

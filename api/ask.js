@@ -9,6 +9,7 @@
  */
 
 import { CHUNKS, PROFILE } from './_knowledge.js';
+import { SCHEMA } from './_prefs.js';
 
 const HOST = 'https://generativelanguage.googleapis.com/v1beta';
 const CHAT_MODEL = 'gemini-2.5-flash';
@@ -104,14 +105,18 @@ async function retrieve(question) {
  * Generation
  * ------------------------------------------------------------------ */
 
-const systemPrompt = (passages) => `You are the assistant on ${PROFILE.name}'s portfolio site. You answer questions from recruiters, engineers and collaborators about his work.
+const systemPrompt = (passages, style) => `You are the assistant on ${PROFILE.name}'s portfolio site. You answer questions from recruiters, engineers and collaborators about his work.
 
 Answer ONLY from the numbered context below. If the context does not contain the answer, say plainly that the site does not cover it and point the reader at ${PROFILE.email}. Never invent employers, dates, metrics, tools or projects.
 
 Rules:
-- Two to four sentences. No preamble, no bullet lists unless you are naming more than three items.
+${style.answer === 'detailed'
+    ? '- One or two short paragraphs, up to about 150 words, covering what was built, how, and why it matters. No preamble.'
+    : '- Two to four sentences. No preamble, no bullet lists unless you are naming more than three items.'}
 - Write about him in the third person, as "Ajinkya".
-- Cite the passages you used with bracketed numbers, like [1] or [2][3].
+${style.sources === 'hide'
+    ? '- Do not include citation numbers; the reader has turned sources off.'
+    : '- Cite the passages you used with bracketed numbers, like [1] or [2][3].'}
 - His Emerson internship is current and ongoing, and covers two systems: the PMO Command Centre (POR/PPR) and the S&OP Agent. His AIMSS Technical Lead role is a separate college leadership position, not a job at Emerson — never merge them.
 - Plain text only. No markdown headings, bold or links.
 
@@ -193,6 +198,11 @@ export default async function handler(req, res) {
 
   const history = Array.isArray(body.history) ? body.history.slice(-MAX_HISTORY) : [];
 
+  // Reader settings from /settings, checked against the same schema the
+  // settings page is built from. Anything unknown falls back quietly.
+  const pick = (k) => (SCHEMA[k].values.includes(body.style?.[k]) ? body.style[k] : SCHEMA[k].def);
+  const style = { answer: pick('answer'), sources: pick('sources') };
+
   let passages;
   try {
     passages = await retrieve(question);
@@ -218,11 +228,11 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt(passages) }] },
+          systemInstruction: { parts: [{ text: systemPrompt(passages, style) }] },
           contents,
           generationConfig: {
             temperature: 0.25,
-            maxOutputTokens: 400,
+            maxOutputTokens: style.answer === 'detailed' ? 700 : 400,
             // No visible thinking on a two-sentence answer — it is pure latency.
             thinkingConfig: { thinkingBudget: 0 },
           },

@@ -286,13 +286,25 @@ const SCENES = {
       <rect x="-2.2" y="6" width="4.4" height="10" rx="2.2" className="gl-fill-acc" />
     </g>
   ),
+  /* Three sliders, each knob easing to a new setting in turn —
+     preferences, tuning, making it yours. */
+  dial: (w) => (
+    <g transform={`translate(${w / 2} ${H / 2})`}>
+      {[-17, 0, 17].map((y, i) => (
+        <g key={y}>
+          <line x1="-34" y1={y} x2="34" y2={y} className="gl-stroke" />
+          <circle cx="0" cy={y} r="7.5" className={`gl-fill-ink gl-knob gl-knob--${i}`} />
+        </g>
+      ))}
+    </g>
+  ),
 };
 
 const WIDTH = {
   mark: 1.35, graph: 1.9, bars: 1.5, type: 1.65, ship: 1.7, chat: 1.45,
   search: 1.7, stack: 1.3, wave: 1.8, check: 1.15, loop: 1.15, spark: 1.2,
   doc: 1.05, hand: 1.15, click: 1.15, cloud: 1.25, git: 1.6,
-  db: 1.1, plug: 1.6, bot: 1.2, code: 1.45, lock: 1.05,
+  db: 1.1, plug: 1.6, bot: 1.2, code: 1.45, lock: 1.05, dial: 1.2,
 };
 
 const Glyph = ({ kind = 'mark', acc = 'pink', label }) => {

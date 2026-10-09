@@ -26,6 +26,9 @@ const PAGES = [
   { to: '/lab',   label: 'Workshop', title: 'The workshop', kicker: 'Seven builds, one map',      glyph: 'stack', acc: 'lime',   note: 'Every project, built floor by floor' },
 ];
 
+/* Not a tab: reached from the slider button and the index. */
+const SETTINGS = { to: '/settings', label: 'Settings', title: 'Settings', kicker: 'Make it yours', glyph: 'dial', acc: 'violet', note: 'Theme, motion, your cursor, the assistant' };
+
 const Nav = () => {
   const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
@@ -287,6 +290,19 @@ const Nav = () => {
         </nav>
 
         <div className="nav-right">
+          <a
+            href="/settings"
+            onClick={(e) => page(e, SETTINGS)}
+            className={`nav-set${pathname === '/settings' ? ' is-on' : ''}`}
+            aria-label="Settings"
+            data-cursor-label="Settings"
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M3 6h14M3 14h14" />
+              <circle cx="7" cy="6" r="2.4" />
+              <circle cx="13" cy="14" r="2.4" />
+            </svg>
+          </a>
           <ThemeToggle theme={theme} onToggle={toggle} />
           <button
             type="button"
@@ -329,6 +345,11 @@ const Nav = () => {
             <span className="ix-page-g"><Glyph kind="graph" acc="blue" /></span>
             <span className="ix-page-t display">Emerson case</span>
             <span className="ix-page-n">Two agent systems, drawn out</span>
+          </a>
+          <a href="/settings" onClick={(e) => page(e, SETTINGS)} className={`ix-page ix-in${pathname === '/settings' ? ' is-on' : ''}`} data-cursor="hot">
+            <span className="ix-page-g"><Glyph kind="dial" acc="violet" /></span>
+            <span className="ix-page-t display">Settings</span>
+            <span className="ix-page-n">{SETTINGS.note}</span>
           </a>
         </div>
 
@@ -431,6 +452,17 @@ const Nav = () => {
         .nav-tab:hover .nav-roll > span:last-child { transform: translateY(0); }
 
         .nav-right { justify-self: end; display: flex; align-items: center; gap: 0.5rem; }
+        .nav-set {
+          display: grid; place-items: center; flex: none;
+          width: 38px; height: 38px; border-radius: 99px;
+          color: var(--ink);
+          transition: background 0.3s var(--ease-out), transform 0.5s var(--ease-out);
+        }
+        .nav-set svg { width: 20px; height: 20px; fill: var(--paper); stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; overflow: visible; }
+        .nav-set circle { transition: transform 0.5s var(--ease-out); }
+        .nav-set:hover, .nav-set.is-on { background: var(--paper-2); }
+        .nav-set:hover circle:first-of-type { transform: translateX(6px); }
+        .nav-set:hover circle:last-of-type { transform: translateX(-6px); }
 
         /* The index button reads out the section you are in; the label
            rolls up to the next one rather than swapping in place. */
@@ -574,7 +606,7 @@ const Nav = () => {
           .nav-tab { padding: 0.55rem 0.7rem; }
           .nav-now { display: none; }
           .nav-index { padding: 0 0.38rem; gap: 0; }
-          .nav-right .theme-toggle { display: none; }
+          .nav-right .theme-toggle, .nav-right .nav-set { display: none; }
           .ix-theme { display: inline; }
           .ix-shell { grid-template-columns: 1fr; grid-template-rows: none; }
         }

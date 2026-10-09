@@ -13,15 +13,19 @@
     <link rel="alternate icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <script>
-      /* Applied before first paint so a returning dark-mode visitor never
-         sees the light palette flash past. */
+      /* Applied before first paint so a returning dark-mode (or large
+         text) visitor never sees the defaults flash past. */
       /* The browser restores the previous scroll offset on reload, which
          lands the visitor mid-page — and with pinned sections, often in
          a section they never asked for. We decide where the page opens. */
       if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
       try {
-        var t = localStorage.getItem('ac-theme');
-        document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light';
+        var p = JSON.parse(localStorage.getItem('ac-prefs') || '{}');
+        var t = p.theme || localStorage.getItem('ac-theme');
+        if (t === 'system') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        var h = document.documentElement;
+        h.dataset.theme = t === 'dark' ? 'dark' : 'light';
+        if (p.text === 'large') h.dataset.text = 'large';
         if (t === 'dark') {
           document.querySelector('meta[name="theme-color"]').content = '#0B0B0C';
         }

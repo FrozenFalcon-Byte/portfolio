@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { gsap, ScrollTrigger, reduced } from '../lib/motion';
 import Glyph from './Glyph';
 import { ARROW, HAND, CREASES } from './Cursor';
+import { usePrefs } from '../lib/prefs';
 
 /* ------------------------------------------------------------------
    Pair — two cursors, one pipeline.
@@ -70,6 +71,7 @@ const REMARK = {
 const same = (a, b) => a.every((v, i) => v === b[i]);
 
 const Pair = () => {
+  const { tag } = usePrefs();
   const stageRef = useRef(null);
   const rackRef = useRef(null);
   const runRef = useRef(null);
@@ -407,7 +409,7 @@ const Pair = () => {
         >
           <div className="pr-bar">
             <div className="pr-here">
-              <span className="pr-av pr-av--you">You</span>
+              <span className="pr-av pr-av--you">{tag}</span>
               <span className="pr-av pr-av--me">Ajinkya</span>
             </div>
             <div className="pr-acts">

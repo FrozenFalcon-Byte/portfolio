@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { gsap, EASE, reduced } from '../lib/motion';
 import Mark from './Mark';
 import PageLoader, { loaderKind } from './PageLoader';
+import { getPrefs } from '../lib/prefs';
 
 /* ------------------------------------------------------------------
    The loader — "a." stands for "ajinkya."
@@ -339,8 +340,36 @@ const HomeLoader = () => {
 
 /* Home tells the name; every other page gets a loader told in its own
    idea. Decided once, by where the reload landed. */
+/* Settings can turn the loader off, or show it once per visit. Either
+   way the page is told loading is done exactly as if it had played, so
+   everything that waits on it still makes its entrance. */
+const SEEN = 'ac-loader-seen';
+const skipLoader = () => {
+  const { loader } = getPrefs();
+  if (loader === 'never') return true;
+  if (loader !== 'once') return false;
+  try {
+    if (sessionStorage.getItem(SEEN)) return true;
+    sessionStorage.setItem(SEEN, '1');
+  } catch { /* storage blocked: just play it */ }
+  return false;
+};
+
+const NoLoader = () => {
+  useEffect(() => {
+    window.loaderIsDone = true;
+    document.documentElement.classList.remove('is-loading');
+    window.dispatchEvent(new Event('loader-complete'));
+  }, []);
+  return null;
+};
+
 const Loader = () => {
-  const [kind] = useState(() => (window.location.pathname === '/' ? 'home' : loaderKind(window.location.pathname)));
+  const [kind] = useState(() => {
+    if (skipLoader()) return 'none';
+    return window.location.pathname === '/' ? 'home' : loaderKind(window.location.pathname);
+  });
+  if (kind === 'none') return <NoLoader />;
   return kind === 'home' ? <HomeLoader /> : <PageLoader kind={kind} />;
 };
 

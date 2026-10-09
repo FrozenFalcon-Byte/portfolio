@@ -2,6 +2,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import { CustomEase } from 'gsap/CustomEase';
+import { getPrefs } from './prefs';
 
 gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase);
 
@@ -18,9 +19,14 @@ CustomEase.create('glide', '0.76, 0, 0.24, 1');
 
 export const EASE = { swift: 'swift', glide: 'glide' };
 
+/* Still motion is the OS asking, or the reader choosing it in settings. */
 export const reduced = () =>
   typeof window !== 'undefined' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  (getPrefs().motion === 'still' || window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+/* Calm keeps every animation but drops the extras: blur, the cursor's
+   lean and its click bursts. */
+export const calm = () => reduced() || getPrefs().motion === 'calm';
 
 /* ------------------------------------------------------------------
    Motion blur.
@@ -37,6 +43,7 @@ export const reduced = () =>
    ------------------------------------------------------------------ */
 let blurOK = null;
 export const canBlur = () => {
+  if (getPrefs().motion !== 'full') return false;
   if (blurOK !== null) return blurOK;
   if (typeof window === 'undefined') return false;
   const cores = navigator.hardwareConcurrency || 4;

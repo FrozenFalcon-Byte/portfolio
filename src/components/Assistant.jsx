@@ -3,6 +3,7 @@ import { ArrowUp, Loader2 } from 'lucide-react';
 import { gsap, heading, reduced, cleanup, fx, fx0 } from '../lib/motion';
 import Glyph from './Glyph';
 import Mark from './Mark';
+import { getPrefs } from '../lib/prefs';
 
 const GREETING =
   'Ask me about Ajinkya — what he is building at Emerson, how Swarm keeps a human in the loop, why FinMCP is an MCP server first. I answer from this site and show you what I used.';
@@ -151,7 +152,9 @@ const Assistant = () => {
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ question, history }),
+        // How long, and whether to cite: the reader's settings, checked
+        // again on the server against the same schema.
+        body: JSON.stringify({ question, history, style: { answer: getPrefs().answer, sources: getPrefs().sources } }),
       });
 
       if (!res.ok || !res.body) {
