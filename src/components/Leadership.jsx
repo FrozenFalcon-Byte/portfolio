@@ -171,7 +171,7 @@ const Leadership = () => {
     <section ref={rootRef} id="leadership" className="block record" data-acc="teal">
       <div className="shell">
         <div className="sec-head">
-          <span className="eyebrow"><b>06</b>On the record</span>
+          <span className="eyebrow"><b>07</b>On the record</span>
           <span className="rule" ref={ruleRef} />
         </div>
         <h2 ref={headRef} className="display display--l rec-head">

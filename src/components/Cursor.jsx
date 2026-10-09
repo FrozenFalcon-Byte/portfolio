@@ -38,7 +38,7 @@ const labelFor = (el) => {
   return '';
 };
 
-const ARROW = 'M4.6 20.2 L3.9 6.5 C3.8 4.7 5.8 3.5 7.3 4.5 L18.8 11.9 '
+export const ARROW = 'M4.6 20.2 L3.9 6.5 C3.8 4.7 5.8 3.5 7.3 4.5 L18.8 11.9 '
   + 'C20.7 13.2 19.8 16.1 17.6 16.0 L13.0 15.9 C12.2 15.9 11.4 16.3 11.0 17.1 '
   + 'L8.8 21.1 C7.8 23.1 4.8 22.4 4.6 20.2 Z';
 
@@ -46,13 +46,13 @@ const ARROW = 'M4.6 20.2 L3.9 6.5 C3.8 4.7 5.8 3.5 7.3 4.5 L18.8 11.9 '
    hotspot, three folded fingers stepping down to the right, the thumb
    reaching in from the left. Creases between the knuckles are drawn on
    top so it reads as a hand at 30px. */
-const HAND = 'M9 3 C9 1.3 10.3 0 12 0 C13.7 0 15 1.3 15 3 V11.2 '
+export const HAND = 'M9 3 C9 1.3 10.3 0 12 0 C13.7 0 15 1.3 15 3 V11.2 '
   + 'C15.4 10.4 16.2 9.9 17.1 9.9 C18.4 9.9 19.4 10.9 19.4 12.2 V12.9 '
   + 'C19.8 12.1 20.6 11.6 21.5 11.6 C22.8 11.6 23.8 12.6 23.8 13.9 V14.6 '
   + 'C24.2 13.9 25 13.4 25.9 13.4 C27.1 13.4 28.1 14.4 28.1 15.6 V22 '
   + 'C28.1 27.2 24.1 31 19 31 H16.4 C13.4 31 10.8 29.6 9.2 27.2 L3.6 19.2 '
   + 'C2.8 18 3 16.4 4.2 15.6 C5.4 14.8 7 15.1 7.8 16.3 L9 18 Z';
-const CREASES = 'M15 11.2 V16 M19.4 12.9 V16.6 M23.8 14.6 V17.4';
+export const CREASES = 'M15 11.2 V16 M19.4 12.9 V16.6 M23.8 14.6 V17.4';
 
 /* The text beam, built from the same rounded bars as everything else. */
 const BEAM = [

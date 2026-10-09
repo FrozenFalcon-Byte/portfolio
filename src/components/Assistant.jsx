@@ -209,7 +209,7 @@ const Assistant = () => {
       <div className="as-box" ref={boxRef} data-surface="ink">
         <div className="as-grid">
           <div className="as-intro">
-            <span className="eyebrow"><b>04</b>Ask my portfolio</span>
+            <span className="eyebrow"><b>05</b>Ask my portfolio</span>
             <h2 ref={headRef} className="display as-head">
               <span className="ln"><span className="ln-in">Don&rsquo;t read it.</span></span>
               <span className="ln"><span className="ln-in">Ask it<Glyph kind="chat" acc="violet" /></span></span>

@@ -189,7 +189,7 @@ const Stack = () => {
     <section ref={rootRef} id="stack" className="block stack" data-acc="lime">
       <div className="shell">
         <div className="sec-head">
-          <span className="eyebrow"><b>05</b>Stack</span>
+          <span className="eyebrow"><b>06</b>Stack</span>
           <span className="rule" ref={ruleRef} />
           <span className="mono st-note">{total} tools · 5 layers</span>
         </div>

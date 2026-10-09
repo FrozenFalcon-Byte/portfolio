@@ -68,7 +68,7 @@ const Contact = () => {
   return (
     <footer ref={rootRef} id="contact" className="contact" data-surface="ink" data-acc="yellow">
       <div className="shell ct-in">
-        <span className="eyebrow"><b>07</b>Contact</span>
+        <span className="eyebrow"><b>08</b>Contact</span>
 
         <h2 ref={headRef} className="display ct-head">
           <span className="ln"><span className="ln-in">Say hello<Glyph kind="hand" acc="yellow" /></span></span>
