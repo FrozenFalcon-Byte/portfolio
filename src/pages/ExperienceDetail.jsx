@@ -126,143 +126,130 @@ const useDiagram = (rootRef) => {
   }, [rootRef]);
 };
 
-const Shadows = ({ id }) => (
-  <defs>
-    <filter id={`${id}-ao`} x="-30%" y="-40%" width="160%" height="200%">
-      <feDropShadow dx="0" dy="2" stdDeviation="1.5" floodColor="#000" floodOpacity="0.10" />
-      <feDropShadow dx="0" dy="10" stdDeviation="9" floodColor="#000" floodOpacity="0.10" />
-    </filter>
-    <filter id={`${id}-lift`} x="-40%" y="-60%" width="180%" height="240%">
-      <feDropShadow dx="0" dy="3" stdDeviation="2" floodColor="#000" floodOpacity="0.14" />
-      <feDropShadow dx="0" dy="22" stdDeviation="16" floodColor="#000" floodOpacity="0.22" />
-    </filter>
-  </defs>
-);
-
-const Node = ({ x, y, w, label, strong, hl, id }) => {
+/* A node is a card: a glyph for what kind of thing it is, its name,
+   and one line on what it does. Lit by the note being read. */
+const Card = ({ x, y, w = 170, h = 96, label, sub, glyph, strong, hl, acc }) => {
   const on = hl?.includes(label);
-  const h = strong ? 56 : 46;
   return (
-    <g className={`dg-box${on ? ' is-hl' : ''}`}>
+    <g className={`dg-box${on ? ' is-hl' : ''}${strong ? ' is-strong' : ''}`}>
       <g className="dg-lift" style={{ transformOrigin: `${x + w / 2}px ${y + h / 2}px` }}>
-        <rect
-          x={x} y={y} width={w} height={h} rx={h / 2}
-          className={strong ? 'dg-rect dg-rect--strong' : 'dg-rect'}
-          filter={`url(#${id}-${on ? 'lift' : 'ao'})`}
-        />
-        <text x={x + w / 2} y={y + (strong ? 34 : 29)} className="dg-label" textAnchor="middle">{label}</text>
+        <rect x={x} y={y} width={w} height={h} rx="20" className="dg-rect" />
+        <foreignObject x={x + 14} y={y + 13} width="70" height="30">
+          <div className="dg-g"><Glyph kind={glyph} acc={acc} /></div>
+        </foreignObject>
+        <text x={x + 16} y={y + 66} className="dg-label">{label}</text>
+        {sub && <text x={x + 16} y={y + 85} className="dg-sub">{sub}</text>}
       </g>
     </g>
   );
 };
 
-/* Edges are written as orthogonal routes ("M x y V y H x ...") and
-   drawn with every elbow rounded, so the wiring reads as one cable
-   bending rather than lines meeting at corners. The end gets a small
-   socket where it plugs into the next node. */
-const R = 14;
-const route = (d) => {
-  const pts = [];
-  let x = 0; let y = 0;
-  d.trim().split(/\s+(?=[MVH])/).forEach((tok) => {
-    const c = tok[0];
-    const v = tok.slice(1).trim().split(/\s+/).map(Number);
-    if (c === 'M') { [x, y] = v; } else if (c === 'V') { [y] = v; } else { [x] = v; }
-    pts.push([x, y]);
-  });
-  let out = `M${pts[0][0]} ${pts[0][1]}`;
-  for (let i = 1; i < pts.length - 1; i += 1) {
-    const [ax, ay] = pts[i - 1]; const [bx, by] = pts[i]; const [cx, cy] = pts[i + 1];
-    const l1 = Math.hypot(bx - ax, by - ay); const l2 = Math.hypot(cx - bx, cy - by);
-    const r = Math.min(R, l1 / 2, l2 / 2);
-    const p1 = [bx - ((bx - ax) / l1) * r, by - ((by - ay) / l1) * r];
-    const p2 = [bx + ((cx - bx) / l2) * r, by + ((cy - by) / l2) * r];
-    out += ` L${p1[0]} ${p1[1]} Q${bx} ${by} ${p2[0]} ${p2[1]}`;
+/* Cables are single smooth curves leaving and entering along the
+   flow — horizontal by default, vertical when asked — with a socket
+   where they plug in. */
+const curve = (x1, y1, x2, y2, v) => {
+  if (v) {
+    const dy = Math.max(28, Math.abs(y2 - y1) / 2);
+    return `M${x1} ${y1} C${x1} ${y1 + dy} ${x2} ${y2 - dy} ${x2} ${y2}`;
   }
-  const end = pts[pts.length - 1];
-  return { d: `${out} L${end[0]} ${end[1]}`, end };
+  const dx = Math.max(28, Math.abs(x2 - x1) / 2);
+  return `M${x1} ${y1} C${x1 + dx} ${y1} ${x2 - dx} ${y2} ${x2} ${y2}`;
 };
 
-const Edge = ({ d }) => {
-  const { d: path, end } = route(d);
+const Edge = ({ from, to, v, d, className = '' }) => {
+  const path = d || curve(from[0], from[1], to[0], to[1], v);
+  const end = to;
   return (
     <>
-      <path d={path} className="dg-line" pathLength="1" />
+      <path d={path} className={`dg-line ${className}`} pathLength="1" />
       <path d={path} className="dg-pulse" pathLength="1" />
-      <circle cx={end[0]} cy={end[1]} r="4" className="dg-socket" />
+      <circle cx={end[0]} cy={end[1]} r="4.5" className="dg-socket" />
     </>
   );
 };
 
-const CommandCentreDiagram = ({ hl }) => {
+/* PMO Command Centre: configuration on the left, one shared graph in
+   the middle that both products run through, the validator on the
+   right with a loop back into the SQL agent. */
+const CommandCentreDiagram = ({ hl, acc }) => {
   const ref = useRef(null);
   useDiagram(ref);
-  const n = { hl, id: 'por' };
+  const n = { hl, acc };
 
   return (
     <div className="dg" ref={ref}>
-      <svg viewBox="90 10 820 600" role="img" aria-label="Architecture of the PMO Command Centre: two configuration modules feed a config-driven loader, which assembles one shared agent graph; the graph fans out to an extraction agent and a SQL agent, both of which report to a validator that can send work back to the SQL agent before a report is produced.">
-        <Shadows id="por" />
-        <Edge d="M260 74 V101 H460 V128" />
-        <Edge d="M660 74 V101 H460 V128" />
-        <Edge d="M460 174 V228" />
-        <Edge d="M460 284 V321 H230 V358" />
-        <Edge d="M460 284 V321 H690 V358" />
-        <Edge d="M230 404 V440 H460 V468" />
-        <Edge d="M690 404 V440 H460 V468" />
-        <Edge d="M460 514 V558" />
-        <Edge d="M580 491 H870 V381 H810" />
+      <svg viewBox="0 0 1000 450" role="img" aria-label="Architecture of the PMO Command Centre: two configuration modules feed a config-driven loader, which assembles one shared agent graph holding an extraction agent and a SQL agent; both report to a validator that can send work back to the SQL agent before a report is produced.">
+        <g className="dg-core">
+          <rect x="446" y="8" width="334" height="434" rx="34" className="dg-core-rect" />
+          <text x="472" y="46" className="dg-core-t">Shared agent graph</text>
+          <text x="472" y="66" className="dg-core-s">one graph, both products</text>
+        </g>
 
-        <Node {...n} x={150} y={28} w={220} label="POR module" />
-        <Node {...n} x={550} y={28} w={220} label="PPR module" />
-        <Node {...n} x={310} y={128} w={300} label="Config-driven loader" />
-        <Node {...n} x={260} y={228} w={400} label="Shared agent graph" strong />
-        <Node {...n} x={110} y={358} w={240} label="Extraction agent" />
-        <Node {...n} x={570} y={358} w={240} label="SQL agent" />
-        <Node {...n} x={340} y={468} w={240} label="Validator" />
-        <Node {...n} x={370} y={558} w={180} label="Report" />
+        <Edge from={[180, 88]} to={[216, 213]} />
+        <Edge from={[180, 362]} to={[216, 237]} />
+        <Edge from={[428, 213]} to={[474, 144]} />
+        <Edge from={[428, 237]} to={[474, 318]} />
+        <Edge from={[756, 144]} to={[820, 138]} />
+        <Edge from={[756, 318]} to={[820, 162]} />
+        <Edge from={[905, 196]} to={[905, 330]} v />
+        <Edge d="M846 196 C846 286 812 352 756 352" to={[756, 352]} className="dg-retry" />
+        <text x="800" y="378" className="dg-note dg-note--acc" textAnchor="middle">retry</text>
 
-        <text x={886} y={436} className="dg-note" textAnchor="middle" transform="rotate(90 886 436)">
-          self-correcting retry
-        </text>
+        <Card {...n} x={10} y={40} label="POR module" sub="declares what it needs" glyph="doc" />
+        <Card {...n} x={10} y={314} label="PPR module" sub="declares what it needs" glyph="doc" />
+        <Card {...n} x={216} y={177} w={212} label="Config-driven loader" sub="assembles the graph" glyph="stack" />
+        <Card {...n} x={474} y={96} w={282} label="Extraction agent" sub="documents into structure" glyph="search" />
+        <Card {...n} x={474} y={270} w={282} label="SQL agent" sub="answers from the warehouse" glyph="type" />
+        <Card {...n} x={820} y={100} label="Validator" sub="can send work back" glyph="check" />
+        <Card {...n} x={820} y={330} label="Report" sub="what the PMO reads" glyph="bars" strong />
       </svg>
     </div>
   );
 };
 
-const SnopDiagram = ({ hl }) => {
+/* S&OP agent: three stages read like lines of text — understand the
+   question, plan and check the query, answer — each line handing to
+   the next with one long cable. */
+const SNOP_ROWS = [
+  { y: 50, k: '01 · Understand' },
+  { y: 232, k: '02 · Plan and check' },
+  { y: 414, k: '03 · Answer' },
+];
+const SnopDiagram = ({ hl, acc }) => {
   const ref = useRef(null);
   useDiagram(ref);
-  const n = { hl, id: 'snop' };
+  const n = { hl, acc, w: 200 };
+  const X = [10, 260, 510, 760];
+  const [r1, r2, r3] = SNOP_ROWS.map((r) => r.y);
+  const mid = (y) => y + 48;
 
   return (
     <div className="dg" ref={ref}>
-      <svg viewBox="0 0 920 410" role="img" aria-label="Architecture of the S&OP agent: a question passes through a guardrail, a conversation router and intent extraction, then an orchestrator, planner, SQL generator and an abstract-syntax-tree validator, before an executor, an output agent and a streamed response.">
-        <Shadows id="snop" />
-        <Edge d="M170 63 H230" />
-        <Edge d="M380 63 H440" />
-        <Edge d="M590 63 H650" />
-        <Edge d="M800 63 H862 V213 H800" />
-        <Edge d="M650 213 H590" />
-        <Edge d="M440 213 H380" />
-        <Edge d="M230 213 H170" />
-        <Edge d="M95 236 V340" />
-        <Edge d="M170 363 H230" />
-        <Edge d="M380 363 H440" />
+      <svg viewBox="0 0 1000 530" role="img" aria-label="Architecture of the S&OP agent: a question passes through a guardrail, a conversation router and intent extraction, then an orchestrator, planner, SQL generator and an abstract-syntax-tree validator, before an executor, an output agent and a streamed response.">
+        {SNOP_ROWS.map((r) => (
+          <text key={r.k} x="960" y={r.y - 14} className="dg-note" textAnchor="end">{r.k}</text>
+        ))}
 
-        <Node {...n} x={20} y={40} w={150} label="Question" />
-        <Node {...n} x={230} y={40} w={150} label="Guardrail" />
-        <Node {...n} x={440} y={40} w={150} label="Router" />
-        <Node {...n} x={650} y={40} w={150} label="Intent" />
+        {[r1, r2].map((y) => [0, 1, 2].map((i) => (
+          <Edge key={`${y}-${i}`} from={[X[i] + 200, mid(y)]} to={[X[i + 1], mid(y)]} />
+        )))}
+        {[0, 1].map((i) => <Edge key={`c${i}`} from={[X[i] + 200, mid(r3)]} to={[X[i + 1], mid(r3)]} />)}
+        <Edge d={`M860 ${r1 + 96} C860 ${r1 + 160} 110 ${r2 - 64} 110 ${r2}`} to={[110, r2]} />
+        <Edge d={`M860 ${r2 + 96} C860 ${r2 + 160} 110 ${r3 - 64} 110 ${r3}`} to={[110, r3]} />
 
-        <Node {...n} x={650} y={190} w={150} label="Orchestrator" />
-        <Node {...n} x={440} y={190} w={150} label="Planner" />
-        <Node {...n} x={230} y={190} w={150} label="SQL gen" />
-        <Node {...n} x={20} y={190} w={150} label="AST check" />
+        <Card {...n} x={X[0]} y={r1} label="Question" sub="in plain words" glyph="chat" />
+        <Card {...n} x={X[1]} y={r1} label="Guardrail" sub="off-topic stops here" glyph="check" />
+        <Card {...n} x={X[2]} y={r1} label="Router" sub="conversation or data" glyph="loop" />
+        <Card {...n} x={X[3]} y={r1} label="Intent" sub="typed, before any SQL" glyph="type" />
 
-        <Node {...n} x={20} y={340} w={150} label="Executor" />
-        <Node {...n} x={230} y={340} w={150} label="Output agent" />
-        <Node {...n} x={440} y={340} w={150} label="Stream" strong />
+        <Card {...n} x={X[0]} y={r2} label="Orchestrator" sub="picks the path" glyph="graph" />
+        <Card {...n} x={X[1]} y={r2} label="Planner" sub="lays out the steps" glyph="doc" />
+        <Card {...n} x={X[2]} y={r2} label="SQL gen" sub="writes the query" glyph="type" />
+        <Card {...n} x={X[3]} y={r2} label="AST check" sub="parsed before it runs" glyph="search" />
+
+        <Card {...n} x={X[0]} y={r3} label="Executor" sub="runs against the warehouse" glyph="bars" />
+        <Card {...n} x={X[1]} y={r3} label="Output agent" sub="writes the answer" glyph="chat" />
+        <Card {...n} x={X[2]} y={r3} label="Stream" sub="over server-sent events" glyph="wave" strong />
       </svg>
     </div>
   );
@@ -324,7 +311,7 @@ const Chapter = ({ id, n, name, sub, lead, notes, Diagram, acc }) => {
         <div className="cs-ch-body">
           <div className="cs-ch-stage">
             <div className="cs-ch-pin">
-              <Diagram hl={hl} />
+              <Diagram hl={hl} acc={acc} />
               <div className="cs-ch-read" aria-hidden="true">
                 <span className="cs-ch-dots">
                   {notes.map((x, i) => <i key={x.k} className={i === active ? 'is-on' : i < active ? 'is-past' : ''} />)}
@@ -574,25 +561,40 @@ const ExperienceDetail = () => {
 
         /* ---- diagram ---- */
         .dg {
-          padding: clamp(1rem, 2.6vw, 2.25rem);
+          padding: clamp(1rem, 2.4vw, 2rem);
           border-radius: var(--r-xl);
           background: var(--paper-2);
-          /* the board is a recessed tray, occluded at its top edge */
-          box-shadow: inset 0 0 0 1px var(--line-2), inset 0 10px 22px -12px rgba(0,0,0,0.22);
         }
-        .dg svg { display: block; width: 100%; height: auto; max-height: 70vh; overflow: visible; }
+        .dg svg { display: block; width: 100%; height: auto; max-height: 72vh; overflow: visible; }
         .dg-box { cursor: default; }
         .dg-lift { transition: transform 0.6s var(--ease-out); }
-        .dg-rect { fill: var(--paper); stroke: var(--line); stroke-width: 1.5; transition: fill 0.45s var(--ease-out), stroke 0.45s; }
-        .dg-rect--strong { fill: var(--ink); stroke: var(--ink); }
-        .dg-rect--strong + .dg-label { fill: var(--paper); font-weight: 700; }
-        .dg-label { fill: var(--ink); font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: -0.02em; transition: fill 0.45s; }
-        .dg-box.is-hl .dg-lift { transform: translateY(-4px) scale(1.03); }
+        .dg-rect {
+          fill: var(--paper); stroke: var(--line-2); stroke-width: 1;
+          filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.07));
+          transition: fill 0.45s var(--ease-out), stroke 0.45s;
+        }
+        .dg-g { font-size: 30px; line-height: 0; }
+        .dg-g .glyph { margin: 0; }
+        .dg-label { fill: var(--ink); font-family: var(--font-display); font-weight: 650; font-size: 19px; letter-spacing: -0.025em; transition: fill 0.45s; }
+        .dg-sub { fill: var(--ink-3); font-family: var(--font-body); font-weight: 500; font-size: 13.5px; transition: fill 0.45s; }
+        .dg-box.is-strong .dg-rect { fill: var(--ink); stroke: var(--ink); }
+        .dg-box.is-strong .dg-label { fill: var(--paper); }
+        .dg-box.is-strong .dg-sub { fill: color-mix(in srgb, var(--paper) 60%, transparent); }
+        .dg-box.is-hl .dg-lift { transform: translateY(-5px) scale(1.035); }
         .dg-box.is-hl .dg-rect { fill: var(--acc); stroke: var(--acc); }
-        .dg-box.is-hl .dg-label { fill: var(--acc-ink); font-weight: 700; }
-        .dg-note { fill: var(--ink-3); font-family: var(--font-body); font-weight: 600; font-size: 12px; letter-spacing: 0.02em; }
-        .dg-line { fill: none; stroke: var(--ink-3); stroke-width: 1.75; stroke-dasharray: 1; opacity: 0.55; stroke-linecap: round; }
-        .dg-socket { fill: var(--paper-2); stroke: var(--ink-3); stroke-width: 1.75; }
+        .dg-box.is-hl .dg-label { fill: var(--acc-ink); }
+        .dg-box.is-hl .dg-sub { fill: var(--acc-ink); opacity: 0.75; }
+        .dg-box.is-hl .glyph { --acc: #0E0E0D; --acc-ink: #FFFFFF; }
+
+        .dg-core-rect { fill: color-mix(in srgb, var(--acc) 11%, var(--paper)); stroke: color-mix(in srgb, var(--acc) 45%, transparent); stroke-width: 1.4; stroke-dasharray: 6 6; }
+        .dg-core-t { fill: var(--ink); font-family: var(--font-display); font-weight: 700; font-size: 18px; letter-spacing: -0.03em; }
+        .dg-core-s { fill: var(--ink-3); font-family: var(--font-body); font-size: 12.5px; }
+
+        .dg-note { fill: var(--ink-3); font-family: var(--font-body); font-weight: 600; font-size: 12.5px; }
+        .dg-note--acc { fill: var(--acc); }
+        .dg-line { fill: none; stroke: var(--ink-3); stroke-width: 1.6; stroke-dasharray: 1; opacity: 0.6; stroke-linecap: round; }
+        .dg-line.dg-retry { stroke: var(--acc); opacity: 1; stroke-width: 2; }
+        .dg-socket { fill: var(--paper-2); stroke: var(--ink-3); stroke-width: 1.6; }
         /* A bead riding the same cable — the charge. */
         .dg-pulse { fill: none; stroke: var(--acc); stroke-width: 7; stroke-linecap: round; stroke-dasharray: 0 1; }
 
@@ -645,7 +647,7 @@ const ExperienceDetail = () => {
           .cs-ch-stage { display: contents; }
           .cs-ch-pin { position: sticky; top: 4.75rem; z-index: 2; padding-bottom: 0.75rem; background: var(--paper); box-shadow: 0 18px 24px -18px rgba(0,0,0,0.25); border-radius: 0 0 var(--r-l) var(--r-l); }
           .dg { overflow-x: auto; overscroll-behavior-x: contain; }
-          .dg svg { min-width: 600px; max-height: none; }
+          .dg svg { min-width: 760px; max-height: none; }
           .cs-note, .cs-note:first-child { min-height: 46vh; align-items: flex-start; }
           .cs-notes { padding-bottom: 0; }
         }

@@ -462,6 +462,25 @@ html.lenis, html.lenis body { height: auto; }
 .glyph .gl-press { transform-box: fill-box; animation: gl-press 1.4s var(--ease-in-out) infinite; }
 .glyph .gl-ripple { fill: none; stroke: var(--acc-ink); stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: gl-ripple 1.4s var(--ease-out) infinite; }
 
+.glyph .gl-fill-acc { fill: var(--acc); }
+.glyph .gl-dbtop { fill: var(--acc); opacity: 0.45; }
+.glyph .gl-dbband { stroke-width: 4; animation: gl-dbband 1.8s var(--ease-in-out) infinite; }
+.glyph .gl-plug { animation: gl-plug 1.8s var(--ease-in-out) infinite; }
+.glyph .gl-spark-hit { fill: var(--acc-ink); transform-box: fill-box; transform-origin: center; animation: gl-plughit 1.8s var(--ease-out) infinite; }
+.glyph .gl-antenna { animation: gl-bounce 1.2s var(--ease-in-out) infinite; }
+.glyph .gl-look { animation: gl-look 3s var(--ease-in-out) infinite; }
+.glyph .gl-eye { transform-box: fill-box; transform-origin: center; animation: gl-eye 3s var(--ease-in-out) infinite; }
+.glyph .gl-brk-l { animation: gl-brk-l 1.6s var(--ease-in-out) infinite; }
+.glyph .gl-brk-r { animation: gl-brk-r 1.6s var(--ease-in-out) infinite; }
+.glyph .gl-shackle { animation: gl-shackle 2s var(--ease-out) infinite; }
+@keyframes gl-dbband  { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(28px); opacity: 0; } }
+@keyframes gl-plug    { 0%, 100% { transform: translateX(-14px); } 40%, 70% { transform: translateX(10px); } }
+@keyframes gl-plughit { 0%, 38% { transform: scale(0); opacity: 0; } 45% { transform: scale(1.6); opacity: 1; } 70%, 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes gl-look    { 0%, 20%, 100% { transform: translateX(0); } 35%, 50% { transform: translateX(-5px); } 65%, 80% { transform: translateX(5px); } }
+@keyframes gl-eye     { 0%, 44%, 50%, 100% { transform: scaleY(1); } 47% { transform: scaleY(0.1); } }
+@keyframes gl-brk-l   { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-6px); } }
+@keyframes gl-brk-r   { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(6px); } }
+@keyframes gl-shackle { 0%, 30% { transform: translateY(-7px); } 45% { transform: translateY(1px); } 55%, 100% { transform: translateY(0); } }
 @keyframes gl-dot    { 0%, 100% { transform: translateY(0) scale(1, 1); } 30% { transform: translateY(-30px) scale(0.9, 1.1); } 55% { transform: translateY(0) scale(1.3, 0.7); } 70% { transform: translateY(-5px); } }
 @keyframes gl-spin   { to { transform: rotate(360deg); } }
 @keyframes gl-pop    { 0%, 60%, 100% { transform: scale(1); } 20% { transform: scale(1.45); } }

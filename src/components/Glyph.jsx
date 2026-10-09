@@ -229,12 +229,70 @@ const SCENES = {
         transform="scale(2)" />
     </g>
   ),
+
+  /* A database: a cylinder with a scan band sweeping down it. */
+  db: (w) => (
+    <g transform={`translate(${w / 2 - 22} 10)`}>
+      <path d="M0 9 V49 A22 8 0 0 0 44 49 V9" className="gl-fill-ink" />
+      <ellipse cx="22" cy="9" rx="22" ry="8" className="gl-fill-ink" />
+      <ellipse cx="22" cy="9" rx="15" ry="4.2" className="gl-dbtop" />
+      <path d="M0 22 A22 8 0 0 0 44 22" className="gl-stroke gl-stroke--acc gl-dbband" />
+    </g>
+  ),
+
+  /* A plug sliding home into its socket — a connection, a protocol. */
+  plug: (w) => (
+    <g transform={`translate(${w / 2} ${H / 2})`}>
+      <g className="gl-plug">
+        <rect x="-46" y="-14" width="26" height="28" rx="8" className="gl-fill-ink" />
+        <rect x="-22" y="-9" width="14" height="5" rx="2.5" className="gl-fill-ink" />
+        <rect x="-22" y="4" width="14" height="5" rx="2.5" className="gl-fill-ink" />
+      </g>
+      <path d="M8 -18 H26 A12 12 0 0 1 38 -6 V6 A12 12 0 0 1 26 18 H8 Z" className="gl-fill-ink" />
+      <rect x="10" y="-9" width="8" height="5" rx="2" className="gl-fill-acc" />
+      <rect x="10" y="4" width="8" height="5" rx="2" className="gl-fill-acc" />
+      <circle cx="-2" cy="0" r="3.5" className="gl-spark-hit" />
+    </g>
+  ),
+
+  /* An agent: a head that looks around and blinks. */
+  bot: (w) => (
+    <g transform={`translate(${w / 2} ${H / 2 + 4})`}>
+      <line x1="0" y1="-24" x2="0" y2="-32" className="gl-stroke" />
+      <circle cx="0" cy="-34" r="5" className="gl-fill-ink gl-antenna" />
+      <rect x="-26" y="-22" width="52" height="40" rx="14" className="gl-fill-ink" />
+      <g className="gl-look">
+        <rect x="-15" y="-9" width="9" height="13" rx="4.5" className="gl-fill-acc gl-eye" />
+        <rect x="6" y="-9" width="9" height="13" rx="4.5" className="gl-fill-acc gl-eye" />
+      </g>
+    </g>
+  ),
+
+  /* Code: brackets breathing apart round a blinking caret. */
+  code: (w) => (
+    <g transform={`translate(${w / 2} ${H / 2})`}>
+      <path d="M-26 -16 L-42 0 L-26 16" className="gl-stroke gl-stroke--fat gl-brk-l" />
+      <path d="M26 -16 L42 0 L26 16" className="gl-stroke gl-stroke--fat gl-brk-r" />
+      <path d="M8 -20 L-8 20" className="gl-stroke gl-stroke--fat" />
+    </g>
+  ),
+
+  /* A padlock whose shackle lifts and snaps shut — security, access. */
+  lock: (w) => (
+    <g transform={`translate(${w / 2} ${H / 2 + 6})`}>
+      <path d="M-13 -6 V-16 A13 13 0 0 1 13 -16 V-6" className="gl-stroke gl-stroke--fat gl-shackle" />
+      <rect x="-22" y="-8" width="44" height="32" rx="9" className="gl-fill-ink" />
+      <circle cx="0" cy="5" r="5" className="gl-fill-acc" />
+      <rect x="-2.2" y="6" width="4.4" height="10" rx="2.2" className="gl-fill-acc" />
+    </g>
+  ),
 };
 
 const WIDTH = {
   mark: 1.35, graph: 1.9, bars: 1.5, type: 1.65, ship: 1.7, chat: 1.45,
   search: 1.7, stack: 1.3, wave: 1.8, check: 1.15, loop: 1.15, spark: 1.2,
   doc: 1.05, hand: 1.15, click: 1.15, cloud: 1.25, git: 1.6,
+  db: 1.1, plug: 1.6, bot: 1.2, code: 1.45, lock: 1.05,
 };
 
 const Glyph = ({ kind = 'mark', acc = 'pink', label }) => {

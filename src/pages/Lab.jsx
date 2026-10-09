@@ -77,13 +77,13 @@ const SITES = [
 /* A glyph for every labelled floor, so a building reads at a glance:
    what is data, what is an agent, what a person touches. */
 const FLOOR_GLYPH = {
-  'Postgres · row-level security': 'stack', 'MCP server · 34 tools': 'graph', 'Web app + in-app agent': 'chat',
-  'Claude Desktop · Code · Cursor': 'click', 'Any public GitHub repo': 'git', 'Snapshot + index': 'stack',
-  'Cited answers': 'search', 'Reading tours · first issues': 'ship', Triager: 'search', Coder: 'type',
-  Tester: 'check', Reviewer: 'doc', 'A human merges': 'hand', 'SQLite records': 'stack',
-  'ChromaDB vectors': 'wave', 'Confidence filter': 'bars', 'Gemini answer': 'spark',
-  'Postgres tenant model': 'stack', 'Roles + access': 'check', 'Invoices + receipts': 'doc', Analytics: 'bars',
-  'OCR · Tesseract': 'type', 'Background removal': 'spark', 'AI summary': 'chat',
+  'Postgres · row-level security': 'lock', 'MCP server · 34 tools': 'plug', 'Web app + in-app agent': 'bot',
+  'Claude Desktop · Code · Cursor': 'code', 'Any public GitHub repo': 'git', 'Snapshot + index': 'db',
+  'Cited answers': 'search', 'Reading tours · first issues': 'ship', Triager: 'search', Coder: 'code',
+  Tester: 'check', Reviewer: 'doc', 'A human merges': 'hand', 'SQLite records': 'db',
+  'ChromaDB vectors': 'graph', 'Confidence filter': 'bars', 'Gemini answer': 'spark',
+  'Postgres tenant model': 'db', 'Roles + access': 'lock', 'Invoices + receipts': 'doc', Analytics: 'bars',
+  'OCR · Tesseract': 'type', 'Background removal': 'spark', 'AI summary': 'bot',
   'Augmented data': 'cloud', Conv: 'bars', Pool: 'stack', Dense: 'graph', 'Live inference · 94% val': 'ship',
 };
 
@@ -147,8 +147,10 @@ const Lab = () => {
 
     let W = 0; let H = 0; let small = false;
     const measure = () => {
-      const r = svg.getBoundingClientRect();
-      W = r.width; H = r.height;
+      // Layout size, not the painted rect: the page arrives scaled by
+      // the route transition, and a scaled measure leaves the map drawn
+      // at one size and the HTML labels at another.
+      W = scene.clientWidth; H = scene.clientHeight;
       small = W < 860;
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     };
@@ -161,12 +163,13 @@ const Lab = () => {
     const stops = () => {
       const z0 = fit();
       const ax = small ? 0.5 : 0.66;
+      const sx = small ? 0.5 : 0.6;   // a close-up sits further left so its labels fit
       const ay = small ? 0.33 : 0.55;
       return [
         { fx: 0, fy: 0, fz: 0, zoom: z0 * 1.05, S: 0.36, ax, ay: small ? 0.36 : 0.52 },
         ...PLOTS.map((p) => ({
           fx: p.cx, fy: p.cy, fz: p.top * 0.45,
-          zoom: z0 * (small ? 2.3 : 2.6), S: 0.52, ax, ay,
+          zoom: z0 * (small ? 2.3 : 2.6), S: 0.52, ax: sx, ay,
         })),
         { fx: 0, fy: 0, fz: 0, zoom: z0 * 0.98, S: 0.66, ax, ay: small ? 0.36 : 0.5 },
       ];
@@ -226,6 +229,7 @@ const Lab = () => {
 
       /* Buildings. A site starts going up just before the camera lands
          on it and each floor follows the one below. */
+      const placed = [];
       TOWERS.forEach((tw, ti) => {
         const b = clamp01((k - (tw.si + 1) + 0.85) / 0.7);
         const n = tw.floors.length;
@@ -247,24 +251,50 @@ const Lab = () => {
           if (tag) {
             const [ax0, ay0] = P(x + w, y + d / 2, z + h / 2);
             const pl = PLOTS[tw.si];
-            const tx = Math.max(P(x + w, y, 0)[0], P(pl.x1, pl.y0, 0)[0]) + 22;
-            tag.line.setAttribute('d', `M${ax0.toFixed(1)} ${ay0.toFixed(1)}H${tx.toFixed(1)}`);
-            tag.el.style.transform = `translate3d(${(tx + 6).toFixed(1)}px, ${ay0.toFixed(1)}px, 0) translateY(-50%)`;
-            tag.line.style.opacity = String(grow);
-            tag.el.style.opacity = String(grow);
+            // Beside the plot, but never past the screen's edge.
+            if (!tag.w) tag.w = tag.el.offsetWidth;
+            const tx = Math.max(ax0 + 24, Math.min(
+              Math.max(P(x + w, y, 0)[0], P(pl.x1, pl.y0, 0)[0]) + 22,
+              W - tag.w - 30,
+            ));
+            placed.push({ tag, ax0, ay0, tx, ly: ay0, grow, si: tw.si });
           }
           z += tw.fh * grow;
         });
       });
+
+      /* Towers on one plot can put floors at the same height, so a
+         site's labels are spread into a column with room for each, and
+         every leader bends once to reach its own label. */
+      const gap = small ? 26 : 36;
+      const bySite = {};
+      placed.forEach((t) => { (bySite[t.si] ||= []).push(t); });
+      Object.values(bySite).forEach((list) => {
+        list.sort((p, q) => p.ay0 - q.ay0);
+        for (let i = 1; i < list.length; i += 1) list[i].ly = Math.max(list[i].ly, list[i - 1].ly + gap);
+        const shift = (list.reduce((acc, t) => acc + t.ly - t.ay0, 0)) / list.length;
+        const tx = Math.max(...list.map((t) => t.tx));
+        list.forEach((t) => {
+          const ly = t.ly - shift;
+          const bend = tx - 18;
+          t.tag.line.setAttribute('d', `M${t.ax0.toFixed(1)} ${t.ay0.toFixed(1)}H${bend.toFixed(1)}L${tx.toFixed(1)} ${ly.toFixed(1)}`);
+          t.tag.el.style.transform = `translate3d(${(tx + 6).toFixed(1)}px, ${ly.toFixed(1)}px, 0) translateY(-50%)`;
+          t.tag.line.style.opacity = String(t.grow);
+          t.tag.el.style.opacity = String(t.grow);
+        });
+      });
     };
 
-    const ro = new ResizeObserver(() => { measure(); STOPS = stops(); last = ''; });
+    const ro = new ResizeObserver(() => { measure(); STOPS = stops(); last = ''; tags.flat().forEach((t) => { if (t) t.w = 0; }); });
     ro.observe(scene);
+    const remeasure = () => { measure(); STOPS = stops(); last = ''; };
+    window.addEventListener('resize', remeasure);
+    ScrollTrigger.addEventListener('refresh', remeasure);
     gsap.ticker.add(render);
     render();
 
     if (flat) {
-      return () => { gsap.ticker.remove(render); ro.disconnect(); };
+      return () => { gsap.ticker.remove(render); ro.disconnect(); window.removeEventListener('resize', remeasure); ScrollTrigger.removeEventListener('refresh', remeasure); };
     }
 
     const st = ScrollTrigger.create({
@@ -283,6 +313,8 @@ const Lab = () => {
     return () => {
       gsap.ticker.remove(render);
       ro.disconnect();
+      window.removeEventListener('resize', remeasure);
+      ScrollTrigger.removeEventListener('refresh', remeasure);
       unsnap();
       st.kill();
       stRef.current = null;
@@ -473,17 +505,17 @@ const Lab = () => {
         .lab-scene[data-mode="site"] .lab-hub,
         .lab-scene[data-mode="site"] .lab-plot:not(.is-on),
         .lab-scene[data-mode="site"] .lab-road:not(.is-on) { opacity: 0.3; }
-        .lab-tag path { stroke: var(--ink-2); stroke-width: 1; opacity: 0; }
+        .lab-tag path { fill: none; stroke: var(--ink-2); stroke-width: 1; stroke-linejoin: round; opacity: 0; }
         .lab-tags .lab-tag, .lab-labels .lab-lab { visibility: hidden; }
         .lab-labels { position: absolute; inset: 0; pointer-events: none; }
         .lab-lab {
           position: absolute; left: 0; top: 0;
-          display: inline-flex; align-items: center; gap: 0.5em;
+          display: inline-grid; grid-template-columns: 3.6rem auto; align-items: center; column-gap: 0.7rem;
           white-space: nowrap;
-          font-size: 13px; font-weight: 600; color: var(--ink);
+          font-size: 15px; font-weight: 650; letter-spacing: -0.01em; color: var(--ink);
           opacity: 0;
         }
-        .lab-lab .glyph { font-size: 22px; margin: 0; }
+        .lab-lab .glyph { font-size: 30px; margin: 0; justify-self: start; }
         ${SITES.map((_, i) => `.lab-tags.is-site-${i} .lab-tag[data-site="${i}"], .lab-labels.is-site-${i} .lab-lab[data-site="${i}"] { visibility: visible; }`).join('\n')}
 
         /* The reading panel. */
@@ -571,8 +603,8 @@ const Lab = () => {
           .lab-t { font-size: clamp(1.8rem, 8vw, 2.6rem); margin-bottom: 0.7rem; }
           .lab-b { font-size: var(--step--1); }
           .lab-row { margin-top: 1rem; }
-          .lab-lab { font-size: 11px; }
-          .lab-lab .glyph { font-size: 17px; }
+          .lab-lab { font-size: 12px; grid-template-columns: 2.6rem auto; column-gap: 0.5rem; }
+          .lab-lab .glyph { font-size: 21px; }
         }
 
         .lab.is-flat .lab-scene { height: auto; min-height: 100svh; padding-bottom: 4rem; }

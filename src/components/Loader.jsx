@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap, EASE, reduced } from '../lib/motion';
 import Mark from './Mark';
+import PageLoader, { loaderKind } from './PageLoader';
 
 /* ------------------------------------------------------------------
    The loader — "a." stands for "ajinkya."
@@ -31,7 +32,7 @@ const pickPop = () => {
   return pick;
 };
 
-const Loader = () => {
+const HomeLoader = () => {
   const rootRef = useRef(null);
   const veilRef = useRef(null);
   const wordRef = useRef(null);
@@ -334,6 +335,13 @@ const Loader = () => {
       `}</style>
     </div>
   );
+};
+
+/* Home tells the name; every other page gets a loader told in its own
+   idea. Decided once, by where the reload landed. */
+const Loader = () => {
+  const [kind] = useState(() => (window.location.pathname === '/' ? 'home' : loaderKind(window.location.pathname)));
+  return kind === 'home' ? <HomeLoader /> : <PageLoader kind={kind} />;
 };
 
 export default Loader;

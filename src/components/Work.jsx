@@ -618,8 +618,9 @@ const Work = () => {
           overscroll-behavior: contain;
         }
         .sh-close {
-          position: sticky; top: 1rem; float: right;
-          margin: 1rem 1rem 0 0;
+          /* Inset clear of the panel's rounded corner, not just the edge. */
+          position: sticky; top: clamp(1.1rem, 2.2vw, 1.75rem); float: right;
+          margin: clamp(1.1rem, 2.2vw, 1.75rem) clamp(1.1rem, 2.2vw, 1.75rem) 0 0;
           display: grid; place-items: center;
           width: 3rem; height: 3rem;
           border-radius: 99px;

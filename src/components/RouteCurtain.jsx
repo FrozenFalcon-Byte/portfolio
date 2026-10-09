@@ -112,7 +112,6 @@ export const RouteCurtain = ({ children }) => {
         navigate(to);
         gsap.set(page, { transformOrigin: `50% ${H / 2}px`, scale: 0.94, opacity: 0, y: 40, ...(blur ? { filter: 'blur(10px)' } : {}) });
       }, 0.85)
-      .add(() => ScrollTrigger.refresh(), 1.0)
 
       .to(inner, { opacity: 0, y: -24, scale: 0.96, ...(blur ? { filter: 'blur(8px)' } : {}), duration: 0.4, ease: 'power2.in' }, 1.05)
       // …and folds down into the tab for the page you are now on.
@@ -129,6 +128,9 @@ export const RouteCurtain = ({ children }) => {
           scale: 1, opacity: 1, y: 0, ...(blur ? { filter: 'blur(0px)' } : {}),
           duration: 0.85, ease: EASE.swift,
           clearProps: 'transform,transformOrigin,opacity,filter',
+          // Pins measured while the page was scaled down keep that size;
+          // measure again now that it is back to full size.
+          onComplete: () => ScrollTrigger.refresh(),
         });
       }, 1.2)
       .set(morph, { visibility: 'hidden' }, 2.1);

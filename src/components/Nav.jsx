@@ -172,30 +172,42 @@ const Nav = () => {
     return () => st.kill();
   }, [pathname]);
 
-  /* The index: a card that unrolls from its button on desktop and
-     fills the screen on a phone. */
+  /* The index grows out of its own button into the whole screen: the
+     sheet starts clipped to exactly the pill's outline and opens from
+     there, under the nav, so the logo and the button never move — the
+     button simply turns into Close. Closing folds it back into the pill. */
+  const btnRef = useRef(null);
   useEffect(() => {
     const panel = panelRef.current;
-    if (!panel) return undefined;
+    const btn = btnRef.current;
+    if (!panel || !btn) return undefined;
     const rows = panel.querySelectorAll('.ix-in');
-    const shut = 'inset(0% 0% 100% 60% round 28px)';
+    const shut = () => {
+      const p = panel.getBoundingClientRect();
+      const b = btn.getBoundingClientRect();
+      const t = Math.max(0, b.top - p.top);
+      const r = Math.max(0, p.right - b.right);
+      const l = Math.max(0, b.left - p.left);
+      const h = Math.min(b.height, p.height);
+      return `inset(${t}px ${r}px ${Math.max(0, p.height - t - h)}px ${l}px round ${h / 2}px)`;
+    };
+    const full = 'inset(0px 0px 0px 0px round 0px)';
+    gsap.killTweensOf([panel, rows]);
     if (open) {
-      if (window.innerWidth < 760) window.lenis?.stop();
+      window.lenis?.stop();
       gsap.set(panel, { visibility: 'visible', pointerEvents: 'auto' });
-      if (reduced()) { gsap.set(panel, { clipPath: 'inset(0% 0% 0% 0% round 28px)' }); return undefined; }
+      if (reduced()) { gsap.set(panel, { clipPath: full }); gsap.set(rows, { opacity: 1, y: 0 }); return undefined; }
       gsap.timeline()
-        .fromTo(panel, { clipPath: shut }, { clipPath: 'inset(0% 0% 0% 0% round 28px)', duration: 0.7, ease: EASE.glide })
+        .fromTo(panel, { clipPath: shut() }, { clipPath: full, duration: 0.9, ease: EASE.glide })
         .fromTo(rows,
-          { y: 22, opacity: 0, ...fx(8) },
-          { y: 0, opacity: 1, ...fx0(), duration: 0.6, stagger: 0.03, ease: EASE.swift }, 0.12);
+          { y: 40, opacity: 0, ...fx(10) },
+          { y: 0, opacity: 1, ...fx0(), duration: 0.8, stagger: 0.035, ease: EASE.swift }, 0.22);
     } else {
       window.lenis?.start();
-      gsap.to(panel, {
-        clipPath: shut,
-        duration: reduced() ? 0 : 0.5,
-        ease: EASE.glide,
-        onComplete: () => gsap.set(panel, { visibility: 'hidden', pointerEvents: 'none' }),
-      });
+      if (panel.style.visibility !== 'visible') return undefined;
+      gsap.timeline({ onComplete: () => gsap.set(panel, { visibility: 'hidden', pointerEvents: 'none' }) })
+        .to(rows, { opacity: 0, y: -16, ...fx(6), duration: 0.25, stagger: 0.01, ease: 'power1.in' })
+        .to(panel, { clipPath: shut(), duration: reduced() ? 0 : 0.7, ease: EASE.glide }, 0.12);
     }
     return undefined;
   }, [open]);
@@ -274,6 +286,7 @@ const Nav = () => {
           <ThemeToggle theme={theme} onToggle={toggle} />
           <button
             type="button"
+            ref={btnRef}
             className={`nav-index${open ? ' is-open' : ''}`}
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
@@ -281,17 +294,19 @@ const Nav = () => {
             data-cursor="hot"
           >
             <span className="nav-now" aria-hidden="true">
-              <span key={active || 'none'} className="nav-now-in">
-                {now ? <><i className="num">{now.n}</i>{now.label}</> : 'Index'}
+              <span key={open ? 'close' : active || 'none'} className="nav-now-in">
+                {open ? 'Close' : now ? <><i className="num">{now.n}</i>{now.label}</> : 'Index'}
               </span>
             </span>
             <span className="sr-only">{open ? 'Close the index' : 'Open the index'}</span>
-            <span className="nav-grid" aria-hidden="true"><i /><i /><i /><i /></span>
+            <span className={`nav-grid${open ? ' is-x' : ''}`} aria-hidden="true"><i /><i /><i /><i /></span>
           </button>
         </div>
       </header>
 
       <div className="ix" id="nav-ix" ref={panelRef} data-surface="ink" data-acc="yellow" role="dialog" aria-label="Index">
+        <div className="ix-shell">
+        <p className="ix-kick ix-in">{now ? <>You are reading <b>{now.label}</b></> : 'Where to?'}</p>
         <div className="ix-pages">
           <p className="ix-h ix-in">Pages</p>
           {PAGES.map((p) => (
@@ -333,6 +348,7 @@ const Nav = () => {
           <a href="https://www.linkedin.com/in/ajinkyachavan4829/" target="_blank" rel="noreferrer">LinkedIn</a>
           <a href="/resume.pdf" download>Résumé</a>
           <button type="button" className="ix-theme" onClick={toggle}>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</button>
+        </div>
         </div>
       </div>
 
@@ -453,61 +469,68 @@ const Nav = () => {
           box-shadow: inset 0 0 0 1px var(--line-2);
         }
 
-        /* ---- index panel ---- */
+        /* ---- index sheet ---- */
         .ix {
-          position: fixed;
+          position: fixed; inset: 0;
           z-index: 899;
-          top: calc(clamp(0.6rem, 1.6vh, 1.1rem) + 3.6rem);
-          right: max(var(--gutter), calc((100vw - var(--shell)) / 2));
-          width: min(46rem, calc(100vw - var(--gutter) * 2));
-          max-height: calc(100svh - 6rem);
           overflow: auto;
           overscroll-behavior: contain;
-          display: grid;
-          grid-template-columns: 1.15fr 1fr;
-          gap: 1.6rem 2rem;
-          padding: 1.6rem;
-          border-radius: 28px;
           background: var(--paper);
           color: var(--ink);
-          box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.55);
           visibility: hidden;
           pointer-events: none;
-          clip-path: inset(0% 0% 100% 60% round 28px);
+          clip-path: inset(0 0 100% 100%);
         }
+        .ix-shell {
+          width: calc(100% - var(--gutter) * 2);
+          max-width: var(--shell);
+          min-height: 100%;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: auto 1fr auto;
+          gap: clamp(1.5rem, 4vh, 3rem) clamp(2rem, 6vw, 6rem);
+          padding: calc(clamp(0.6rem, 1.6vh, 1.1rem) + 2.75rem + clamp(1.5rem, 6vh, 4.5rem)) 0 clamp(1.25rem, 3vh, 2rem);
+        }
+        .ix-kick { grid-column: 1 / -1; margin: 0; color: var(--ink-3); font-size: var(--step-0); font-weight: 550; }
+        .ix-kick b { color: var(--acc); font-weight: 650; }
         .ix-h { color: var(--ink-3); font-size: var(--step--2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 0.7rem; }
         .ix-pages { display: grid; gap: 0.3rem; align-content: start; }
         .ix-page {
           display: grid;
-          grid-template-columns: auto 1fr;
-          column-gap: 0.9rem;
+          grid-template-columns: clamp(4.6rem, 7.6vw, 6.6rem) 1fr;
+          column-gap: 1.2rem;
           align-items: center;
-          padding: 0.7rem 0.8rem;
-          border-radius: 18px;
+          padding: clamp(0.7rem, 1.6vh, 1.1rem) 1rem;
+          margin-inline: -1rem;
+          border-radius: 24px;
           transition: background 0.35s var(--ease-out);
         }
         .ix-page:hover, .ix-page.is-on { background: var(--paper-2); }
-        .ix-page-g { grid-row: 1 / 3; font-size: 2.1rem; line-height: 0; }
-        .ix-page-t { font-size: var(--step-1); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
-        .ix-page-n { color: var(--ink-2); font-size: var(--step--1); }
-        .ix-page.is-on .ix-page-t::after { content: ""; display: inline-block; width: 0.3em; height: 0.3em; margin-left: 0.2em; border-radius: 99px; background: var(--acc); }
+        .ix-page-g { grid-row: 1 / 3; justify-self: start; font-size: clamp(2.4rem, 4vw, 3.5rem); line-height: 0; transition: transform 0.6s var(--ease-out); }
+        .ix-page:hover .ix-page-g { transform: rotate(-8deg) scale(1.08); }
+        .ix-page-t { font-size: clamp(1.8rem, 3.6vw, 3.2rem); font-weight: 750; letter-spacing: -0.05em; line-height: 1; }
+        .ix-page-n { color: var(--ink-2); font-size: var(--step--1); margin-top: 0.3rem; }
+        .ix-page.is-on .ix-page-t::after { content: ""; display: inline-block; width: 0.2em; height: 0.2em; margin-left: 0.08em; border-radius: 99px; background: var(--acc); }
 
         .ix-secs ol { list-style: none; margin: 0; padding: 0; display: grid; }
         .ix-sec {
-          display: flex; align-items: baseline; gap: 0.9rem;
-          padding: 0.5rem 0.2rem;
+          display: flex; align-items: baseline; gap: 1rem;
+          padding: clamp(0.35rem, 1vh, 0.6rem) 0;
           border-bottom: 1px solid var(--line-2);
-          font-family: var(--font-display); font-weight: 650; font-size: var(--step-1); letter-spacing: -0.03em;
+          font-family: var(--font-display); font-weight: 700;
+          font-size: clamp(1.6rem, 3.2vw, 2.9rem); letter-spacing: -0.05em; line-height: 1.05;
           color: var(--ink-2);
-          transition: color 0.3s, padding 0.45s var(--ease-out);
+          transition: color 0.3s, padding 0.5s var(--ease-out);
         }
-        .ix-sec .num { font-family: var(--font-body); font-size: var(--step--2); color: var(--ink-3); letter-spacing: 0; }
-        .ix-sec:hover { color: var(--ink); padding-left: 0.6rem; }
+        .ix-sec .num { font-family: var(--font-body); font-size: var(--step--1); font-weight: 600; color: var(--ink-3); letter-spacing: 0; min-width: 1.6rem; }
+        .ix-sec:hover { color: var(--ink); padding-left: 0.8rem; }
         .ix-sec.is-on { color: var(--acc); }
 
         .ix-foot {
           grid-column: 1 / -1;
-          display: flex; flex-wrap: wrap; gap: 0.5rem 1.6rem;
+          align-self: end;
+          display: flex; flex-wrap: wrap; gap: 0.5rem 1.8rem;
           padding-top: 1.2rem;
           border-top: 1px solid var(--line);
           font-size: var(--step--1); font-weight: 550;
@@ -543,13 +566,7 @@ const Nav = () => {
           .nav-index { padding: 0 0.38rem; gap: 0; }
           .nav-right .theme-toggle { display: none; }
           .ix-theme { display: inline; }
-          .ix {
-            inset: 0; width: auto; max-height: none; height: 100svh;
-            border-radius: 0;
-            grid-template-columns: 1fr;
-            align-content: start;
-            padding: 5.5rem var(--gutter) 2rem;
-          }
+          .ix-shell { grid-template-columns: 1fr; grid-template-rows: none; }
         }
         @media (max-width: 420px) {
           .nav-tab { padding: 0.5rem 0.5rem; font-size: var(--step--2); }
