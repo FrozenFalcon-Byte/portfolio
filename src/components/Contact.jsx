@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, ArrowUp, Copy, Check } from 'lucide-react';
-import { gsap, heading, magnetic, reduced, cleanup, fx, fx0 } from '../lib/motion';
+import { gsap, ScrollTrigger, heading, magnetic, reduced, cleanup, fx, fx0 } from '../lib/motion';
 import Glyph from './Glyph';
 import Mark from './Mark';
 
@@ -31,9 +31,24 @@ const Contact = () => {
     const tl = gsap.timeline({
       scrollTrigger: { trigger: word, start: 'top bottom', end: 'bottom bottom', scrub: 0.8 },
     });
-    tl.fromTo(chars, { yPercent: 105, rotate: 8, ...fx(10) }, { yPercent: 0, rotate: 0, ...fx0(), stagger: 0.08, ease: 'power3.out' })
-      .fromTo(dot, { y: '-2.4em', scale: 0 }, { y: 0, scale: 1, ease: 'bounce.out', duration: 0.6 }, '-=0.2');
-    return () => { tl.scrollTrigger?.kill(); tl.kill(); };
+    tl.fromTo(chars, { yPercent: 105, rotate: 8, ...fx(10) }, { yPercent: 0, rotate: 0, ...fx0(), stagger: 0.08, ease: 'power3.out' });
+
+    /* The full stop runs on its own clock, not the scrollbar: the page
+       ends right under it, so a scrubbed drop got only a sliver of
+       scroll and snapped in. It falls, lands with a soft squash and
+       settles, and lifts away again if you scroll back up. */
+    gsap.set(dot, { y: '-1.8em', scale: 0.4, opacity: 0, transformOrigin: '50% 100%' });
+    const drop = gsap.timeline({ paused: true })
+      .to(dot, { y: 0, scale: 1, opacity: 1, duration: 0.9, ease: 'power2.in' })
+      .to(dot, { scaleX: 1.35, scaleY: 0.7, duration: 0.18, ease: 'power2.out' })
+      .to(dot, { scaleX: 1, scaleY: 1, duration: 0.9, ease: 'elastic.out(1, 0.45)' });
+    const st = ScrollTrigger.create({
+      trigger: word,
+      start: 'center bottom',
+      onEnter: () => drop.timeScale(1).play(),
+      onLeaveBack: () => drop.timeScale(1.6).reverse(),
+    });
+    return () => { tl.scrollTrigger?.kill(); tl.kill(); st.kill(); drop.kill(); };
   }, []);
 
   const copy = async () => {

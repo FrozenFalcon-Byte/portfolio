@@ -4,6 +4,8 @@ import Lenis from 'lenis';
 import { gsap, ScrollTrigger, reduced } from './lib/motion';
 import Home from './pages/Home';
 import ExperienceDetail from './pages/ExperienceDetail';
+import Story from './pages/Story';
+import Lab from './pages/Lab';
 import Nav from './components/Nav';
 import { RouteCurtain } from './components/RouteCurtain';
 import Cursor from './components/Cursor';
@@ -127,6 +129,8 @@ const Shell = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/experience/pmo" element={<ExperienceDetail />} />
+            <Route path="/story" element={<Story />} />
+            <Route path="/lab" element={<Lab />} />
             <Route path="*" element={<Home />} />
           </Routes>
         </main>
