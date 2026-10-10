@@ -265,9 +265,13 @@ const Cursor = () => {
       tilt.v *= 0.8;
       tilt.a += tilt.v;
 
-      root.style.transform = `translate3d(${ptr.x}px, ${ptr.y}px, 0)`;
-      tiltEl.style.transform = `rotate(${state === 'beam' ? tilt.a * 0.3 : tilt.a}deg) scale(${s.scale * s.sx}, ${s.scale})`;
+      // A resting cursor writes nothing: styles only change when a value does.
+      const pos = `translate3d(${ptr.x}px, ${ptr.y}px, 0)`;
+      const lean = `rotate(${(state === 'beam' ? tilt.a * 0.3 : tilt.a).toFixed(2)}deg) scale(${(s.scale * s.sx).toFixed(3)}, ${s.scale.toFixed(3)})`;
+      if (pos !== wrote.pos) { root.style.transform = pos; wrote.pos = pos; }
+      if (lean !== wrote.lean) { tiltEl.style.transform = lean; wrote.lean = lean; }
     };
+    const wrote = { pos: '', lean: '' };
 
     gsap.ticker.add(tick);
     window.addEventListener('pointermove', onMove, { passive: true });

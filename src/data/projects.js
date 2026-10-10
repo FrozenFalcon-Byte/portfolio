@@ -11,7 +11,7 @@ export const PROJECTS = [
     meta: 'Full-stack · live',
     tone: 'lilac',
     span: 7,
-    img: '/finmcp.webp',
+    img: '/work/finmcp.webp',
     desc: 'A personal finance platform whose business logic is an MCP server. The web app, Claude Desktop and the in-app agent are all clients of the same ledger.',
     lead: 'Most AI features are bolted onto a finished product. FinMCP inverts that: the ledger, the rules and every operation on them live in an MCP server, and the web app is simply the first client to connect. Claude Desktop, Claude Code and Cursor are the others, and none of them gets a weaker version of the app.',
     details: [
@@ -35,7 +35,7 @@ export const PROJECTS = [
     meta: 'Full-stack · live',
     tone: 'cyan',
     span: 5,
-    img: '/trailhead.jpg',
+    img: '/work/trailhead.webp',
     desc: 'Point it at any public GitHub repository and it finds you a way in — cited answers, reading tours, and the issues worth a first contribution.',
     lead: 'Joining a codebase is mostly navigation, not programming. Trailhead reads a repository the way a patient colleague would: it answers questions with the commit, pull request or discussion behind each claim, plans a step-by-step reading order for whatever you are trying to do, and ranks the open issues that suit a newcomer.',
     details: [
@@ -59,7 +59,7 @@ export const PROJECTS = [
     meta: 'Agents · A2A + MCP',
     tone: 'acid',
     span: 5,
-    img: '/swarm.jpg',
+    img: '/work/swarm.webp',
     desc: 'Four specialised agents that triage, fix, test and review GitHub issues — and never merge anything without a human.',
     lead: 'Swarm takes the least glamorous part of maintaining a repository — tests that fail at random — and gives it a crew. Four LLM agents run as separate Agent2Agent services, find the next peer by skill, and hand work along a state-machine task board with streamed progress. A human stands at the end of it, and nothing merges without them.',
     details: [
@@ -87,7 +87,7 @@ export const PROJECTS = [
     meta: 'RAG · deployed',
     tone: 'paper',
     span: 7,
-    img: '/Risk.png',
+    img: '/work/risk.webp',
     desc: 'A dual-database RAG system that predicts construction violations, stop-work orders and safety risks before they land.',
     lead: 'A retrieval system that knows when it does not know. Given a project it has never seen, it declines rather than inventing a plausible risk profile — which, for a safety tool, is the only acceptable failure mode.',
     details: [
@@ -108,7 +108,7 @@ export const PROJECTS = [
     meta: 'SimpleSight Solutions · Nov 2025',
     tone: 'lilac',
     span: 4,
-    img: '/image.png',
+    img: '/work/fleet.webp',
     desc: 'Invoicing, receipts, role-based access and analytics for small businesses on a single Postgres tenant model.',
     lead: 'Built for SimpleSight Solutions Pvt. Ltd.: the billing surface a small business actually touches every day, with the tenancy and permission model underneath it done properly the first time.',
     details: [
@@ -128,7 +128,7 @@ export const PROJECTS = [
     meta: 'Python · Streamlit',
     tone: 'cyan',
     span: 4,
-    img: '/img.png',
+    img: '/work/signal.webp',
     desc: 'OCR, background removal and AI summarisation of visual data, wrapped in one tool.',
     lead: 'One place to take a messy image and get something structured out of it — text, a cut-out subject, or a written report on what the picture contains.',
     details: [
@@ -148,7 +148,7 @@ export const PROJECTS = [
     meta: 'TensorFlow · 94% val',
     tone: 'acid',
     span: 4,
-    img: '/nature.jpeg',
+    img: '/work/nature.webp',
     desc: 'A convolutional network trained on augmented landscape data, deployed as a live inference app.',
     lead: 'A straightforward supervised problem done carefully: the interesting work was in the augmentation, which is what stopped the network memorising a narrow set of landscapes.',
     details: [

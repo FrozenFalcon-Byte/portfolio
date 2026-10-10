@@ -120,6 +120,55 @@
   --paper: #161618; --paper-2: #1F1F22; --paper-3: #2A2A2E;
 }
 
+/* ------------------------------------------------------------
+   Ambient occlusion.
+
+   Light reaching a surface is blocked where it meets another one, so
+   the seam darkens: tight and dark right at the contact line, wide and
+   faint further out. Each level is that falloff built from stacked
+   shadows (no gradients): a hairline of contact, a short penumbra,
+   and a long, soft ambient shade, all pulled in with negative spread
+   so the darkness pools under the surface instead of haloing it.
+
+     --ao-1  small things resting on a surface: buttons, chips, pills
+     --ao-2  cards and panels resting on the page
+     --ao-3  things floating over the page: nav, sheets, overlays
+     --ao-lift  a card picked up on hover
+     --ao-in    wells cut into a surface: tracks, inputs, code
+
+   One strength, --ao-k, scales them all. Black barely reads against a
+   near-black ground, so dark surfaces turn it up. The tokens are
+   declared again wherever --ao-k changes, so they recompute there
+   rather than inheriting the page's.
+   ------------------------------------------------------------ */
+:root { --ao-c: 14 14 13; --ao-k: 1; }
+[data-theme="dark"], [data-surface="ink"] { --ao-c: 0 0 0; --ao-k: 3.2; }
+
+:root, [data-theme="dark"], [data-surface="ink"] {
+  --ao-1:
+    0 0.5px 0.5px rgb(var(--ao-c) / calc(0.07 * var(--ao-k))),
+    0 1px 2px -0.5px rgb(var(--ao-c) / calc(0.08 * var(--ao-k))),
+    0 4px 8px -4px rgb(var(--ao-c) / calc(0.10 * var(--ao-k)));
+  --ao-2:
+    0 0.5px 1px rgb(var(--ao-c) / calc(0.06 * var(--ao-k))),
+    0 2px 4px -1px rgb(var(--ao-c) / calc(0.05 * var(--ao-k))),
+    0 10px 20px -10px rgb(var(--ao-c) / calc(0.10 * var(--ao-k))),
+    0 30px 56px -30px rgb(var(--ao-c) / calc(0.16 * var(--ao-k)));
+  --ao-3:
+    0 1px 1.5px rgb(var(--ao-c) / calc(0.07 * var(--ao-k))),
+    0 6px 12px -6px rgb(var(--ao-c) / calc(0.10 * var(--ao-k))),
+    0 22px 44px -18px rgb(var(--ao-c) / calc(0.16 * var(--ao-k))),
+    0 54px 100px -40px rgb(var(--ao-c) / calc(0.20 * var(--ao-k)));
+  --ao-lift:
+    0 1px 1.5px rgb(var(--ao-c) / calc(0.05 * var(--ao-k))),
+    0 12px 22px -10px rgb(var(--ao-c) / calc(0.12 * var(--ao-k))),
+    0 40px 70px -32px rgb(var(--ao-c) / calc(0.22 * var(--ao-k)));
+  --ao-in:
+    inset 0 1px 1.5px rgb(var(--ao-c) / calc(0.07 * var(--ao-k))),
+    inset 0 3px 8px -4px rgb(var(--ao-c) / calc(0.09 * var(--ao-k)));
+}
+[data-theme="dark"] [data-surface="ink"] { --ao-c: 0 0 0; --ao-k: 3.6; }
+
 /* ============================================================
    3. RESET
    ============================================================ */
@@ -645,3 +694,90 @@ html[data-motion="still"] .rule { transform: none; }
   .rule { transform: none; }
   .spin { animation: spin 1.4s linear infinite !important; }
 }
+
+/* ============================================================
+   AMBIENT OCCLUSION, APPLIED
+
+   Every surface on the site sits on one of the levels defined with
+   the palette. Collected here rather than in each component so the
+   light is the same everywhere. The :root prefix outranks a
+   component's own rule, so a surface cannot quietly keep an older,
+   one-off shadow. Hairline outlines that a surface relied on are
+   kept alongside the occlusion.
+   ============================================================ */
+
+/* Level 1: resting on a surface. */
+:root .btn,
+:root .glyph,
+:root .nav-logo-mark,
+:root .as-chip,
+:root .wk-pill button,
+:root .sy-chip,
+:root .sy-card-n,
+:root .sy-card-go, :root .sy-next-go,
+:root .lab-go,
+:root .lab-k .num,
+:root .ct-copy,
+:root .rc-stamps li,
+:root .gx-node,
+:root .pr-tile,
+:root .loader-pill,
+:root .st-seg-thumb,
+:root .st-switch-k,
+:root .hc-segs,
+:root .st-sw { box-shadow: var(--ao-1); }
+:root .st-sw[aria-checked="true"] { box-shadow: 0 0 0 3px var(--paper-2), 0 0 0 5px var(--ink), var(--ao-1); }
+:root .st-btn { box-shadow: inset 0 0 0 1px var(--line), var(--ao-1); }
+:root .st-btn:hover, :root .st-btn--ink { box-shadow: var(--ao-1); }
+
+/* Level 2: cards and panels on the page. */
+:root .panel,
+:root .media,
+:root .as-app,
+:root .ct-row,
+:root .rc,
+:root .rc-page,
+:root .pr-stage,
+:root .dg,
+:root .cs-index-row,
+:root .st-group,
+:root .st-hood,
+:root .ab-tile,
+:root .sy-card,
+:root .sh-shot,
+:root .as-how li { box-shadow: var(--ao-2); }
+:root .hero-side,
+:root .st-col,
+:root .wk-frame { box-shadow: inset 0 0 0 1px var(--line-2), var(--ao-2); }
+:root .dg { filter: none; }
+
+/* Picked up. */
+:root .ab-tile:hover,
+:root .cs-index-row:hover,
+:root .sy-card:hover { box-shadow: var(--ao-lift); }
+
+/* Level 3: floating over everything. */
+:root .nav-links,
+:root .nav-index { box-shadow: inset 0 0 0 1px var(--line-2), var(--ao-3); }
+:root .lab-panels,
+:root .lab-steps,
+:root .cs-hero-panel,
+:root .sh-aside,
+:root .sh-main { box-shadow: var(--ao-3); }
+
+/* Wells. */
+:root .ex-switch,
+:root .st-seg,
+:root .st-html,
+:root .st-try,
+:root .st-stats div,
+:root .st-tag-field,
+:root .st-switch { box-shadow: var(--ao-in); }
+:root .as-form,
+:root .st-redeem input { box-shadow: inset 0 0 0 1px var(--line), var(--ao-in); }
+:root .st-redeem input:focus { box-shadow: inset 0 0 0 2px var(--acc), var(--ao-in); }
+:root .st-switch.is-on { box-shadow: var(--ao-in); }
+
+/* The one pressed segment stands up out of its track. */
+:root .ex-seg.is-on { box-shadow: var(--ao-1); }
+

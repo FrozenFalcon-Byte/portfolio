@@ -2,6 +2,7 @@ import React, { createContext, forwardRef, useCallback, useContext, useEffect, u
 import { useNavigate } from 'react-router-dom';
 import { gsap, ScrollTrigger, EASE, reduced, canBlur } from '../lib/motion';
 import Glyph from './Glyph';
+import { preloadRoute } from '../lib/routes';
 
 const Ctx = createContext(() => {});
 
@@ -40,6 +41,7 @@ const DEST = {
   '/story': { acc: 'yellow', glyph: 'ship' },
   '/lab': { acc: 'lime', glyph: 'stack' },
   '/experience/pmo': { acc: 'blue', glyph: 'graph' },
+  '/settings': { acc: 'violet', glyph: 'dial' },
 };
 
 const box = (r) => ({ left: r.left, top: r.top, width: r.width, height: r.height });
@@ -66,6 +68,10 @@ export const RouteCurtain = ({ children }) => {
     busy.current = true;
 
     const path = to.split('#')[0] || '/';
+    // The page's code is fetched while the morph plays; the swap waits
+    // for it only if the network is slower than the animation.
+    let arrived = false;
+    const chunk = preloadRoute(path).catch(() => {}).then(() => { arrived = true; });
     const d = DEST[path] || DEST['/'];
     setDest({ ...d, title: title || 'Ajinkya' });
 
@@ -108,6 +114,11 @@ export const RouteCurtain = ({ children }) => {
       }, 0)
       .to(inner, { opacity: 1, y: 0, scale: 1, ...(blur ? { filter: 'blur(0px)' } : {}), duration: 0.6, ease: EASE.swift }, 0.3)
 
+      .add(() => {
+        if (arrived) return;
+        tl.pause();
+        chunk.then(() => tl.resume());
+      }, 0.84)
       .add(() => {
         navigate(to);
         gsap.set(page, { transformOrigin: `50% ${H / 2}px`, scale: 0.94, opacity: 0, y: 40, ...(blur ? { filter: 'blur(10px)' } : {}) });

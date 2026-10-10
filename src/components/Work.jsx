@@ -121,7 +121,7 @@ const Sheet = ({ project, onClose }) => {
           <div className="sh-main-in">
             <span className="sh-meta sh-swap">{p.meta}</span>
             <p className="display sh-lead sh-swap">{p.lead}</p>
-            <div className="sh-shot sh-swap"><img src={p.img} alt="" /></div>
+            <div className="sh-shot sh-swap"><img src={p.img} alt="" decoding="async" /></div>
             <span className="sh-label sh-swap">What I built</span>
             <ol className="sh-steps">
               {p.details.map((d, i) => (
@@ -301,7 +301,7 @@ const Reel = ({ onOpen }) => {
                     <span className="wk-media-tag">{x.meta}</span>
                   </div>
                   <div className="wk-frame-in">
-                    <img src={x.img} alt="" loading={i < 2 ? 'eager' : 'lazy'} />
+                    <img src={x.img} alt="" decoding="async" loading={i < 2 ? 'eager' : 'lazy'} />
                   </div>
                 </div>
               ))}
@@ -345,7 +345,7 @@ const Cards = ({ onOpen }) => {
         {PROJECTS.map((p) => (
           <li key={p.id} className="wk-card" data-acc={p.acc}>
             <button onClick={() => onOpen(p)}>
-              <div className="media wk-card-media"><img src={p.img} alt="" loading="lazy" /></div>
+              <div className="media wk-card-media"><img src={p.img} alt="" loading="lazy" decoding="async" /></div>
               <div className="wk-card-top">
                 <span className="tag tag--acc">{p.n}</span>
                 <span className="mono wk-kind">{p.kind}</span>

@@ -445,13 +445,23 @@ export function marquee(track, opts = {}) {
     track.style.transform = `translate3d(${x}px, 0, 0)`;
   };
 
-  gsap.ticker.add(tick);
+  // Runs only while the strip is on screen.
+  let on = false;
+  const seen = ScrollTrigger.create({
+    trigger: track, start: 'top bottom', end: 'bottom top',
+    onToggle: (self) => {
+      if (self.isActive === on) return;
+      on = self.isActive;
+      if (on) gsap.ticker.add(tick); else gsap.ticker.remove(tick);
+    },
+  });
   window.addEventListener('resize', measure);
   window.lenis?.on?.('scroll', onScroll);
   const raf = requestAnimationFrame(measure);
 
   return () => {
     cancelAnimationFrame(raf);
+    seen.kill();
     gsap.ticker.remove(tick);
     window.removeEventListener('resize', measure);
     window.lenis?.off?.('scroll', onScroll);
@@ -663,17 +673,17 @@ export function scrambleHover(el, opts = {}) {
   el.setAttribute('aria-label', label);
 
   const fns = [];
-  const until = new WeakMap();      // char -> timestamp it resolves at
+  const until = new Map();          // char -> timestamp it resolves at
 
   if (!reduced()) {
+    // Idle most of the time: only characters still scrambling are visited.
     const tick = () => {
+      if (!until.size) return;
       const now = performance.now();
-      for (const c of chars) {
-        const t = until.get(c);
-        if (!t) continue;
+      until.forEach((t, c) => {
         if (now >= t) { c.textContent = c.dataset.c; until.delete(c); }
         else if (Math.random() < 0.5) c.textContent = pick();
-      }
+      });
     };
     gsap.ticker.add(tick);
     fns.push(() => gsap.ticker.remove(tick));
@@ -681,11 +691,25 @@ export function scrambleHover(el, opts = {}) {
     const disturb = (c, ms) => until.set(c, performance.now() + ms);
 
     if (fine()) {
-      const move = (e) => {
-        for (const c of chars) {
+      // Character centres are read once per visit, not once per move:
+      // reading layout right after the ticker wrote text forces a reflow.
+      let centres = null;
+      const enter = () => {
+        centres = chars.map((c) => {
           const r = c.getBoundingClientRect();
-          const dx = e.clientX - (r.left + r.width / 2);
-          const dy = e.clientY - (r.top + r.height / 2);
+          return [r.left + r.width / 2, r.top + r.height / 2];
+        });
+      };
+      const leave = () => { centres = null; };
+      el.addEventListener('pointerenter', enter);
+      el.addEventListener('pointerleave', leave);
+      fns.push(() => { el.removeEventListener('pointerenter', enter); el.removeEventListener('pointerleave', leave); });
+      const move = (e) => {
+        if (!centres) enter();
+        for (let i = 0; i < chars.length; i += 1) {
+          const c = chars[i];
+          const dx = e.clientX - centres[i][0];
+          const dy = e.clientY - centres[i][1];
           // Nearer characters hold their scramble longer, so the
           // disturbance has a soft edge rather than a hard circle.
           const d = Math.hypot(dx, dy);

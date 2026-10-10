@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap, ScrollTrigger, EASE, reduced } from '../lib/motion';
 import Glyph from './Glyph';
+import { preloadRoute } from '../lib/routes';
 
 /* ------------------------------------------------------------------
    The loader for every page that is not home.
@@ -39,6 +40,7 @@ const META = {
 const ready = () => Promise.race([
   Promise.all([
     document.fonts?.ready ?? Promise.resolve(),
+    preloadRoute(window.location.pathname).catch(() => {}),
     document.readyState === 'complete'
       ? Promise.resolve()
       : new Promise((r) => window.addEventListener('load', r, { once: true })),

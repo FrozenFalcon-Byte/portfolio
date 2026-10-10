@@ -34,10 +34,48 @@ function assistantApi(env) {
   };
 }
 
+/* The two Latin font files are needed by every page's first paint, but
+ * the browser only discovers them after the CSS has downloaded and
+ * parsed. Preloading them from the HTML starts both downloads at once,
+ * so headings stop swapping fonts after they have already been laid out. */
+function preloadFonts() {
+  return {
+    name: 'preload-fonts',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(_html, ctx) {
+        return Object.keys(ctx.bundle || {})
+          .filter((f) => /(geist|bricolage-grotesque)-latin-wght-normal-[\w-]+\.woff2$/.test(f))
+          .map((f) => ({
+            tag: 'link',
+            attrs: { rel: 'preload', href: `/${f}`, as: 'font', type: 'font/woff2', crossorigin: '' },
+            injectTo: 'head',
+          }));
+      },
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    plugins: [react(), assistantApi(env)],
-    build: { target: 'es2020' },
+    plugins: [react(), assistantApi(env), preloadFonts()],
+    build: {
+      target: 'es2020',
+      rollupOptions: {
+        output: {
+          // Libraries change far less often than the site does. Kept in
+          // their own files, a deploy only invalidates the site's code and
+          // a returning visitor keeps React and GSAP from cache.
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            if (/[\\/](react|react-dom|scheduler|react-router|react-router-dom|cookie|set-cookie-parser)[\\/]/.test(id)) return 'react';
+            if (/[\\/](gsap|lenis)[\\/]/.test(id)) return 'motion';
+            return 'vendor';
+          },
+        },
+      },
+    },
   };
 });

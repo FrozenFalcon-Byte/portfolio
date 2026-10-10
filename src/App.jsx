@@ -1,17 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import Lenis from 'lenis';
 import { gsap, ScrollTrigger, reduced } from './lib/motion';
 import Home from './pages/Home';
-import ExperienceDetail from './pages/ExperienceDetail';
-import Story from './pages/Story';
-import Lab from './pages/Lab';
 import Nav from './components/Nav';
 import { RouteCurtain } from './components/RouteCurtain';
 import Cursor from './components/Cursor';
 import Loader from './components/Loader';
-import Settings from './pages/Settings';
+import { Story, Lab, ExperienceDetail, Settings, preloadRoute, prefetchRoutes } from './lib/routes';
 import { getPrefs, usePrefs } from './lib/prefs';
+
+// A reload straight into a page starts fetching its chunk now, in
+// parallel with React booting, rather than once the router asks for it.
+preloadRoute(window.location.pathname).catch(() => {});
 
 /* Lenis drives scroll and ScrollTrigger reads from it — one clock, so
    pinned sections and scrubbed timelines never drift apart. */
@@ -120,6 +121,13 @@ const Shell = () => {
   useSmoothScroll();
   const { cursor } = usePrefs();
 
+  // The other pages download once this one has finished arriving.
+  useEffect(() => {
+    if (window.loaderIsDone) { prefetchRoutes(); return undefined; }
+    window.addEventListener('loader-complete', prefetchRoutes, { once: true });
+    return () => window.removeEventListener('loader-complete', prefetchRoutes);
+  }, []);
+
   return (
     <>
       {cursor === 'drawn' && <Cursor />}
@@ -129,6 +137,7 @@ const Shell = () => {
       <RouteCurtain>
         <Nav />
         <main className="page">
+          <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/experience/pmo" element={<ExperienceDetail />} />
@@ -137,6 +146,7 @@ const Shell = () => {
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Home />} />
           </Routes>
+          </Suspense>
         </main>
       </RouteCurtain>
     </>
