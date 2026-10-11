@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Cap, Token } from './Comic';
 import { ArrowDownRight, ArrowUpRight, Download } from 'lucide-react';
 import {
   gsap, EASE, linesIn, scrambleHover, magnetic, reduced, cleanup, fx, fx0,
@@ -339,6 +340,22 @@ const Hero = () => {
 
       <div className="shell hero-reel">
         <div className="hero-reel-in"><Console /></div>
+        {/* Inset panels at their own depths, half off the console's
+            edges, each with something running inside. */}
+        <div className="hero-ins hero-ins--a" data-depth="0.2" aria-hidden="true">
+          <div className="hero-ins-pnl hero-ins-term" data-surface="ink">
+            <code><b>$</b> git push origin main</code>
+            <code><i>→</i> tests passed</code>
+            <code><i>→</i> deployed to Azure</code>
+          </div>
+        </div>
+        <div className="hero-ins hero-ins--b" data-depth="-0.12" aria-hidden="true">
+          <div className="hero-ins-pnl hero-ins-card">
+            <Token className="hero-ins-tok" />
+            <span><strong>Ajinkya Chavan</strong><em>AI/ML engineer · Pune</em></span>
+          </div>
+        </div>
+        <Cap className="hero-cap" depth={0.3} tilt={1.4}>Meet the agent. Ask it about the work and it tells you where each answer came from.</Cap>
       </div>
 
       <style>{`
@@ -439,7 +456,36 @@ const Hero = () => {
         .hero-btns .btn { padding: min(0.95em, 1.6svh) 1.5em; }
 
         /* ---- the console ---- */
-        .hero-reel { padding-bottom: var(--bay); }
+        .hero-reel { position: relative; padding-bottom: var(--bay); }
+        .hero-ins { position: absolute; z-index: 3; pointer-events: none; }
+        .hero-ins--a { left: max(0.5rem, calc(var(--gutter) - 2.2rem)); top: -3.4rem; }
+        .hero-ins--b { right: max(0.5rem, calc(var(--gutter) - 2rem)); top: 62%; }
+        .hero-ins-pnl {
+          display: grid; gap: 0.4rem;
+          padding: 1rem 1.15rem; border-radius: var(--r-m);
+          box-shadow: 0 0 0 2px #0E0E0D, var(--ao-3);
+        }
+        .hero-ins-term { rotate: -4deg; min-width: 15rem; }
+        .hero-ins-term code { font-family: var(--font-mono); font-size: var(--step--1); white-space: nowrap; overflow: hidden; width: 0; animation: hero-type 6s steps(24, end) infinite; }
+        .hero-ins-term code:nth-child(2) { animation-delay: 0.9s; }
+        .hero-ins-term code:nth-child(3) { animation-delay: 1.8s; }
+        .hero-ins-term code b { color: var(--acc); font-weight: 600; }
+        .hero-ins-term code i { font-style: normal; color: var(--ink-3); }
+        @keyframes hero-type { 0% { width: 0; } 18%, 88% { width: 22ch; } 100% { width: 0; } }
+        .hero-ins-card { rotate: 3deg; grid-auto-flow: column; align-items: center; gap: 0.85rem; background: #FFFFFF; color: #0E0E0D; }
+        .hero-ins-card span { display: grid; gap: 0.15rem; }
+        .hero-ins-card strong { font-family: var(--font-display); font-size: var(--step-1); letter-spacing: -0.04em; line-height: 1; }
+        .hero-ins-card em { font-style: normal; font-size: var(--step--1); color: #5C5C58; font-weight: 550; }
+        .hero-ins-tok { font-size: 3.2rem; animation: hero-bob 2.6s var(--ease-in-out) infinite; }
+        @keyframes hero-bob { 50% { translate: 0 -0.08em; rotate: -8deg; } }
+        .hero-cap { right: max(var(--gutter), 3rem); top: -1.6rem; }
+        @media (max-width: 760px) {
+          .hero-ins--b { display: none; }
+          .hero-ins--a { left: 0.6rem; }
+          .hero-ins-term { min-width: 0; padding: 0.7rem 0.85rem; }
+          .hero-cap { right: 0.8rem; left: 0.8rem; top: auto; bottom: calc(var(--bay) - 1.8rem); }
+        }
+        @media (prefers-reduced-motion: reduce) { .hero-ins-term code { animation: none; width: auto; } .hero-ins-tok { animation: none; } }
         .hero-reel-in { transform-origin: 50% 0; will-change: transform; }
         .cs {
           --run: 0;

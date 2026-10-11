@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Cap } from './Comic';
 import { gsap, ScrollTrigger, heading, countTo, drawRule, reduced, cleanup, canBlur, fx, fx0 } from '../lib/motion';
 import Glyph from './Glyph';
 
@@ -169,6 +170,7 @@ const Leadership = () => {
 
   return (
     <section ref={rootRef} id="leadership" className="block record" data-acc="teal">
+      <Cap className="cc-cap--edge">And the paperwork, kept between builds.</Cap>
       <div className="shell">
         <div className="sec-head">
           <span className="eyebrow"><b>07</b>On the record</span>
@@ -187,7 +189,7 @@ const Leadership = () => {
       </div>
 
       <style>{`
-        .record { overflow: clip; }
+        .record { overflow: clip; overflow-clip-margin: 3rem; }
         .rec-head { margin-bottom: clamp(2rem, 6vh, 3.5rem); }
 
         .rec-scene { height: 100svh; display: flex; align-items: center; overflow: hidden; }

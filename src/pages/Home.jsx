@@ -8,6 +8,7 @@ import Experience from '../components/Experience';
 import Leadership from '../components/Leadership';
 import Stack from '../components/Stack';
 import Contact from '../components/Contact';
+import { ComicLayer, Drip } from '../components/Comic';
 
 const Home = () => (
   <>
@@ -19,7 +20,9 @@ const Home = () => (
     <Assistant />
     <Stack />
     <Leadership />
+    <Drip />
     <Contact />
+    <ComicLayer />
   </>
 );
 

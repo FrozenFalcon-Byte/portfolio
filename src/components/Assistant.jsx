@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Cap } from './Comic';
 import { ArrowUp, Loader2 } from 'lucide-react';
 import { gsap, heading, reduced, cleanup, fx, fx0 } from '../lib/motion';
 import Glyph from './Glyph';
@@ -209,7 +210,8 @@ const Assistant = () => {
 
   return (
     <section ref={rootRef} id="assistant" className="block assistant" data-acc="violet">
-      <div className="as-box" ref={boxRef} data-surface="ink">
+      <Cap className="cc-cap--edge">Or just ask. Every answer says where it came from.</Cap>
+      <div className="as-box" ref={boxRef} data-surface="ink" data-tilt="-3">
         <div className="as-grid">
           <div className="as-intro">
             <span className="eyebrow"><b>05</b>Ask my portfolio</span>

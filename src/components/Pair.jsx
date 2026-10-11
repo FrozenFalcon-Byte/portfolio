@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Cap } from './Comic';
 import { gsap, ScrollTrigger, reduced } from '../lib/motion';
 import Glyph from './Glyph';
 import { ARROW, HAND, CREASES } from './Cursor';
@@ -381,6 +382,7 @@ const Pair = () => {
 
   return (
     <section id="pair" className="block pair" data-acc="teal">
+      <Cap className="cc-cap--edge cc-cap--edge-r" tilt={1.2}>Your turn. Four agent steps, in the wrong order.</Cap>
       <div className="shell">
         <div className="sec-head">
           <span className="eyebrow"><b>04</b>Pair with me</span>
@@ -401,6 +403,7 @@ const Pair = () => {
 
         <div
           className="pr-stage"
+          data-tilt="2.5"
           ref={stageRef}
           onPointerMove={onMove}
           onPointerUp={onUp}
