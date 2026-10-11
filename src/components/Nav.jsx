@@ -22,7 +22,7 @@ const LINKS = [
 /* Pages. The bar is about these; the sections live in the index. */
 const PAGES = [
   { to: '/',      label: 'Home',     title: 'Home',         kicker: 'Ajinkya Chavan · Portfolio', glyph: 'mark',  acc: 'pink',   note: 'Everything, in one scroll' },
-  { to: '/story', label: 'Story',    title: 'Story',        kicker: 'The long way round',         glyph: 'ship',  acc: 'yellow', note: 'A camera ride through the years' },
+  { to: '/story', label: 'Story',    title: 'Story',        kicker: 'Panel by panel',             glyph: 'ship',  acc: 'yellow', note: 'Everything I build, panel by panel' },
   { to: '/lab',   label: 'Workshop', title: 'The workshop', kicker: 'Seven builds, one map',      glyph: 'stack', acc: 'lime',   note: 'Every project, built floor by floor' },
 ];
 

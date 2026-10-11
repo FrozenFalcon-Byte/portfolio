@@ -28,7 +28,7 @@ export const loaderKind = (path) => {
 };
 
 const META = {
-  story: { word: 'Story', glyph: 'ship', acc: 'yellow', note: 'A camera ride through the years', tab: '/story' },
+  story: { word: 'Story', glyph: 'ship', acc: 'yellow', note: 'Everything I build, panel by panel', tab: '/story' },
   lab: { word: 'Workshop', glyph: 'stack', acc: 'lime', note: 'Seven builds, one map', tab: '/lab', ink: true },
   graph: { word: 'Emerson', glyph: 'graph', acc: 'blue', note: 'Two agent systems, drawn out', tab: null },
   settings: { word: 'Settings', glyph: 'dial', acc: 'violet', note: 'Make the site yours', tab: null },

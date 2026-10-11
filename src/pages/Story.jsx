@@ -26,7 +26,7 @@ import { PROJECTS } from '../data/projects';
      drip     ink runs down the page
      hall     a hall of columns, a strip across it, a dolly to a plinth
      lift     hold, and the whole stack lifts into orbit
-     record   four records rise at their own speeds and settle into a row
+     record   a comic page of records, each panel running its own picture
      back     the opening comes back, with an empty lot at the end
      ask      the invitation, a poster, and the builds on a turntable
    ------------------------------------------------------------------ */
@@ -148,10 +148,10 @@ const CLIMB = [[0, 0], [0.3, 3], [0.42, 3], [0.5, 2], [0.62, 2], [0.72, 3], [0.8
 const SOP = ['Guardrail', 'Intent', 'Plan', 'Generate', 'Validate', 'Execute', 'Stream'];
 // Where each agent's panel floats on the slab: position, depth, tilt.
 const CREW_AT = [
-  { x: 0.19, y: 0.47, z: 0.7, ry: 14, rx: -6, r: -3 },
-  { x: 0.76, y: 0.3, z: 1, ry: -12, rx: 6, r: 2 },
-  { x: 0.33, y: 0.76, z: 0.9, ry: 10, rx: 8, r: 2 },
-  { x: 0.74, y: 0.72, z: 0.6, ry: -14, rx: -8, r: -2 },
+  { x: 0.19, y: 0.47, z: 0.7, ry: 14, rx: -6, r: -3, mx: 0.28, my: 0.38 },
+  { x: 0.76, y: 0.3, z: 1, ry: -12, rx: 6, r: 2, mx: 0.72, my: 0.3 },
+  { x: 0.33, y: 0.76, z: 0.9, ry: 10, rx: 8, r: 2, mx: 0.3, my: 0.74 },
+  { x: 0.74, y: 0.72, z: 0.6, ry: -14, rx: -8, r: -2, mx: 0.71, my: 0.66 },
 ];
 const CREW = [
   { n: 'Triager', c: 'Labels it a flaky test, not a real failure.', g: 'search' },
@@ -172,17 +172,19 @@ const CAPSULES = [
   { t: 'Interfaces', g: 'click', i: ['React', 'Realtime', 'Motion'] },
 ];
 const ORBIT = ['Python', 'LangGraph', 'React', 'Azure', 'FastAPI', 'MCP', 'Docker', 'TypeScript', 'RAG', 'PostgreSQL', 'A2A', 'TensorFlow'];
-const RECORDS = [
-  { big: '9.55', t: 'CGPA', c: 'B.Tech CSE (AI/ML), VIIT Pune, class of 2027.' },
-  { big: 'IEEE', t: 'Co-author', c: 'Pre-output truthfulness control in LLMs, ICICIS 2026.' },
-  { big: 'Lead', t: 'AIMSS club', c: 'Tech Lead 2024–26: workshops, mentoring, the club’s ML work.' },
-  { big: 'CCNA', t: 'Certified', c: 'CISCO CCNAv7, plus machine and deep learning in Python and R.' },
+// The records page: where each panel flies in from (fractions of the
+// screen), the tilt it arrives with, the tilt it rests at, and how fast
+// it drifts once it has landed.
+const REC_IN = [
+  { a: 0.3, x: -0.35, y: 0.25, r: -9, rest: -0.8, sp: 0.18 },
+  { a: 0.45, x: 0.35, y: 0.15, r: 8, rest: 1.1, sp: 0.3 },
+  { a: 0.6, x: -0.15, y: 0.8, r: -6, rest: 0.9, sp: 0.24 },
+  { a: 0.75, x: 0.2, y: 0.9, r: 7, rest: -1.2, sp: 0.36 },
 ];
-
-// Each record card travels at its own speed and tilt, and settles
-// into the row at the same moment.
-const REC_SPEED = [1.18, 0.86, 1.32, 0.98];
-const REC_TILT = [-7, 5, -4, 8];
+const PAPER_LINES = [92, 100, 86, 96, 70, 88, 54];
+const NET_LINKS = 'M20 60 L80 25 L150 60 L220 30 M20 60 L80 95 L150 60 L220 90 M80 25 L80 95';
+const NET_ROUTE = 'M20 60 L80 25 L150 60 L220 90 L150 60 L80 95 L20 60';
+const NET_NODES = [[20, 60], [80, 25], [80, 95], [150, 60], [220, 30], [220, 90]];
 
 // The shelf the lens searches: past projects, none of them close enough.
 const SHELF = [
@@ -221,6 +223,10 @@ const Story = () => {
     const askDrips = Array.from(stage.querySelectorAll('.sx-ask-drips i'));
     const cols = Array.from(stage.querySelectorAll('.sx-col'));
     const recs = Array.from(stage.querySelectorAll('.sx-rec'));
+    const meter = Array.from(stage.querySelectorAll('.sx-meter i b'));
+    const paperLines = Array.from(stage.querySelectorAll('.sx-paper i'));
+    const crowd = Array.from(stage.querySelectorAll('.sx-crowd i'));
+    const netLinks = stage.querySelector('.sx-net-links');
     const orbit = Array.from(stage.querySelectorAll('.sx-orb'));
     const steps = Array.from(stage.querySelectorAll('.sx-step'));
     const sop = Array.from(stage.querySelectorAll('.sx-sop-s'));
@@ -410,7 +416,7 @@ const Story = () => {
         });
         // The best score climbs, wobbles and stops well under the line.
         const g = out(seg(t, 0.55, 0.85));
-        tf($['ring.gauge'], T((1 - g) * W * 0.4, drift * 0.05, 1, mix(18, 4, g)));
+        tf($['ring.gauge'], T((1 - g) * W * 0.9, drift * 0.05, 1, mix(18, 4, g)));
         const v = 0.34 * out(seg(t, 0.6, 1.2)) + Math.sin(t * 22) * 0.015 * (1 - seg(t, 1.0, 1.3));
         tf($['ring.needle'], `rotate(${(-90 + v * 180).toFixed(2)}deg)`);
         // Then it says so.
@@ -472,14 +478,32 @@ const Story = () => {
       },
 
       record(t) {
-        tf($['record.ground'], T(0, Math.max(0, 0.9 - t) * H));
+        tf($['record.ground'], T(0, Math.max(0, 0.75 - t) * H));
+        // Panels fly in from all sides, land on the page, then each
+        // drifts at its own depth.
         recs.forEach((el, i) => {
-          const d = t - 1.3;
-          const settle = 1 - io(seg(Math.abs(d), 0, 0.9));
-          tf(el, T(0, -d * H * REC_SPEED[i], 1, REC_TILT[i] * Math.min(1, Math.abs(d) * 1.4) * Math.sign(d || 1)));
-          cls(el, 'is-set', settle > 0.92);
+          const P = REC_IN[i];
+          const k = out(seg(t, P.a, P.a + 0.6));
+          const drift = -(t - 1.5) * H * P.sp;
+          tf(el, T(P.x * W * (1 - k), P.y * H * (1 - k) + drift, mix(0.86, 1, k), mix(P.r, P.rest, k)));
         });
-        fl('record.c1', t, 1.1, 0.7);
+        // CGPA rolls up and fills its meter.
+        const v = 9.55 * out(seg(t, 0.55, 1.35));
+        const txt = v.toFixed(2);
+        if ($['record.num'].$v !== txt) { $['record.num'].textContent = txt; $['record.num'].$v = txt; }
+        meter.forEach((el, j) => tf(el, `scaleX(${cl(v - j).toFixed(3)})`));
+        // The paper writes itself, then gets its stamp.
+        tf($['record.paper'], T(0, (1 - out(seg(t, 0.6, 1.2))) * H * 0.16));
+        paperLines.forEach((el, j) => tf(el, `scaleX(${out(seg(t, 0.75 + j * 0.06, 0.95 + j * 0.06)).toFixed(3)})`));
+        const st = back(seg(t, 1.3, 1.55));
+        tf($['record.stamp'], `scale(${(mix(2.2, 1, cl(st)) * (st > 0 ? 1 : 0)).toFixed(3)}) rotate(-12deg)`);
+        op($['record.stamp'], seg(t, 1.3, 1.36));
+        // The room fills.
+        crowd.forEach((el, j) => cls(el, 'is-in', t > 0.85 + j * 0.04));
+        // The network draws its links.
+        const nl = (1 - seg(t, 0.95, 1.5)).toFixed(3);
+        if (netLinks.$d !== nl) { netLinks.style.strokeDashoffset = nl; netLinks.$d = nl; }
+        fl('record.c1', t, 1.5, 0.3);
       },
 
       back(t) {
@@ -721,7 +745,7 @@ const Story = () => {
                 {Array.from({ length: 26 }, (_, i) => <i key={i} style={{ left: `${(i * 3.9 + ((i * 7) % 5)) % 100}%`, '--w': `${1 + (i % 4)}px`, '--o': 0.12 + (i % 3) * 0.06 }} />)}
               </div>
               {CREW.map((a, i) => (
-                <div key={a.n} className="sx-pnl sx-agent" style={{ left: `${CREW_AT[i].x * 100}%`, top: `${CREW_AT[i].y * 100}%` }}>
+                <div key={a.n} className="sx-pnl sx-agent" style={{ '--x': `${CREW_AT[i].x * 100}%`, '--y': `${CREW_AT[i].y * 100}%`, '--mx': `${CREW_AT[i].mx * 100}%`, '--my': `${CREW_AT[i].my * 100}%` }}>
                   <header>
                     <span className="num">{String(i + 1).padStart(2, '0')}</span>
                     <strong className="display">{a.n}</strong>
@@ -778,7 +802,7 @@ const Story = () => {
               <Walker className="sx-rg-say-me" />
               <span className="display">I don’t know.</span>
             </div>
-            <Cap k="ring.c1" on={0.45} className="sx-rg-c1">Retrieval that knows when it doesn’t know.</Cap>
+            <Cap k="ring.c1" on={0.45} off={1.05} className="sx-rg-c1">Retrieval that knows when it doesn’t know.</Cap>
             <Cap k="ring.c2" on={1.05} className="sx-rg-c2">The construction-risk predictor declines on a project it has never seen, rather than inventing a plausible risk profile. For a safety tool, that is the only acceptable failure.</Cap>
           </section>
 
@@ -837,16 +861,39 @@ const Story = () => {
           {/* ---------------- record ---------------- */}
           <section className="sx-scene" data-scene="record" data-acc="teal" aria-label="On the record">
             <div className="sx-full sx-rec-ground" data-k="record.ground" />
-            <div className="sx-rec-row">
-              {RECORDS.map((r) => (
-                <div key={r.big} className="sx-rec">
-                  <div className="sx-rec-card">
-                    <span className="sx-rec-t">{r.t}</span>
-                    <strong className="display">{r.big}</strong>
-                    <p>{r.c}</p>
-                  </div>
+            <div className="sx-rec-page">
+              <div className="sx-pnl sx-rec sx-rec--cgpa">
+                <header><span>CGPA</span><span>B.Tech CSE (AI/ML), VIIT Pune, class of 2027</span></header>
+                <strong className="display" data-k="record.num">9.55</strong>
+                <div className="sx-meter" aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <i key={i}><b /></i>)}</div>
+              </div>
+              <div className="sx-pnl sx-rec sx-rec--ieee">
+                <header><span>Co-author</span><span>IEEE, ICICIS 2026</span></header>
+                <div className="sx-paper" data-k="record.paper">
+                  <b>Pre-output truthfulness control in LLMs</b>
+                  {PAPER_LINES.map((w, i) => <i key={i} style={{ width: `${w}%` }} />)}
+                  <em className="sx-paper-stamp" data-k="record.stamp">Published</em>
                 </div>
-              ))}
+                <strong className="display">IEEE</strong>
+              </div>
+              <div className="sx-pnl sx-rec sx-rec--lead">
+                <header><span>AIMSS club</span><span>Tech Lead 2024–26</span></header>
+                <div className="sx-room" aria-hidden="true">
+                  <div className="sx-board"><i /><i /><i /></div>
+                  <Walker className="sx-room-me" />
+                  <div className="sx-crowd">{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</div>
+                </div>
+                <strong className="display">Lead</strong>
+              </div>
+              <div className="sx-pnl sx-rec sx-rec--ccna">
+                <header><span>Certified</span><span>CISCO CCNAv7</span></header>
+                <svg className="sx-net" viewBox="0 0 240 120" aria-hidden="true">
+                  <path className="sx-net-links" d={NET_LINKS} pathLength="1" />
+                  {NET_NODES.map(([x, y]) => <rect key={`${x}-${y}`} x={x - 9} y={y - 9} width="18" height="18" rx="4" />)}
+                  <circle r="6" className="sx-net-pkt"><animateMotion dur="3.2s" repeatCount="indefinite" path={NET_ROUTE} /></circle>
+                </svg>
+                <strong className="display">CCNA</strong>
+              </div>
             </div>
             <Cap k="record.c1" on={0.7} off={2.1} className="sx-rc-c1">On the record, too. Kept while building on the side.</Cap>
           </section>
@@ -1210,6 +1257,7 @@ const STYLE = `
   .sx-grain { position: absolute; inset: 0 0 -50% 0; }
   .sx-grain i { position: absolute; top: 0; bottom: 0; width: var(--w); background: #0E0E0D; opacity: var(--o); border-radius: 4px; }
   .sx-agent {
+    left: var(--x); top: var(--y);
     width: min(19rem, 40vw); translate: -50% -50%; overflow: visible;
     display: grid; gap: 0.7rem;
     padding: clamp(0.8rem, 1.5vw, 1.15rem);
@@ -1453,27 +1501,54 @@ const STYLE = `
 
   /* ---- record ---- */
   .sx-rec-ground { background: var(--paper); }
-  .sx-rec-row {
-    position: absolute; left: 50%; top: 50%;
-    width: min(76rem, 92vw);
-    translate: -50% -50%;
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(0.6rem, 1.6vw, 1.4rem);
+  .sx-rec-page {
+    position: absolute; left: 50%; top: 54%; translate: -50% -50%;
+    width: min(72rem, 92vw); height: min(36rem, 70vh);
+    display: grid; gap: clamp(0.7rem, 1.6vw, 1.2rem);
+    grid-template-columns: 1.25fr 1fr 1fr; grid-template-rows: 1fr 1fr;
+    grid-template-areas: "a a b" "c d b";
   }
-  .sx-rec { position: relative; height: min(30rem, 62vh); }
-  .sx-rec-card {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; gap: 0.6rem;
-    padding: clamp(1rem, 2vw, 1.6rem);
-    border-radius: var(--r-m);
-    background: var(--acc); color: var(--acc-ink);
-    box-shadow: inset 0 0 0 2px var(--ink), var(--ao-2);
-    transition: scale 0.6s var(--ease-out);
+  .sx-rec { position: relative; display: flex; flex-direction: column; gap: 0.6rem; min-height: 0; padding: clamp(0.9rem, 1.8vw, 1.4rem); background: var(--paper-2); }
+  .sx-rec header { display: flex; justify-content: space-between; gap: 1rem; font-size: var(--step--1); font-weight: 650; }
+  .sx-rec header span + span { opacity: 0.7; text-align: right; font-weight: 550; }
+  .sx-rec strong { margin-top: auto; font-size: clamp(2rem, 4.4vw, 4rem); letter-spacing: -0.06em; line-height: 0.85; }
+  .sx-rec--cgpa { grid-area: a; background: var(--acc); color: var(--acc-ink); }
+  .sx-rec--cgpa strong { font-size: clamp(4rem, 11vw, 10rem); font-variant-numeric: tabular-nums; }
+  .sx-rec--ieee { grid-area: b; }
+  .sx-rec--lead { grid-area: c; }
+  .sx-rec--ccna { grid-area: d; }
+  .sx-meter { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 5px; }
+  .sx-meter i { position: relative; height: 0.7rem; border-radius: 3px; background: rgb(14 14 13 / 0.16); overflow: hidden; }
+  .sx-meter b { position: absolute; inset: 0; background: var(--acc-ink); transform-origin: 0 50%; transform: scaleX(0); }
+  .sx-paper {
+    position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden;
+    display: grid; align-content: start; gap: 0.55rem;
+    padding: clamp(0.8rem, 1.5vw, 1.2rem); border-radius: var(--r-s);
+    background: #FFFFFF; color: #0E0E0D; box-shadow: 0 0 0 2px #0E0E0D, var(--ao-1);
   }
-  .sx-rec.is-set .sx-rec-card { scale: 1.02; }
-  .sx-rec-card strong { margin-top: auto; font-size: clamp(2.6rem, 6vw, 5.6rem); letter-spacing: -0.06em; line-height: 0.85; }
-  .sx-rec-t { font-weight: 650; font-size: var(--step--1); }
-  .sx-rec-card p { margin: 0; font-size: var(--step--1); line-height: 1.4; opacity: 0.86; }
-  .sx-rc-c1 { left: 5%; top: 9%; }
+  .sx-paper b { font-weight: 700; font-size: var(--step-0); line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 0.2rem; }
+  .sx-paper i { display: block; height: 0.4rem; border-radius: 4px; background: #DADAD4; transform-origin: 0 50%; transform: scaleX(0); }
+  .sx-paper-stamp {
+    position: absolute; right: 0.9rem; bottom: 0.9rem;
+    padding: 0.3rem 0.7rem; border-radius: var(--r-s);
+    box-shadow: inset 0 0 0 3px var(--acc); color: var(--acc);
+    font-style: normal; font-weight: 800; font-size: var(--step-0); text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .sx-room { position: relative; flex: 1 1 auto; min-height: 0; }
+  .sx-board { position: absolute; left: 50%; top: 2%; translate: -50% 0; width: 58%; height: 36%; display: grid; align-content: center; gap: 0.35rem; padding: 0 0.7rem; border-radius: var(--r-s); background: var(--paper); box-shadow: 0 0 0 2px var(--ink); }
+  .sx-board i { display: block; height: 0.32rem; border-radius: 4px; background: var(--acc); transform-origin: 0 50%; animation: sx-type 3.6s infinite both; }
+  .sx-board i:nth-child(2) { width: 70%; animation-delay: 0.4s; background: var(--ink-3); }
+  .sx-board i:nth-child(3) { width: 84%; animation-delay: 0.8s; }
+  .sx-room-me { position: absolute; left: 76%; top: 8%; font-size: clamp(28px, 4.6vh, 44px); animation: sx-bob 2.4s var(--ease-in-out) infinite; }
+  .sx-crowd { position: absolute; left: 4%; right: 4%; bottom: 8%; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; justify-items: center; }
+  .sx-crowd i { width: min(100%, 1.15rem); aspect-ratio: 1; border-radius: 50%; background: var(--ink); scale: 0; transition: scale 0.45s var(--ease-out); }
+  .sx-crowd i:nth-child(3n) { background: var(--acc); box-shadow: 0 0 0 2px var(--ink); }
+  .sx-crowd i.is-in { scale: 1; }
+  .sx-net { flex: 1 1 auto; min-height: 0; width: 100%; overflow: visible; }
+  .sx-net-links { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .sx-net rect { fill: var(--paper); stroke: var(--ink); stroke-width: 2.5; }
+  .sx-net-pkt { fill: var(--acc); stroke: var(--ink); stroke-width: 2; }
+  .sx-rc-c1 { left: 4%; top: 11%; z-index: 2; }
 
   /* ---- back ---- */
   .sx-back-title { top: 17%; }
@@ -1615,17 +1690,23 @@ const STYLE = `
     .sx-step strong { font-size: 0.62rem; letter-spacing: -0.02em; }
     .sx-cl-c1 { top: 10%; }
     .sx-cl-c2 { bottom: 6%; }
-    .sx-agent { width: 44vw; padding: 0.6rem; gap: 0.45rem; }
+    .sx-agent { left: var(--mx); top: var(--my); width: 44vw; padding: 0.6rem; gap: 0.45rem; }
     .sx-agent > p { display: none; }
     .sx-mini { height: 3.6rem; font-size: 0.6rem; padding: 0.4rem; }
     .sx-crew-disc { width: 4.4rem; height: 4.4rem; margin: -2.2rem 0 0 -2.2rem; font-size: 0.66rem; }
     .sx-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .sx-shelf-card:nth-child(n+7) { display: none; }
-    .sx-rg-gauge { top: 7%; width: 9.5rem; }
-    .sx-rg-c1 { top: 20%; }
-    .sx-rec-row { grid-template-columns: 1fr 1fr; }
-    .sx-rec { height: min(17rem, 33vh); }
-    .sx-rec-card p { display: none; }
+    .sx-rg-main { top: 45%; }
+    .sx-rg-gauge { top: auto; bottom: 3%; left: 4%; right: auto; width: 8.5rem; }
+    .sx-rg-say { right: 7%; bottom: 18%; padding: 0.75rem 0.95rem; }
+    .sx-rg-say > span { font-size: 1.6rem; }
+    .sx-rg-gauge p { font-size: 0.66rem; flex-direction: column; gap: 0.1rem; }
+    .sx-rg-say-me { font-size: 44px; }
+    .sx-rg-c1, .sx-rg-c2 { top: 11%; left: 4%; right: 4%; max-width: none; }
+    .sx-rec-page { height: min(40rem, 74vh); grid-template-columns: 1fr 1fr; grid-template-rows: 0.9fr 1.2fr 1fr; grid-template-areas: "a a" "b b" "c d"; }
+    .sx-rec header span + span { display: none; }
+    .sx-rec--ieee strong { display: none; }
+    .sx-paper b { font-size: var(--step--1); }
     .sx-caps { gap: 1em; padding: 0 0.6em; }
     .sx-capsule { min-height: 30em; padding: 2em 0.6em 1.4em; }
     .sx-capsule strong { font-size: 2.6em; }

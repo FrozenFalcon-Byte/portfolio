@@ -544,7 +544,7 @@ const Lab = () => {
               <h2 className="display lab-t">All of it, built by one person who is still building.</h2>
               <p className="lab-b">That is the structure. The road that led to it is on the other page.</p>
               <div className="lab-row">
-                <TransitionLink to="/story" title="Story" kicker="The long way round" className="lab-go" data-cursor="hot">
+                <TransitionLink to="/story" title="Story" kicker="Panel by panel" className="lab-go" data-cursor="hot">
                   Read the story
                   <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 9 L9 3 M4 3 H9 V8" /></svg>
                 </TransitionLink>
