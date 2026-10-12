@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Cap } from './Comic';
+import { Cap, Inset } from './Comic';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { TransitionLink } from './RouteCurtain';
 import { gsap, ScrollTrigger, EASE, heading, reduced, cleanup, fx, fx0 } from '../lib/motion';
@@ -250,6 +250,7 @@ const Experience = () => {
   return (
     <section ref={rootRef} id="experience" className="experience" data-acc="blue">
       <Cap className="cc-cap--edge cc-cap--edge-r" tilt={1.4}>December 2025, Emerson. Two reporting codebases that should have been one.</Cap>
+      <Inset scene="type" className="cc-ins--l" tilt={-1.6} />
       <div className="shell ex-intro">
         <span className="eyebrow"><b>02</b>Experience</span>
         <h2 ref={headRef} className="display display--l ex-head">

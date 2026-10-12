@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Cap } from './Comic';
+import { Cap, Inset } from './Comic';
 import { gsap, ScrollTrigger, reduced } from '../lib/motion';
 import Glyph from './Glyph';
 import { ARROW, HAND, CREASES } from './Cursor';
@@ -383,6 +383,7 @@ const Pair = () => {
   return (
     <section id="pair" className="block pair" data-acc="teal">
       <Cap className="cc-cap--edge cc-cap--edge-r" tilt={1.2}>Your turn. Four agent steps, in the wrong order.</Cap>
+      <Inset scene="sort" className="cc-ins--l" tilt={-2} />
       <div className="shell">
         <div className="sec-head">
           <span className="eyebrow"><b>04</b>Pair with me</span>

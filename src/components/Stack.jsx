@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Cap } from './Comic';
+import { Cap, Inset } from './Comic';
 import { gsap, ScrollTrigger, EASE, heading, drawRule, reduced, cleanup, fx, fx0, stepSnap } from '../lib/motion';
 import Glyph from './Glyph';
 
@@ -189,6 +189,7 @@ const Stack = () => {
   return (
     <section ref={rootRef} id="stack" className="block stack" data-acc="lime">
       <Cap className="cc-cap--edge cc-cap--edge-r" tilt={1.4}>What all of it runs on.</Cap>
+      <Inset scene="stack" className="cc-ins--l" tilt={-1.4} />
       <div className="shell">
         <div className="sec-head">
           <span className="eyebrow"><b>06</b>Stack</span>

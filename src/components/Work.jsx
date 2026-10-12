@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Cap } from './Comic';
+import { Cap, Inset } from './Comic';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Plus, X } from 'lucide-react';
 import { gsap, ScrollTrigger, EASE, heading, drawRule, riseIn, reduced, cleanup, canBlur, fx, fx0, stepSnap } from '../lib/motion';
@@ -384,6 +384,7 @@ const Work = () => {
   return (
     <section ref={rootRef} id="work" className="block work" data-acc="pink">
       <Cap className="cc-cap--edge">Seven builds, each one shipped end to end. Pick one.</Cap>
+      <Inset scene="ship" className="cc-ins--r" tilt={1.4} />
       <div className="shell">
         <div className="sec-head">
           <span className="eyebrow"><b>03</b>Work</span>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Cap } from './Comic';
+import { Cap, Inset } from './Comic';
 import { ArrowUp, Loader2 } from 'lucide-react';
 import { gsap, heading, reduced, cleanup, fx, fx0 } from '../lib/motion';
 import Glyph from './Glyph';
@@ -211,6 +211,7 @@ const Assistant = () => {
   return (
     <section ref={rootRef} id="assistant" className="block assistant" data-acc="violet">
       <Cap className="cc-cap--edge">Or just ask. Every answer says where it came from.</Cap>
+      <Inset scene="read" className="cc-ins--r" tilt={1.8} />
       <div className="as-box" ref={boxRef} data-surface="ink" data-tilt="-3">
         <div className="as-grid">
           <div className="as-intro">

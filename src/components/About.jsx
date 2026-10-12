@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Cap } from './Comic';
+import { Cap, Inset } from './Comic';
 import { gsap, drawRule, countTo, reduced, cleanup, fx, fx0 } from '../lib/motion';
 import ScrubText from './ScrubText';
 import Glyph from './Glyph';
@@ -79,6 +79,7 @@ const About = () => {
   return (
     <section ref={rootRef} id="about" className="block about" data-acc="yellow">
       <Cap className="cc-cap--edge">First, the short version. The long one is on the Story page.</Cap>
+      <Inset scene="walk" className="cc-ins--r" tilt={1.8} />
       <div className="shell">
         <div className="sec-head">
           <span className="eyebrow"><b>01</b>About</span>
