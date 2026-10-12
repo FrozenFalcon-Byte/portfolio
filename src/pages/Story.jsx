@@ -19,13 +19,13 @@ import { PROJECTS } from '../data/projects';
 
    Scenes, in the order you meet them:
      open     a full-bleed title pulls in to a framed panel; insets fly in
-     climb    a panel grows to full bleed while the token climbs a graph
+     climb    a panel grows to full bleed while a report writes itself
      near     a panel tilted back in space stands up as it reaches you
-     crew     a slab slides over; hold to run four agents
+     crew     a slab slides over; hold to pass a test down four agents
      ring     a lens searches a shelf of past projects, finds nothing close
      drip     ink runs down the page
-     hall     a hall of columns, a strip across it, a dolly to a plinth
-     lift     hold, and the whole stack lifts into orbit
+     hall     the stack, dropped in layer by layer, with the builds on top
+     lift     hold, and a question rides the stack down and back up
      record   a comic page of records, each panel running its own picture
      back     the opening comes back, with an empty lot at the end
      ask      the invitation, a poster, and the builds on a turntable
@@ -38,15 +38,15 @@ const SCENES = [
   { id: 'crew',   at: 7.7,  len: 2.9, acc: 'lime',   label: 'Crew' },
   { id: 'ring',   at: 10.1, len: 2.4, acc: 'yellow', label: 'Retrieval' },
   { id: 'drip',   at: 12.2, len: 1.0, acc: 'violet' },
-  { id: 'hall',   at: 13.2, len: 4.4, acc: 'violet', label: 'Stack' },
-  { id: 'lift',   at: 17.3, len: 2.5, acc: 'pink' },
-  { id: 'record', at: 19.5, len: 2.8, acc: 'teal',   label: 'Record' },
-  { id: 'back',   at: 21.9, len: 2.7, acc: 'yellow', label: 'Next' },
-  { id: 'ask',    at: 24.3, len: 3.4, acc: 'yellow' },
-  { id: 'poster', at: 25.3, len: 2.0, acc: 'yellow' },
-  { id: 'reel',   at: 27.0, len: 1.7, acc: 'pink',   label: 'Builds' },
+  { id: 'hall',   at: 13.2, len: 3.0, acc: 'violet', label: 'Stack' },
+  { id: 'lift',   at: 15.9, len: 2.5, acc: 'pink' },
+  { id: 'record', at: 18.1, len: 2.8, acc: 'teal',   label: 'Record' },
+  { id: 'back',   at: 20.5, len: 2.7, acc: 'yellow', label: 'Next' },
+  { id: 'ask',    at: 22.9, len: 3.4, acc: 'yellow' },
+  { id: 'poster', at: 23.9, len: 2.0, acc: 'yellow' },
+  { id: 'reel',   at: 25.6, len: 1.7, acc: 'pink',   label: 'Builds' },
 ];
-const TOTAL = 27.0 + 1.7 + 1;   // screens of track; the last one is the stuck stage itself
+const TOTAL = 25.6 + 1.7 + 1;   // screens of track; the last one is the stuck stage itself
 
 const cl = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const seg = (t, a, b) => cl((t - a) / (b - a));
@@ -63,6 +63,7 @@ const io = (x) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2);
 const Walker = ({ className = '', k }) => (
   <div className={`sx-walker ${className}`} data-k={k} aria-hidden="true">
     <span className="sx-tok"><b>a</b><i /></span>
+    <span className="sx-legs"><i /><i /></span>
   </div>
 );
 
@@ -102,8 +103,8 @@ const Cap = ({ k, on, off, className = '', children }) => (
 const HoldButton = ({ label, onHold, k }) => {
   const down = (e) => {
     e.preventDefault();
-    e.currentTarget.setPointerCapture?.(e.pointerId);
     onHold(true);
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* the hold still runs */ }
   };
   const up = () => onHold(false);
   const key = (on) => (e) => {
@@ -136,42 +137,45 @@ const HoldButton = ({ label, onHold, k }) => {
   );
 };
 
-/* The PMO graph as a staircase: each stage is a step, production is
-   the landing at the top. The token climbs it, fails a check on
-   Validate, drops back a step to fix the SQL, and walks on up. */
+/* The PMO graph as a report that writes itself: each stage fills in
+   one part of the page. The run reaches Validate, the totals do not
+   match, it goes back to the SQL, fixes the join and carries on. */
 const STEPS = ['Intake', 'Extract', 'SQL', 'Validate', 'Report', 'Production'];
-const STEP_W = 0.13;
-const STEP_X = (i) => 0.1 + STEP_W * i;
-const STEP_TOP = (i) => 0.8 - i * 0.1;
 const CLIMB = [[0, 0], [0.3, 3], [0.42, 3], [0.5, 2], [0.62, 2], [0.72, 3], [0.86, 4], [1, 5]];
+const SLIP = [['North', 12], ['East', 9], ['West', 6], ['South', 4]];
 
 const SOP = ['Guardrail', 'Intent', 'Plan', 'Generate', 'Validate', 'Execute', 'Stream'];
-// Where each agent's panel floats on the slab: position, depth, tilt.
-const CREW_AT = [
-  { x: 0.19, y: 0.47, z: 0.7, ry: 14, rx: -6, r: -3, mx: 0.28, my: 0.38 },
-  { x: 0.76, y: 0.3, z: 1, ry: -12, rx: 6, r: 2, mx: 0.72, my: 0.3 },
-  { x: 0.33, y: 0.76, z: 0.9, ry: 10, rx: 8, r: 2, mx: 0.3, my: 0.74 },
-  { x: 0.74, y: 0.72, z: 0.6, ry: -14, rx: -8, r: -2, mx: 0.71, my: 0.66 },
-];
 const CREW = [
-  { n: 'Triager', c: 'Labels it a flaky test, not a real failure.', g: 'search' },
-  { n: 'Coder', c: 'Writes the fix in a sandbox with no network.', g: 'code' },
-  { n: 'Tester', c: 'Proves it fails before the fix and passes after.', g: 'check' },
-  { n: 'Reviewer', c: 'Reads the diff and approves it.', g: 'doc' },
+  { n: 'Triager', c: 'Labels it a flaky test, not a real failure.', now: 'The Triager reads the failure: flaky, not broken.' },
+  { n: 'Coder', c: 'Writes the fix in a sandbox with no network.', now: 'The Coder writes a fix in a sandbox with no network.' },
+  { n: 'Tester', c: 'Proves it fails before the fix and passes after.', now: 'The Tester proves it fails before the fix and passes after.' },
+  { n: 'Reviewer', c: 'Reads the diff and approves it.', now: 'The Reviewer reads the diff and approves it.' },
 ];
-const COLS = [
-  { t: 'Languages', i: 'Python · Java · C++ · JS · SQL' },
-  { t: 'GenAI & ML', i: 'LangGraph · RAG · MCP · A2A' },
-  { t: 'Web', i: 'React · TypeScript · FastAPI' },
-  { t: 'Cloud', i: 'Azure · AWS · Vercel · Render' },
-  { t: 'Tooling', i: 'Git · Docker · GitHub Actions' },
+const CREW_IDLE = 'Hold the seal. The test only moves while you hold.';
+// Where each panel of the crew page flies in from, and the tilt it keeps.
+const CREW_IN = [[-0.45, 0.1, -9, -1.2], [0, -0.7, 5, 0.8], [0.45, 0.1, 9, -0.7], [-0.35, 0.7, -6, 0.6], [0.4, 0.7, 7, -0.9]];
+const CREW_DONE = 'Pull request opened. Merging it is left to a human.';
+// The stack, top layer first; the page drops them in bottom first.
+const LAYERS = [
+  { t: 'GenAI & ML', i: ['LangGraph', 'RAG', 'MCP', 'A2A', 'TensorFlow'] },
+  { t: 'Web', i: ['React', 'TypeScript', 'FastAPI'] },
+  { t: 'Cloud', i: ['Azure', 'AWS', 'Vercel', 'Render'] },
+  { t: 'Tooling', i: ['Git', 'Docker', 'GitHub Actions'] },
+  { t: 'Languages', i: ['Python', 'Java', 'C++', 'JavaScript', 'SQL'] },
 ];
 const CAPSULES = [
   { t: 'Agents', g: 'graph', i: ['LangGraph', 'MCP servers', 'A2A crews'] },
   { t: 'Retrieval', g: 'search', i: ['RAG', 'Vector search', 'Confidence gates'] },
   { t: 'Interfaces', g: 'click', i: ['React', 'Realtime', 'Motion'] },
 ];
-const ORBIT = ['Python', 'LangGraph', 'React', 'Azure', 'FastAPI', 'MCP', 'Docker', 'TypeScript', 'RAG', 'PostgreSQL', 'A2A', 'TensorFlow'];
+// One question through one build, floor by floor, top to bottom.
+const FLOORS = [
+  { l: 'Interface', t: 'React', d: 'Takes the question, streams the answer back.' },
+  { l: 'API', t: 'FastAPI', d: 'Checks it and opens a stream.' },
+  { l: 'Agent', t: 'LangGraph', d: 'Decides it needs the release notes.' },
+  { l: 'Retrieval', t: 'RAG', d: 'Finds the two notes that answer it.' },
+  { l: 'Data', t: 'PostgreSQL', d: 'Where the notes live.' },
+];
 // The records page: where each panel flies in from (fractions of the
 // screen), the tilt it arrives with, the tilt it rests at, and how fast
 // it drifts once it has landed.
@@ -204,10 +208,9 @@ const Story = () => {
   const rootRef = useRef(null);
   const trackRef = useRef(null);
   const stageRef = useRef(null);
-  const crewRef = useRef({ hold: false, n: 0, done: false });
+  const crewRef = useRef({ hold: false, p: 0 });
   const liftRef = useRef({ hold: false, p: 0 });
   const [flat] = useState(() => reduced());
-  const [crewDone, setCrewDone] = useState(false);
   const [reel, setReel] = useState(0);
 
   useEffect(() => {
@@ -221,32 +224,36 @@ const Story = () => {
     const drips = Array.from(stage.querySelectorAll('.sx-drip i'));
     const shelf = Array.from(stage.querySelectorAll('.sx-shelf-card'));
     const askDrips = Array.from(stage.querySelectorAll('.sx-ask-drips i'));
-    const cols = Array.from(stage.querySelectorAll('.sx-col'));
+    const drawers = Array.from(stage.querySelectorAll('.sx-drawer'));
+    const builds = Array.from(stage.querySelectorAll('.sx-build'));
     const recs = Array.from(stage.querySelectorAll('.sx-rec'));
     const meter = Array.from(stage.querySelectorAll('.sx-meter i b'));
     const paperLines = Array.from(stage.querySelectorAll('.sx-paper i'));
     const crowd = Array.from(stage.querySelectorAll('.sx-crowd i'));
     const netLinks = stage.querySelector('.sx-net-links');
-    const orbit = Array.from(stage.querySelectorAll('.sx-orb'));
-    const steps = Array.from(stage.querySelectorAll('.sx-step'));
+    const floors = Array.from(stage.querySelectorAll('.sx-floor'));
+    const monLines = Array.from(stage.querySelectorAll('.sx-mon-l'));
+    const liftPanels = Array.from(stage.querySelectorAll('.sx-lf-pn'));
     const sop = Array.from(stage.querySelectorAll('.sx-sop-s'));
-    const crewCards = Array.from(stage.querySelectorAll('.sx-agent'));
-    const grain = Array.from(stage.querySelectorAll('.sx-grain i'));
+    const crewCards = Array.from(stage.querySelectorAll('.sx-cr-p'));
 
     let W = 0; let H = 0; let F = 900; let gut = 40; let narrow = false;
-    let plinthBase = 640;
     let shelfXY = [];
+    let crewXY = []; let floorY = []; let shaftH = 1;
+    let chest = { x: 0, y: 0, w: 0, rows: [] };
     const measure = () => {
       W = stage.clientWidth; H = stage.clientHeight;
       F = H * 1.0;
       narrow = W < 760;
       gut = narrow ? 12 : Math.min(W * 0.045, 64);
-      // The plinth is sized so that, at the end of the dolly, it fills
-      // most of the width it has.
-      const sEnd = F / 600;
-      plinthBase = Math.min(W * (narrow ? 0.94 : 0.8), 1000) / sEnd;
-      $['hall.plinth'].style.width = `${plinthBase.toFixed(1)}px`;
-      $['hall.plinth'].style.fontSize = `${(plinthBase / 42).toFixed(2)}px`;
+      // Where the test stands in each panel of the crew page.
+      crewXY = crewCards.map((el) => [el.offsetLeft + el.offsetWidth * (narrow ? 0.24 : 0.2), el.offsetTop + el.offsetHeight * (narrow ? 0.4 : 0.36)]);
+      // The toolbox: where each drawer sits, so the token can stand on it.
+      const ch = $['hall.chest'];
+      chest = { x: ch.offsetLeft, y: ch.offsetTop, w: ch.offsetWidth, rows: drawers.map((d) => d.offsetTop) };
+      // Floor centres for the lift car.
+      floorY = floors.map((el) => el.offsetTop + el.offsetHeight / 2);
+      shaftH = floors[0].parentElement.offsetHeight || 1;
       // Card centres on the shelf, so the lens lands on them at any width.
       shelfXY = shelf.map((el) => [el.offsetLeft + el.offsetWidth / 2, el.offsetTop + el.offsetHeight / 2]);
     };
@@ -276,7 +283,6 @@ const Story = () => {
     const slab = (t, a, b = Infinity) => (t < a ? (a - t) * H : t > b ? -(t - b) * H : 0);
 
     let clock = 0;
-    let orbitA = 0;
 
     const U = {
       open(t) {
@@ -316,29 +322,28 @@ const Story = () => {
         const p = $['climb.panel'];
         tf(p, T(0, slab(t, 0.85, 2.7)));
         cp(p, iy, ix, iy, ix, 26 * (1 - e));
-        // The content pushes in while the frame opens out.
-        tf($['climb.world'], T(0, mix(H * 0.06, 0, seg(t, 0.2, 1.6)), mix(0.9, 1.05, seg(t, 0.2, 2.7))));
-        tf($['climb.sun'], T(0, -seg(t, 0, 2.7) * H * 0.1));
-        // Walk the staircase along its keyframes, hopping step to step.
+        tf($['climb.world'], T(0, mix(H * 0.06, 0, seg(t, 0.2, 1.4)), mix(0.94, 1, seg(t, 0.2, 1.4))));
+        // The run, stage by stage: up to Validate, back to the SQL, on.
         const c = seg(t, 0.95, 2.45);
         let j = 0; while (j < CLIMB.length - 2 && c > CLIMB[j + 1][0]) j += 1;
         const pos = mix(CLIMB[j][1], CLIMB[j + 1][1], seg(c, CLIMB[j][0], CLIMB[j + 1][0]));
-        const a = Math.min(STEPS.length - 2, Math.floor(pos)); const f = pos - a;
-        const cx = (i) => STEP_X(i) + STEP_W / 2;
-        const x = mix(cx(a), cx(a + 1), f) * W;
-        const hop = Math.sin(f * Math.PI) * H * 0.07;
-        const y = Math.min(STEP_TOP(a), STEP_TOP(a + 1)) * H + Math.abs(STEP_TOP(a) - STEP_TOP(a + 1)) * H * (STEP_TOP(a + 1) > STEP_TOP(a) ? f : 1 - f) - hop;
-        tf($['climb.walker'], T(x, y, 1, Math.sin(f * Math.PI) * -12));
-        tf($['climb.say'], T(x, y));
+        const reached = c < 0.3 ? pos : Math.max(3, pos);
         const bad = c > 0.3 && c < 0.5; const fix = c >= 0.5 && c < 0.72;
-        steps.forEach((el, i) => {
-          cls(el, 'is-on', pos >= i - 0.15 && !(bad && i === 3));
-          cls(el, 'is-bad', bad && i === 3);
-        });
-        cls($['climb.say'], 'is-bad', bad);
-        cls($['climb.say'], 'is-fix', fix);
-        cls($['climb.sun'], 'is-on', pos > 4.85);
-        fl('climb.in', t, 2.4, 1.35);
+        const label = bad ? 'Validate: totals off' : fix ? 'SQL: fixing the join' : STEPS[Math.round(pos)];
+        if ($['climb.stage'].$l !== label) { $['climb.stage'].textContent = label; $['climb.stage'].$l = label; }
+        cls($['climb.world'], 'is-bad', bad);
+        monLines.forEach((el, i) => tf(el, `scaleX(${seg(reached, i * 0.95, i * 0.95 + 0.95).toFixed(3)})`));
+        // The check, close up, slides in from the right.
+        const k2 = out(seg(t, 0.95, 1.35));
+        tf($['climb.p2'], T((1 - k2) * W * 0.55, 0, 1, mix(12, 1.6, k2)));
+        cls($['climb.p2'], 'is-bad', bad);
+        cls($['climb.p2'], 'is-fix', fix);
+        cls($['climb.p2'], 'is-ok', c >= 0.72);
+        // The printer comes up from below and prints the report.
+        const k3 = out(seg(t, 1.75, 2.15));
+        tf($['climb.p3'], T(0, (1 - k3) * H * 0.8, 1, mix(-10, -1.4, k3)));
+        tf($['climb.paper'], `translate3d(0, ${((1 - out(seg(c, 0.84, 1))) * 100).toFixed(2)}%, 0)`);
+        cls($['climb.p3'], 'is-sent', pos > 4.85);
       },
 
       near(t) {
@@ -352,48 +357,33 @@ const Story = () => {
         fl('near.c2', t, 1.3, 1);
       },
 
-      crew(t, dt) {
-        const sy = slab(t, 0.9, 2.2);
-        tf($['crew.slab'], T(0, sy));
+      crew(t) {
+        const slabEl = $['crew.slab'];
+        tf(slabEl, T(0, slab(t, 0.9, 2.2)));
         const st = crewRef.current;
-        // The disc follows the pointer; the token chases the disc, harder
-        // while you hold. Carry it to each agent, in order, to run them.
-        if (st.px == null) { st.px = W * 0.5; st.py = H * 0.55; }
-        const k1 = Math.min(1, dt * 12);
-        st.dx = st.dx == null ? st.px : st.dx + (st.px - st.dx) * k1;
-        st.dy = st.dy == null ? st.py : st.dy + (st.py - st.dy) * k1;
-        const k2 = Math.min(1, dt * (st.hold ? 7 : 1.6));
-        const gx = st.hold ? st.dx : W * 0.5 + (st.dx - W * 0.5) * 0.25;
-        const gy = st.hold ? st.dy : H * 0.53 + (st.dy - H * 0.53) * 0.25;
-        st.tx = st.tx == null ? gx : st.tx + (gx - st.tx) * k2;
-        st.ty = st.ty == null ? gy : st.ty + (gy - st.ty) * k2;
-        tf($['crew.disc'], T(st.dx, st.dy, st.hold ? 1.18 : 1));
-        cls($['crew.disc'], 'is-held', st.hold);
-        const label = st.done ? 'Done' : st.hold ? `To ${CREW[st.n].n}` : 'Hold &\nmove';
-        if ($['crew.discT'].$l !== label) { $['crew.discT'].textContent = label; $['crew.discT'].$l = label; }
-        tf($['crew.hand'], T(st.tx, st.ty + Math.sin(clock * 1.7) * (st.hold ? 0 : 7), st.hold ? 1.12 : 1, (st.tx - gx) * -0.05));
-        const mx = st.dx / W * 2 - 1; const my = st.dy / H * 2 - 1;
+        // The panels fly in from every side and land on the page.
         crewCards.forEach((el, i) => {
-          const P = CREW_AT[i];
-          const drift = -(t - 1.55) * H * 0.3 * P.z;
-          const bob = Math.sin(clock * 1.1 + i * 1.7) * 8 * P.z;
-          const px = -mx * 28 * P.z; const py = -my * 18 * P.z;
-          const on = i < st.n;
-          tf(el, `translate3d(${px.toFixed(1)}px, ${(drift + bob + py).toFixed(1)}px, 0) perspective(900px) rotateX(${(P.rx * (on ? 0.3 : 1) - my * 10 * P.z).toFixed(2)}deg) rotateY(${(P.ry * (on ? 0.3 : 1) + mx * 14 * P.z).toFixed(2)}deg) rotate(${P.r}deg)`);
-          cls(el, 'is-on', on);
-          cls(el, 'is-next', i === st.n && !st.done);
+          const P = CREW_IN[i];
+          const k = out(seg(t, 0.3 + i * 0.09, 0.8 + i * 0.09));
+          tf(el, T(P[0] * W * (1 - k), P[1] * H * (1 - k), 1, mix(P[2], P[3], k)));
         });
-        // Holding over the next agent hands it the work.
-        if (st.hold && !st.done && t > 0.8 && t < 2.3) {
-          const r = crewCards[st.n].getBoundingClientRect();
-          const sr = stage.getBoundingClientRect();
-          const x = st.px + sr.left; const y = st.py + sy + sr.top;
-          if (x > r.left && x < r.right && y > r.top && y < r.bottom) {
-            st.n += 1;
-            if (st.n >= CREW.length) { st.done = true; setCrewDone(true); }
-          }
-        }
-        grain.forEach((el, i) => tf(el, T(0, -((t * H * (0.15 + (i % 4) * 0.08)) % (H * 0.5)))));
+        // The test stays with each agent while it works, then walks on.
+        const p = st.p;
+        const a = Math.min(CREW.length, Math.floor(p));
+        const at = a >= CREW.length ? CREW.length : a + io(seg(p - a, 0.7, 1));
+        const i0 = Math.min(CREW.length, Math.floor(at)); const i1 = Math.min(CREW.length, i0 + 1);
+        const g = at - i0;
+        const moving = g > 0.01 && g < 0.99;
+        const [x0, y0] = crewXY[i0]; const [x1, y1] = crewXY[i1];
+        tf($['crew.ticket'], T(mix(x0, x1, g), mix(y0, y1, g) - (moving ? Math.sin(g * Math.PI) * H * 0.06 : 0)));
+        cls($['crew.ticket'], 'is-walk', moving);
+        crewCards.forEach((el, i) => {
+          cls(el, 'is-on', i < CREW.length ? p >= i + 1 : p >= CREW.length);
+          cls(el, 'is-run', p > 0 && i === a && i < CREW.length);
+        });
+        const now = p >= CREW.length ? CREW_DONE : p > 0 ? CREW[a].now : CREW_IDLE;
+        if ($['crew.now'].$l !== now) { $['crew.now'].textContent = now; $['crew.now'].$l = now; }
+        slabEl.style.setProperty('--p', (p / CREW.length).toFixed(4));
       },
 
       ring(t) {
@@ -416,7 +406,7 @@ const Story = () => {
         });
         // The best score climbs, wobbles and stops well under the line.
         const g = out(seg(t, 0.55, 0.85));
-        tf($['ring.gauge'], T((1 - g) * W * 0.9, drift * 0.05, 1, mix(18, 4, g)));
+        tf($['ring.gauge'], T((1 - g) * W * 1.4, drift * 0.05, 1, mix(18, 4, g)));
         const v = 0.34 * out(seg(t, 0.6, 1.2)) + Math.sin(t * 22) * 0.015 * (1 - seg(t, 1.0, 1.3));
         tf($['ring.needle'], `rotate(${(-90 + v * 180).toFixed(2)}deg)`);
         // Then it says so.
@@ -433,47 +423,78 @@ const Story = () => {
       },
 
       hall(t) {
-        // Nothing of the hall shows until the ink has covered the screen;
-        // then the camera arrives from far back and walks the colonnade.
+        // Nothing of the hall shows until the ink has covered the screen.
         const shown = t > -0.12;
         op($['hall.bg'], shown ? 1 : 0);
-        const rise = 0;
-        const cz = t < 1.15 ? mix(-2600, -200, out(seg(t, -0.12, 1.15))) : mix(-200, 2700, io(seg(t, 1.15, 3.3)));
-        cols.forEach((el, i) => {
-          const side = i % 2 ? 1 : -1; const z = 300 + Math.floor(i / 2) * 560;
-          const d = z - cz;
-          if (d < 90 || !shown) { vis(el, false); return; }
-          vis(el, true);
-          const s = F / d;
-          tf(el, T(side * W * 0.33 * s, rise + H * 0.04 * s, s));
-          op(el, cl((d - 90) / 260) * out(seg(t, -0.12, 0.35)));
-        });
-        const pd = 3300 - cz; const ps = F / pd;
-        vis($['hall.plinth'], shown);
-        tf($['hall.plinth'], T(0, rise + H * 0.2 * ps, ps));
-        cls($['hall.plinth'], 'is-near', t > 3.1);
-        fl('hall.strip', t, 0.95, 1);
-        tf($['hall.stripText'], T(mix(W * 0.25, -W * 0.55, seg(t, -0.3, 2.0)), 0));
-        fl('hall.walker', t, 2.35, 1.5, 0, 1, -6);
-        fl('hall.c1', t, 0.55, 0.9);
-        fl('hall.c2', t, 3.55, 0.6);
+        vis($['hall.page'], shown);
+        const k1 = out(seg(t, -0.1, 0.3));
+        tf($['hall.p1'], T(-(1 - k1) * W * 0.5, 0, 1, mix(-8, -0.8, k1)));
+        const k2 = out(seg(t, 0.25, 0.6));
+        tf($['hall.p2'], T((1 - k2) * W * 0.5, 0, 1, mix(9, 1.4, k2)));
+        const k3 = out(seg(t, 1.45, 1.8));
+        tf($['hall.p3'], T(0, (1 - k3) * H * 0.8, 1, mix(-7, -1, k3)));
+        // Drawers open bottom first, one after another, and stay open,
+        // so they make a staircase the token climbs.
+        const n = drawers.length;
+        // Lower drawers pull out further, so each one leaves a ledge.
+        const OPEN = (i) => chest.w * (1.04 + 0.16 * i);
+        const openAt = (i) => io(seg(t, 0.3 + (n - 1 - i) * 0.24, 0.5 + (n - 1 - i) * 0.24)) * OPEN(i);
+        drawers.forEach((el, i) => tf(el, T(openAt(i), 0)));
+        const q = cl((t - 0.42) / 0.24, 0, n - 1);
+        const a = Math.min(n - 2, Math.floor(q)); const f = q - a;
+        const spot = (order) => { const i = n - 1 - order; return [chest.x + openAt(i) + chest.w * 0.88, chest.y + chest.rows[i]]; };
+        const [ax, ay] = spot(a); const [bx, by] = spot(a + 1);
+        const step = f > 0.05 && f < 0.95 && t < 0.42 + (n - 1) * 0.24;
+        tf($['hall.tok'], T(mix(ax, bx, f), mix(ay, by, f) - Math.sin(f * Math.PI) * H * 0.05));
+        cls($['hall.tok'], 'is-walk', step);
+        // The close-up names the drawer the token is standing on.
+        const cur = n - 1 - Math.round(q);
+        if ($['hall.zoomT'].$l !== cur) {
+          $['hall.zoomT'].textContent = LAYERS[cur].t;
+          $['hall.zoomI'].textContent = LAYERS[cur].i.join(' · ');
+          $['hall.zoomN'].textContent = `Drawer ${n - cur} of ${n}`;
+          $['hall.zoomT'].$l = cur;
+          cls($['hall.p2'], 'is-flash', false);
+          void $['hall.p2'].offsetWidth;
+          cls($['hall.p2'], 'is-flash', true);
+        }
+        builds.forEach((el, i) => cls(el, 'is-on', t > 1.75 + i * 0.12));
       },
 
-      lift(t, dt) {
+      lift(t) {
         tf($['lift.slab'], T(0, slab(t, 0.9, 1.95)));
-        const st = liftRef.current;
-        orbitA += dt * (0.22 + st.p * 2.1);
-        const R = Math.min(W * 0.36, 520) * (1 + st.p * 0.22);
-        orbit.forEach((el, i) => {
-          const a = orbitA + (i / orbit.length) * Math.PI * 2;
-          const depth = (Math.sin(a) + 1) / 2;
-          tf(el, T(Math.cos(a) * R, Math.sin(a) * R * 0.34 - st.p * H * 0.1, 0.72 + depth * 0.4));
-          op(el, 0.35 + depth * 0.65);
-          const z = depth > 0.5 ? '3' : '1';
-          if (el.$z !== z) { el.style.zIndex = z; el.$z = z; }
+        const LIN = [[-0.5, 0, -8], [0.5, -0.3, 7], [0.4, 0.3, -6], [0.5, 0.2, 8], [0.3, 0.7, -5]];
+        const REST = [-0.8, 1.2, -1.6, 1.4, -0.6];
+        liftPanels.forEach((el, i) => {
+          const k = out(seg(t, 0.3 + i * 0.08, 0.75 + i * 0.08));
+          tf(el, T(LIN[i][0] * W * (1 - k), LIN[i][1] * H * (1 - k), 1, mix(LIN[i][2], REST[i], k)));
         });
-        tf($['lift.lines'], `rotate(${(orbitA * 34 * (1 + st.p)).toFixed(2)}deg) scale(${(1 + st.p * 0.18).toFixed(3)})`);
-        tf($['lift.walker'], T(0, Math.sin(clock * 1.8) * 10 - st.p * H * 0.14, 1 + st.p * 0.1, -st.p * 14));
+        const st = liftRef.current;
+        // Down to the data with the question, back up with the answer.
+        const last = FLOORS.length - 1;
+        const pos = st.p < 0.5 ? (st.p / 0.5) * last : (1 - (st.p - 0.5) / 0.5) * last;
+        const a = Math.min(last - 1, Math.floor(pos)); const f = pos - a;
+        const y = mix(floorY[a], floorY[a + 1], f);
+        tf($['lift.car'], T(0, y));
+        tf($['lift.cable'], `scaleY(${(y / shaftH).toFixed(4)})`);
+        const up = st.p >= 0.5;
+        const here = Math.round(pos);
+        floors.forEach((el, i) => {
+          cls(el, 'is-on', st.p > 0 && (up || i <= pos + 0.2));
+          cls(el, 'is-here', st.p > 0 && Math.abs(pos - i) < 0.35);
+        });
+        // The dial and the close-up follow the car.
+        tf($['lift.needle'], `rotate(${(mix(-70, 70, pos / last) + Math.sin(clock * 9) * 1.2).toFixed(2)}deg)`);
+        const num = String(FLOORS.length - here);
+        if ($['lift.num'].$l !== num) { $['lift.num'].textContent = num; $['lift.num'].$l = num; }
+        const fl0 = FLOORS[here];
+        const desc = st.p > 0 ? (up && here === 0 && st.p >= 0.999 ? 'Streams the answer back, with its sources.' : fl0.d) : 'The car waits on the top floor.';
+        if ($['lift.fd'].$l !== desc) {
+          $['lift.fd'].textContent = desc; $['lift.fd'].$l = desc;
+          $['lift.ft'].textContent = fl0.t; $['lift.fl'].textContent = `Floor ${num} · ${fl0.l}`;
+        }
+        cls($['lift.say'], 'is-done', st.p >= 0.999);
+        cls($['lift.say'], 'is-wait', st.p > 0 && st.p < 0.999);
         $['lift.slab'].style.setProperty('--p', st.p.toFixed(4));
       },
 
@@ -485,7 +506,7 @@ const Story = () => {
           const P = REC_IN[i];
           const k = out(seg(t, P.a, P.a + 0.6));
           const drift = -(t - 1.5) * H * P.sp;
-          tf(el, T(P.x * W * (1 - k), P.y * H * (1 - k) + drift, mix(0.86, 1, k), mix(P.r, P.rest, k)));
+          tf(el, T(P.x * W * (1 - k), P.y * H * (1 - k) + drift + Math.max(0, 0.75 - t) * H * 1.4, mix(0.86, 1, k), mix(P.r, P.rest, k)));
         });
         // CGPA rolls up and fills its meter.
         const v = 9.55 * out(seg(t, 0.55, 1.35));
@@ -520,6 +541,7 @@ const Story = () => {
         const wx = mix(-W * 0.12, lx, w);
         tf($['back.walker'], T(wx, Math.abs(Math.sin(t * 16)) * -6 * (w < 1 ? 1 : 0), 1, Math.sin(t * 16) * 3 * (w < 1 ? 1 : 0)));
         cls(lot, 'is-on', w > 0.97);
+        cls($['back.walker'], 'is-walk', w > 0.01 && w < 0.97);
         fl('back.c1', t, 1.45, 0.6);
         fl('back.c2', t, 1.95, 0.6);
       },
@@ -557,8 +579,11 @@ const Story = () => {
       lastTime = now; clock += dt;
 
       // Holds run on time, not scroll.
+      // Both stay where you let go.
       const lift = liftRef.current;
-      lift.p = cl(lift.p + (lift.hold ? dt / 1.1 : -dt / 1.6));
+      if (lift.hold) lift.p = cl(lift.p + dt / 3.2);
+      const crew = crewRef.current;
+      if (crew.hold) crew.p = Math.min(CREW.length, crew.p + dt / 1.05);
 
       const top = trackRef.current.offsetTop;
       const s = cl((window.scrollY - top) / H, 0, TOTAL - 1);
@@ -581,8 +606,8 @@ const Story = () => {
     if (flat) {
       // Reduced motion: each scene is drawn once, at the moment it is
       // most itself, and the scenes are read top to bottom.
-      const REST = { open: 0.3, climb: 1.9, near: 1.2, crew: 1.6, ring: 1.2, drip: 0, hall: 3.9, lift: 1.3, record: 1.5, back: 2.3, ask: 1.0, poster: 1.0, reel: 1.6 };
-      crewRef.current.n = CREW.length; crewRef.current.done = true; setCrewDone(true);
+      const REST = { open: 0.3, climb: 1.9, near: 1.2, crew: 1.6, ring: 1.2, drip: 0, hall: 2.0, lift: 1.3, record: 1.5, back: 2.3, ask: 1.0, poster: 1.0, reel: 1.6 };
+      crewRef.current.p = CREW.length; liftRef.current.p = 1;
       const draw = () => {
         measure();
         SCENES.forEach((sc, i) => {
@@ -608,25 +633,6 @@ const Story = () => {
   }, [flat]);
 
   const hold = (ref) => (on) => { ref.current.hold = on; };
-  // A whole slab you can press and hold anywhere. Touch keeps vertical
-  // scrolling: a swipe cancels the pointer, which releases the hold.
-  const holdArea = (ref) => ({
-    onPointerDown: (e) => {
-      if (e.target.closest('a')) return;
-      if (e.pointerType === 'mouse') e.currentTarget.setPointerCapture?.(e.pointerId);
-      const r = e.currentTarget.getBoundingClientRect();
-      ref.current.px = e.clientX - r.left; ref.current.py = e.clientY - r.top;
-      ref.current.hold = true;
-    },
-    onPointerUp: () => { ref.current.hold = false; },
-    onPointerCancel: () => { ref.current.hold = false; },
-    onPointerMove: (e) => {
-      const r = e.currentTarget.getBoundingClientRect();
-      ref.current.px = e.clientX - r.left; ref.current.py = e.clientY - r.top;
-    },
-    onContextMenu: (e) => e.preventDefault(),
-  });
-
   const jump = (at) => {
     const y = trackRef.current.offsetTop + at * stageRef.current.clientHeight;
     if (window.lenis) window.lenis.scrollTo(y, { duration: 2.2 });
@@ -693,26 +699,44 @@ const Story = () => {
           <section className="sx-scene" data-scene="climb" data-acc="blue" aria-label="Agents in production">
             <div className="sx-full sx-pnl-paper" data-k="climb.panel">
               <div className="sx-full sx-climb-world" data-k="climb.world">
-                <div className="sx-sun" data-k="climb.sun" />
-                {STEPS.map((n, i) => (
-                  <div key={n} className={`sx-step${i === STEPS.length - 1 ? ' sx-step--top' : ''}`} style={{ left: `${STEP_X(i) * 100}%`, top: `${STEP_TOP(i) * 100}%`, width: `${STEP_W * 100}%` }}>
-                    <span className="num">{String(i + 1).padStart(2, '0')}</span>
-                    <strong className="display">{n}</strong>
+                <div className="sx-cp sx-cl-p1">
+                  <span className="sx-cp-lab">Emerson, after hours</span>
+                  <span className="sx-hatch sx-room-wall" aria-hidden="true" />
+                  <span className="sx-room-win" aria-hidden="true"><i /></span>
+                  <span className="sx-room-floor" aria-hidden="true" />
+                  <span className="sx-clock" aria-hidden="true"><i /><i /></span>
+                  <div className="sx-desk" aria-hidden="true">
+                    <div className="sx-mon">
+                      <p className="sx-mon-stage" data-k="climb.stage">Intake</p>
+                      <div className="sx-mon-lines">{[86, 64, 92, 48, 74, 58].map((w, i) => <i key={i} className="sx-mon-l" style={{ '--w': `${w}%` }} />)}</div>
+                    </div>
+                    <span className="sx-mon-neck" />
+                    <span className="sx-desk-top" />
+                    <span className="sx-mug"><i /><i /></span>
+                    <span className="sx-desk-leg" /><span className="sx-desk-leg" />
                   </div>
-                ))}
-                <div className="sx-say" data-k="climb.say" aria-hidden="true">
-                  <span className="sx-say-bad">Row count is off.</span>
-                  <span className="sx-say-fix">Back to the SQL. Retry.</span>
+                  <div className="sx-typist" aria-hidden="true"><Walker /></div>
                 </div>
-                <div className="sx-climb-walk" data-k="climb.walker"><Walker /></div>
+                <div className="sx-cp sx-cl-p2" data-k="climb.p2">
+                  <span className="sx-cp-lab">Validate</span>
+                  <code className="sx-chk-sql">JOIN plans p ON <span className="sx-chk-fix"><em>p.id = m.id</em><em>p.project_id = m.project_id</em></span></code>
+                  <p className="sx-chk-say"><em>Rows: 412?</em><em>Totals don’t match.</em><em>Back to the SQL.</em><em>412 rows. Checks out.</em></p>
+                  <span className="sx-caret" aria-hidden="true" />
+                </div>
+                <div className="sx-cp sx-cl-p3" data-k="climb.p3">
+                  <span className="sx-cp-lab">Report</span>
+                  <div className="sx-print-out">
+                    <div className="sx-print-paper" data-k="climb.paper">
+                      <strong className="display">Q3 slippage by region</strong>
+                      {SLIP.map(([r, d]) => <p key={r}><span>{r}</span><i style={{ '--v': d / 12 }} /></p>)}
+                      <b className="sx-print-stamp">Sent to the PMO</b>
+                    </div>
+                  </div>
+                  <div className="sx-print-body" aria-hidden="true"><i /></div>
+                </div>
               </div>
-              <Cap k="climb.c1" on={1.05} className="sx-cl-c1">Two agent systems run in production at Emerson. This one writes the PMO’s reports.</Cap>
-              <Cap k="climb.c2" on={1.75} className="sx-cl-c2">When a check fails, the run loops back and fixes it in the same pass. Nothing is thrown away.</Cap>
-            </div>
-            <div className="sx-pnl sx-cl-in" data-k="climb.in" data-surface="ink" aria-hidden="true">
-              <code><i>✕</i> validate · row count off</code>
-              <code><i>↺</i> retry · SQL agent</code>
-              <code><b>✓</b> validate · report out</code>
+              <Cap k="climb.c1" on={1.0} className="sx-cl-c1">Two agent systems run in production at Emerson. This one writes the PMO’s reports.</Cap>
+              <Cap k="climb.c2" on={1.4} className="sx-cl-c2">When a check fails, the run goes back, fixes the query and carries on.</Cap>
             </div>
           </section>
 
@@ -739,36 +763,59 @@ const Story = () => {
 
           {/* ---------------- crew ---------------- */}
           <section className="sx-scene" data-scene="crew" data-acc="lime" aria-label="Swarm, a crew of agents">
-            <div className="sx-full sx-crew" data-k="crew.slab" {...holdArea(crewRef)}>
-              <Cap k="crew.c1" on={0.75} className="sx-cr-c1">Swarm is a crew of four agents that fixes flaky tests. Hold, and carry the work to each of them in order.</Cap>
-              <div className="sx-grain" aria-hidden="true">
-                {Array.from({ length: 26 }, (_, i) => <i key={i} style={{ left: `${(i * 3.9 + ((i * 7) % 5)) % 100}%`, '--w': `${1 + (i % 4)}px`, '--o': 0.12 + (i % 3) * 0.06 }} />)}
-              </div>
+            <div className="sx-full sx-crew" data-k="crew.slab">
+              <Cap k="crew.c1" on={0.7} className="sx-cr-c1">Swarm: four agents fix a flaky test between them, each with one job.</Cap>
               {CREW.map((a, i) => (
-                <div key={a.n} className="sx-pnl sx-agent" style={{ '--x': `${CREW_AT[i].x * 100}%`, '--y': `${CREW_AT[i].y * 100}%`, '--mx': `${CREW_AT[i].mx * 100}%`, '--my': `${CREW_AT[i].my * 100}%` }}>
-                  <header>
-                    <span className="num">{String(i + 1).padStart(2, '0')}</span>
-                    <strong className="display">{a.n}</strong>
-                    <span className="sx-agent-ok" aria-hidden="true"><Glyph kind="check" acc="lime" /></span>
-                    <span className="sx-agent-tag" aria-hidden="true">Hold here</span>
-                  </header>
-                  <div className={`sx-mini sx-mini--${i}`} aria-hidden="true">
-                    {i === 0 && ['test_login', 'test_cart', 'test_sync'].map((n, j) => (
-                      <p key={n}><span>{n}</span><b className={j === 1 ? 'is-pass' : 'is-flip'}>{j === 1 ? 'passes' : <><em>fails</em><em>flaky</em></>}</b></p>
-                    ))}
-                    {i === 1 && [62, 84, 40, 72, 55].map((w, j) => <i key={j} style={{ '--w': `${w}%`, '--d': `${j * 0.35}s`, '--x': `${(j % 3) * 8}%` }} />)}
-                    {i === 2 && <><b className="sx-flip"><em>fails</em><em>passes</em></b><span>before the fix · after</span></>}
-                    {i === 3 && <>{[['-', 70], ['+', 82], ['+', 54], ['-', 40]].map(([m, w], j) => <p key={j} className={m === '+' ? 'is-add' : 'is-del'}><span>{m}</span><i style={{ width: `${w}%` }} /></p>)}<b className="sx-stamp">Approved</b></>}
+                <div key={a.n} className={`sx-cp sx-cr-p sx-cr-p${i}`}>
+                  <span className="sx-cp-lab">{String(i + 1).padStart(2, '0')} · {a.n}</span>
+                  <span className="sx-cr-ok" aria-hidden="true"><Glyph kind="check" acc="lime" /></span>
+                  <div className="sx-cr-who" aria-hidden="true"><Walker /></div>
+                  <div className={`sx-act sx-act--${i}`} aria-hidden="true">
+                    {i === 0 && (
+                      <div className="sx-sheet">
+                        {['test_login', 'test_cart', 'test_sync'].map((n, j) => (
+                          <p key={n}><span>{n}</span><b className={j === 1 ? 'is-pass' : 'is-flip'}>{j === 1 ? 'passes' : <><em>fails</em><em>flaky</em></>}</b></p>
+                        ))}
+                        <span className="sx-mag"><i /></span>
+                      </div>
+                    )}
+                    {i === 1 && (
+                      <div className="sx-sand">
+                        <div className="sx-sand-scr">{[62, 84, 40, 72].map((w, j) => <i key={j} style={{ '--w': `${w}%`, '--d': `${j * 0.4}s` }} />)}</div>
+                        <span className="sx-sand-box"><span className="sx-hatch" /></span>
+                        <b className="sx-sand-tag">No network</b>
+                      </div>
+                    )}
+                    {i === 2 && (
+                      <div className="sx-lamps">
+                        <p><i className="is-a" /><span>Before the fix</span><b>fails</b></p>
+                        <p><i className="is-b" /><span>After the fix</span><b>passes</b></p>
+                      </div>
+                    )}
+                    {i === 3 && (
+                      <div className="sx-diff">
+                        {[['-', 70], ['+', 82], ['+', 54], ['-', 40]].map(([m, w], j) => <p key={j} className={m === '+' ? 'is-add' : 'is-del'}><span>{m}</span><i style={{ width: `${w}%` }} /></p>)}
+                        <b className="sx-diff-stamp">Approved</b>
+                      </div>
+                    )}
                   </div>
-                  <p>{a.c}</p>
+                  <p className="sx-cr-say">{a.c}</p>
                 </div>
               ))}
-              <div className="sx-crew-hand" data-k="crew.hand"><Walker /></div>
-              <div className="sx-crew-disc" data-k="crew.disc" aria-hidden="true"><span data-k="crew.discT">{'Hold &\nmove'}</span></div>
-              <div className={`sx-crew-end${crewDone ? ' is-on' : ''}`}>
-                <p>Pull request opened. Waiting for a human.</p>
-                <span className="sx-merge"><Glyph kind="lock" acc="lime" />Merge</span>
+              <div className="sx-cp sx-cr-p sx-cr-p4">
+                <span className="sx-cp-lab">Pull request</span>
+                <div className="sx-door" aria-hidden="true">
+                  <span className="sx-door-sign">Merge</span>
+                  <span className="sx-door-lock"><Glyph kind="lock" acc="lime" /></span>
+                  <i className="sx-door-knob" />
+                </div>
+                <p className="sx-cr-say">Opened. Only a human merges it.</p>
               </div>
+              <div className="sx-ticket" data-k="crew.ticket" aria-hidden="true">
+                <span className="sx-slip">test_sync</span>
+              </div>
+              <p className="sx-cap is-on sx-crew-now" aria-live="polite"><span data-k="crew.now">{CREW_IDLE}</span></p>
+              <HoldButton k="crew.hold" label="Hold to run" onHold={hold(crewRef)} />
             </div>
           </section>
 
@@ -817,44 +864,90 @@ const Story = () => {
           {/* ---------------- hall ---------------- */}
           <section className="sx-scene" data-scene="hall" data-acc="violet" data-surface="ink" aria-label="The stack">
             <div className="sx-full sx-hall-bg" data-k="hall.bg" />
-            {COLS.flatMap((c) => [0, 1].map((side) => (
-              <div key={`${c.t}${side}`} className="sx-col" aria-hidden="true">
-                <span>{side ? c.i : c.t}</span>
+            <div className="sx-full" data-k="hall.page">
+              <div className="sx-cp sx-ha-p1" data-k="hall.p1">
+                <span className="sx-cp-lab">The toolbox</span>
+                <span className="sx-ha-floor" aria-hidden="true" />
+                <div className="sx-chest" data-k="hall.chest">
+                  {LAYERS.map((l) => (
+                    <div key={l.t} className="sx-drawer">
+                      <ul>{l.i.map((x) => <li key={x}>{x}</li>)}</ul>
+                      <span className="sx-drawer-n">{l.t}</span>
+                    </div>
+                  ))}
+                  <span className="sx-chest-side" aria-hidden="true"><span className="sx-hatch" /></span>
+                </div>
+                <div className="sx-ha-tok" data-k="hall.tok" aria-hidden="true"><Walker /></div>
               </div>
-            )))}
-            <div className="sx-plinth" data-k="hall.plinth">
-              <div className="sx-caps">
-                {CAPSULES.map((c) => (
-                  <div key={c.t} className="sx-capsule" data-cursor="hot">
-                    <Glyph kind={c.g} acc="violet" />
-                    <strong className="display">{c.t}</strong>
-                    <ul>{c.i.map((x) => <li key={x}>{x}</li>)}</ul>
-                  </div>
-                ))}
+              <div className="sx-cp sx-ha-p2" data-k="hall.p2">
+                <span className="sx-cp-lab" data-k="hall.zoomN">Drawer 1 of 5</span>
+                <strong className="display" data-k="hall.zoomT">Languages</strong>
+                <p data-k="hall.zoomI">Python · Java · C++ · JavaScript · SQL</p>
               </div>
-              <div className="sx-plinth-top" />
+              <div className="sx-cp sx-ha-p3" data-k="hall.p3">
+                <span className="sx-cp-lab">What comes out of it</span>
+                <div className="sx-builds">
+                  {CAPSULES.map((c) => (
+                    <div key={c.t} className="sx-build" data-cursor="hot">
+                      <Glyph kind={c.g} acc="violet" />
+                      <strong className="display">{c.t}</strong>
+                      <span>{c.i.join(' · ')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div className="sx-pnl sx-strip" data-k="hall.strip" aria-hidden="true">
-              <div className="display sx-strip-t" data-k="hall.stripText">Pick the tool the problem is shaped like.</div>
-            </div>
-            <div className="sx-hall-walk" data-k="hall.walker"><Walker /></div>
-            <Cap k="hall.c1" on={0.4} off={2.2} className="sx-ha-c1">Everything he builds stands on five things: languages, GenAI and ML, the web, the cloud and the tooling.</Cap>
-            <Cap k="hall.c2" on={3.15} className="sx-ha-c2">Three of them carry most of the weight.</Cap>
+            <Cap k="hall.c1" on={0.25} className="sx-ha-c1">Everything he builds comes out of one toolbox, five drawers deep.</Cap>
+            <Cap k="hall.c2" on={1.85} className="sx-ha-c2">Three things come out of it most: agents, retrieval, and the screens people use them through.</Cap>
           </section>
 
           {/* ---------------- lift ---------------- */}
-          <section className="sx-scene" data-scene="lift" data-acc="pink" data-surface="ink" aria-label="The whole stack">
+          <section className="sx-scene" data-scene="lift" data-acc="pink" data-surface="ink" aria-label="One question through the whole stack">
             <div className="sx-full sx-lift" data-k="lift.slab">
-              <div className="sx-lift-lines" data-k="lift.lines" aria-hidden="true">
-                {Array.from({ length: 16 }, (_, i) => <i key={i} style={{ '--a': `${i * 22.5}deg`, '--r': `${30 + (i % 4) * 9}%`, '--l': `${10 + (i % 3) * 6}%` }} />)}
+              <div className="sx-cp sx-lf-pn sx-lf-p1">
+                <span className="sx-cp-lab">One build, five floors</span>
+                <div className="sx-tower">
+                  {FLOORS.map((f, i) => (
+                    <div key={f.l} className="sx-floor">
+                      <span className="num">{FLOORS.length - i}</span>
+                      <strong className="display">{f.t}</strong>
+                      <em>{f.l}</em>
+                    </div>
+                  ))}
+                  <div className="sx-shaft" aria-hidden="true">
+                    <span className="sx-hatch" />
+                    <span className="sx-cable" data-k="lift.cable" />
+                    <div className="sx-car" data-k="lift.car"><Walker /></div>
+                  </div>
+                </div>
               </div>
-              <div className="sx-orbit" aria-hidden="true">
-                {ORBIT.map((w) => <span key={w} className="sx-orb">{w}</span>)}
-                <div className="sx-lift-walk" data-k="lift.walker"><Walker /></div>
+              <div className="sx-cp sx-lf-pn sx-lf-p2">
+                <span className="sx-cp-lab">The question</span>
+                <p className="sx-lf-q display">When did it ship?<span className="sx-caret" aria-hidden="true" /></p>
               </div>
-              <Cap k="lift.c1" on={0.65} className="sx-lf-c1">Give it a hard problem and the whole stack lifts at once.</Cap>
-              <Cap k="lift.c2" on={1.05} className="sx-lf-c2">Python to Azure, LangGraph to React: one person, the full height of the stack.</Cap>
-              <HoldButton k="lift.hold" label="Hold to lift" onHold={hold(liftRef)} />
+              <div className="sx-cp sx-lf-pn sx-lf-p3" aria-hidden="true">
+                <span className="sx-cp-lab">Floor</span>
+                <svg viewBox="0 0 200 120" className="sx-dial">
+                  <path d="M30 105 A70 70 0 0 1 170 105" />
+                  {[0, 1, 2, 3, 4].map((i) => { const a = Math.PI * (1 - (i * 140 / 4 + 20) / 180); return <line key={i} x1={100 + 58 * Math.cos(a)} y1={105 - 58 * Math.sin(a)} x2={100 + 70 * Math.cos(a)} y2={105 - 70 * Math.sin(a)} />; })}
+                  <g data-k="lift.needle"><line x1="100" y1="105" x2="100" y2="48" /><circle cx="100" cy="105" r="8" /></g>
+                </svg>
+                <b className="display" data-k="lift.num">5</b>
+              </div>
+              <div className="sx-cp sx-lf-pn sx-lf-p4">
+                <span className="sx-cp-lab" data-k="lift.fl">Floor 5 · Interface</span>
+                <strong className="display" data-k="lift.ft">React</strong>
+                <p data-k="lift.fd">The car waits on the top floor.</p>
+              </div>
+              <div className="sx-cp sx-lf-pn sx-lf-p5" data-k="lift.say">
+                <span className="sx-cp-lab">The answer</span>
+                <p className="sx-lf-idle">Hold, and the question rides down.</p>
+                <p className="sx-lf-dots" aria-hidden="true"><i /><i /><i /></p>
+                <p className="sx-lf-a"><strong className="display">2 June.</strong> <span>Sources: 2 release notes.</span></p>
+              </div>
+              <Cap k="lift.c1" on={0.6} className="sx-lf-c1">One question, through every floor of one build.</Cap>
+              <Cap k="lift.c2" on={1.0} className="sx-lf-c2">He built every floor himself, from the page you type into down to the database.</Cap>
+              <HoldButton k="lift.hold" label="Hold to ask" onHold={hold(liftRef)} />
             </div>
           </section>
 
@@ -1016,7 +1109,7 @@ const STYLE = `
   /* Ink scenes paint their own ground, so they never show before they arrive. */
   .sx-scene[data-surface="ink"] { background: transparent; }
   .sx-scene * { pointer-events: none; }
-  .sx-scene :is(button, a, .sx-capsule) { pointer-events: auto; }
+  .sx-scene :is(button, a, .sx-build) { pointer-events: auto; }
   .sx-full { position: absolute; inset: 0; }
   [data-k] { will-change: transform; }
 
@@ -1036,15 +1129,15 @@ const STYLE = `
     position: absolute; z-index: 6;
     max-width: min(24rem, 78vw);
     margin: 0; padding: 0.85rem 1.05rem;
-    border-radius: var(--r-s);
+    border-radius: 4px;
     background: var(--paper); color: var(--ink);
-    box-shadow: 0 0 0 2px var(--ink), var(--ao-2);
-    font-size: var(--step--1); font-weight: 560; line-height: 1.42;
-    clip-path: inset(0 100% 0 0 round var(--r-s));
+    box-shadow: 0 0 0 2px var(--ink), 5px 5px 0 var(--ink);
+    font-size: var(--step--1); font-weight: 600; line-height: 1.42;
+    clip-path: inset(0 100% 0 0 round 4px);
     transition: clip-path 0.75s var(--ease-out);
   }
   .sx-cap > span { display: block; opacity: 0; translate: 0 0.5em; transition: opacity 0.45s, translate 0.6s var(--ease-out); }
-  .sx-cap.is-on { clip-path: inset(-60px -60px -60px -60px round var(--r-s)); }
+  .sx-cap.is-on { clip-path: inset(-60px -60px -60px -60px round 4px); }
   .sx-cap.is-on > span { opacity: 1; translate: 0 0; transition-delay: 0.22s; }
   [data-surface="ink"] .sx-cap { --paper: #FFFFFF; --ink: #0E0E0D; }
 
@@ -1062,6 +1155,42 @@ const STYLE = `
     translate: -0.06em -0.08em;
   }
   .sx-tok i { position: absolute; left: 0.66em; top: 0.6em; width: 0.11em; height: 0.11em; border-radius: 50%; background: #0E0E0D; }
+  /* Its legs. Idle, one foot taps; walking, they stride. */
+  .sx-tok { z-index: 1; }
+  .sx-legs { position: absolute; left: 50%; top: 0.84em; width: 0.42em; height: 0.3em; translate: -50% 0; }
+  .sx-legs i { position: absolute; top: 0; width: 0.085em; height: 0.26em; border-radius: 0.05em; background: #0E0E0D; transform-origin: 50% 0; }
+  .sx-legs i::after { content: ''; position: absolute; left: -0.02em; bottom: -0.03em; width: 0.17em; height: 0.08em; border-radius: 0.06em; background: #0E0E0D; }
+  .sx-legs i:first-child { left: 0.06em; }
+  .sx-legs i:last-child { right: 0.06em; animation: sx-tap 2.6s var(--ease-in-out) infinite; transform-origin: 50% 0; }
+  @keyframes sx-tap { 0%, 70%, 100% { rotate: 0deg; } 78% { rotate: -16deg; } 86% { rotate: 0deg; } 92% { rotate: -12deg; } }
+  .is-walk .sx-legs i { animation: sx-stride 0.36s ease-in-out infinite alternate; }
+  .is-walk .sx-legs i:last-child { animation-delay: -0.36s; }
+  @keyframes sx-stride { from { rotate: -28deg; } to { rotate: 28deg; } }
+  .is-walk .sx-tok { animation: sx-bob 0.36s ease-in-out infinite alternate; }
+  @keyframes sx-bob { to { translate: 0 -0.05em; } }
+
+  /* Comic panels: hard frames, ink borders, a hard offset shadow. */
+  .sx-cp {
+    position: absolute; overflow: hidden;
+    border-radius: 4px;
+    background: #FFFFFF; color: #0E0E0D;
+    box-shadow: 0 0 0 3px #0E0E0D, 7px 7px 0 #0E0E0D;
+  }
+  .sx-cp-lab {
+    position: absolute; left: 0; top: 0; z-index: 5;
+    padding: 0.35rem 0.75rem 0.4rem;
+    border-radius: 0 0 4px 0;
+    background: #0E0E0D; color: #FFFFFF;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+  }
+  /* Hatching, drawn with an ink-coloured mask so it follows the theme. */
+  .sx-hatch {
+    position: absolute; inset: 0; background-color: #0E0E0D; opacity: 0.32;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9'%3E%3Cpath d='M-2 2 L2 -2 M0 9 L9 0 M7 11 L11 7' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E");
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9'%3E%3Cpath d='M-2 2 L2 -2 M0 9 L9 0 M7 11 L11 7' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E");
+  }
+  .sx-caret { display: inline-block; width: 0.1em; height: 1em; margin-left: 0.12em; vertical-align: -0.12em; background: currentColor; animation: sx-blink 1s steps(1) infinite; }
+  @keyframes sx-blink { 50% { opacity: 0; } }
 
   /* The street. */
   .sx-town {
@@ -1167,51 +1296,84 @@ const STYLE = `
   }
 
   /* ---- climb ---- */
-  .sx-climb-world { transform-origin: 50% 100%; }
-  .sx-sun {
-    position: absolute; left: 70%; top: 26%;
-    width: min(50vh, 40vw); aspect-ratio: 1; translate: -50% -50%;
-    border-radius: 50%;
-    background: var(--paper-3);
-    transition: background 0.8s var(--ease-out);
+  .sx-climb-world { transform-origin: 50% 50%; }
+  .sx-cl-p1 { left: 4%; top: 13%; width: 57%; height: 76%; }
+  .sx-room-wall { inset: 0 0 14% 0; opacity: 0.12; }
+  /* A wall clock running fast: the night goes by while the report gets written. */
+  .sx-clock { position: absolute; left: 7%; top: 58%; width: 8%; aspect-ratio: 1; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 3px #0E0E0D; }
+  .sx-clock i { position: absolute; left: 50%; bottom: 50%; width: 3px; margin-left: -1.5px; border-radius: 2px; background: #0E0E0D; transform-origin: 50% 100%; }
+  .sx-clock i:first-child { height: 26%; animation: sx-spin 48s linear infinite; }
+  .sx-clock i:last-child { height: 40%; background: var(--acc); animation: sx-spin 4s linear infinite; }
+  @keyframes sx-spin { to { rotate: 360deg; } }
+  .sx-mug { position: absolute; right: 8%; bottom: 28%; width: 7%; height: 10%; border-radius: 0 0 4px 4px; background: var(--acc); box-shadow: 0 0 0 3px #0E0E0D; }
+  .sx-mug i { position: absolute; bottom: 125%; width: 3px; height: 70%; border-radius: 2px; background: #0E0E0D; opacity: 0; animation: sx-steam 2.4s ease-in-out infinite; }
+  .sx-mug i:first-child { left: 30%; }
+  .sx-mug i:last-child { left: 62%; animation-delay: 1.2s; }
+  @keyframes sx-steam { 0% { opacity: 0; translate: 0 40%; } 40% { opacity: 0.7; } 100% { opacity: 0; translate: 0 -60%; scale: 1 1.3; } }
+  .sx-room-win { position: absolute; left: 7%; top: 14%; width: 25%; height: 34%; border-radius: 3px; background: #0E0E0D; box-shadow: 0 0 0 3px #0E0E0D; overflow: hidden; }
+  .sx-room-win::before, .sx-room-win::after { content: ''; position: absolute; background: #FFFFFF; z-index: 1; }
+  .sx-room-win::before { left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; }
+  .sx-room-win::after { top: 50%; left: 0; right: 0; height: 3px; margin-top: -1.5px; }
+  .sx-room-win i { position: absolute; right: 14%; top: 14%; width: 38%; aspect-ratio: 1; border-radius: 50%; background: var(--acc); }
+  .sx-room-floor { position: absolute; left: 0; right: 0; bottom: 14%; height: 3px; background: #0E0E0D; }
+  .sx-desk { position: absolute; left: 40%; right: 5%; bottom: 14%; height: 72%; }
+  .sx-mon {
+    position: absolute; left: 12%; right: 8%; top: 0; height: 58%;
+    display: grid; align-content: start; gap: 0.6rem;
+    padding: 0.9rem 1rem; border-radius: 6px;
+    background: #0E0E0D; color: #FFFFFF; box-shadow: 0 0 0 3px #0E0E0D;
+    transition: background 0.3s;
   }
-  .sx-sun.is-on { background: var(--acc); }
-  .sx-step {
-    position: absolute; bottom: 0;
-    display: flex; flex-direction: column; gap: 0.25em;
-    padding: clamp(0.5rem, 1.2vw, 1rem);
-    border-radius: 14px 14px 0 0;
-    background: var(--paper);
-    box-shadow: inset 0 0 0 2px var(--ink), var(--ao-2);
-    color: var(--ink-3);
-    transition: background 0.4s, color 0.4s;
+  .sx-mon-stage { margin: 0; font-family: var(--font-mono); font-size: clamp(0.72rem, 1.2vw, 0.95rem); font-weight: 600; color: var(--acc); }
+  .sx-mon-stage::before { content: '> '; color: #FFFFFF; }
+  .sx-climb-world.is-bad .sx-mon { background: var(--acc); }
+  .sx-climb-world.is-bad .sx-mon-stage { color: #0E0E0D; }
+  .sx-mon-lines { display: grid; gap: 0.45rem; }
+  .sx-mon-l { display: block; height: 0.45rem; width: var(--w); border-radius: 3px; background: rgb(255 255 255 / 0.85); transform-origin: 0 50%; transform: scaleX(0); }
+  .sx-mon-neck { position: absolute; left: 50%; top: 58%; width: 8%; height: 14%; translate: -50% 0; background: #0E0E0D; }
+  .sx-desk-top { position: absolute; left: 0; right: 0; top: 72%; height: 7%; border-radius: 3px; background: #0E0E0D; }
+  .sx-desk-leg { position: absolute; top: 79%; bottom: 0; width: 4%; background: #0E0E0D; left: 6%; }
+  .sx-desk-leg + .sx-desk-leg { left: auto; right: 6%; }
+  .sx-typist { position: absolute; left: 28%; bottom: 14%; }
+  .sx-typist .sx-walker { position: relative; font-size: clamp(80px, 16vh, 150px); translate: -50% 0; animation: sx-type-bob 0.5s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+  @keyframes sx-type-bob { to { rotate: 4deg; } }
+  .sx-cl-p2 { left: 64%; top: 12%; width: 32%; height: 34%; padding: 2.6rem 1.2rem 1rem; display: grid; align-content: start; gap: 0.8rem; }
+  .sx-chk-sql { font-family: var(--font-mono); font-size: 0.74rem; line-height: 1.5; color: #5C5C58; }
+  .sx-chk-fix, .sx-chk-say { display: inline-grid; }
+  .sx-chk-fix em, .sx-chk-say em { grid-area: 1 / 1; font-style: normal; transition: opacity 0.3s, translate 0.4s var(--ease-out); }
+  .sx-chk-fix em { color: #0E0E0D; font-weight: 600; text-decoration: underline wavy #0E0E0D; text-underline-offset: 3px; }
+  .sx-chk-fix em:last-child { opacity: 0; translate: 0 60%; text-decoration: none; background: var(--acc); color: var(--acc-ink); padding: 0 0.3em; }
+  .sx-cl-p2:is(.is-fix, .is-ok) .sx-chk-fix em:first-child { opacity: 0; translate: 0 -60%; }
+  .sx-cl-p2:is(.is-fix, .is-ok) .sx-chk-fix em:last-child { opacity: 1; translate: 0 0; }
+  .sx-chk-say { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(1.3rem, 2.6vw, 2.3rem); letter-spacing: -0.04em; line-height: 1.02; }
+  .sx-chk-say em { opacity: 0; translate: 0 0.3em; }
+  .sx-cl-p2:not(.is-bad):not(.is-fix):not(.is-ok) .sx-chk-say em:nth-child(1),
+  .sx-cl-p2.is-bad .sx-chk-say em:nth-child(2),
+  .sx-cl-p2.is-fix .sx-chk-say em:nth-child(3),
+  .sx-cl-p2.is-ok .sx-chk-say em:nth-child(4) { opacity: 1; translate: 0 0; }
+  .sx-cl-p2.is-bad { background: #0E0E0D; color: #FFFFFF; }
+  .sx-cl-p2.is-bad .sx-chk-sql { color: rgb(255 255 255 / 0.6); }
+  .sx-cl-p2.is-bad .sx-chk-fix em:first-child { color: #FFFFFF; text-decoration-color: var(--acc); }
+  .sx-cl-p2.is-bad .sx-cp-lab { background: var(--acc); color: var(--acc-ink); }
+  .sx-cl-p2 .sx-caret { position: absolute; right: 1.2rem; bottom: 1rem; font-size: 1.4rem; }
+  .sx-cl-p3 { left: 64%; top: 52%; width: 32%; height: 37%; }
+  .sx-print-out { position: absolute; left: 12%; right: 12%; top: 2.4rem; bottom: 30%; overflow: hidden; }
+  .sx-print-paper {
+    position: absolute; left: 6%; right: 6%; bottom: 0; top: 0;
+    display: grid; align-content: start; gap: 0.35rem;
+    padding: 0.8rem 0.9rem; background: #FFFFFF; box-shadow: inset 0 0 0 2px #0E0E0D;
+    transform: translate3d(0, 100%, 0);
   }
-  .sx-step .num { font-size: var(--step--1); font-weight: 600; }
-  .sx-step strong { font-size: clamp(0.9rem, 1.9vw, 1.7rem); letter-spacing: -0.04em; line-height: 1; }
-  .sx-step.is-on { color: var(--ink); }
-  .sx-step.is-on .num { color: var(--acc); }
-  .sx-step.is-bad { background: var(--ink); color: var(--paper); }
-  .sx-step--top.is-on { background: var(--acc); color: var(--acc-ink); }
-  .sx-step--top.is-on .num { color: var(--acc-ink); }
-  .sx-climb-walk { position: absolute; left: 0; top: 0; z-index: 3; font-size: clamp(56px, 9vh, 96px); }
-  .sx-climb-walk .sx-walker { position: relative; font-size: 1em; translate: -0.5em -1em; }
-  .sx-say {
-    position: absolute; left: 0; top: 0; z-index: 4;
-    font-size: clamp(56px, 9vh, 96px);
-  }
-  .sx-say span {
-    position: absolute; left: 0.3em; bottom: 1.2em;
-    padding: 0.6rem 0.9rem; border-radius: 16px 16px 16px 4px;
-    font-size: var(--step--1); font-weight: 650; white-space: nowrap;
-    opacity: 0; translate: 0 8px; scale: 0.9; transform-origin: 0 100%;
-    transition: opacity 0.3s, translate 0.45s var(--ease-out), scale 0.45s var(--ease-out);
-  }
-  .sx-say-bad { background: var(--ink); color: var(--paper); }
-  .sx-say-fix { background: var(--acc); color: var(--acc-ink); box-shadow: var(--ao-2); }
-  .sx-say.is-bad .sx-say-bad, .sx-say.is-fix .sx-say-fix { opacity: 1; translate: 0 0; scale: 1; }
-  .sx-cl-c1 { left: 6%; top: 16%; }
-  .sx-cl-c2 { right: 5%; bottom: 10%; }
-  .sx-cl-in { right: 4%; top: 72%; display: grid; gap: 0.3rem; padding: 1rem 1.1rem; width: min(19rem, 60vw); }
+  .sx-print-paper strong { font-size: clamp(0.8rem, 1.2vw, 1rem); letter-spacing: -0.03em; }
+  .sx-print-paper p { margin: 0; display: grid; grid-template-columns: 2.8rem 1fr; gap: 0.4rem; align-items: center; font-size: 0.66rem; font-weight: 600; }
+  .sx-print-paper i { display: block; height: 0.5rem; border-radius: 2px; background: var(--acc); width: calc(var(--v) * 100%); }
+  .sx-print-stamp { position: absolute; right: 0.6rem; bottom: 0.7rem; padding: 0.25rem 0.6rem; border: 2px solid #0E0E0D; border-radius: 4px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; rotate: -12deg; opacity: 0; scale: 2; transition: opacity 0.2s, scale 0.4s var(--ease-out); background: #FFFFFF; }
+  .sx-cl-p3.is-sent .sx-print-stamp { opacity: 1; scale: 1; }
+  .sx-print-body { position: absolute; left: 6%; right: 6%; bottom: 8%; height: 24%; border-radius: 6px; background: #0E0E0D; }
+  .sx-print-body::before { content: ''; position: absolute; left: 14%; right: 14%; top: 0.5rem; height: 4px; border-radius: 2px; background: rgb(255 255 255 / 0.3); }
+  .sx-print-body i { position: absolute; right: 8%; bottom: 30%; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--acc); animation: sx-blink 0.9s steps(1) infinite; }
+  .sx-cl-c1 { left: 2.5%; top: 9%; max-width: min(22rem, 78vw); }
+  .sx-cl-c2 { left: 60%; top: 43%; max-width: min(18rem, 78vw); }
 
   /* ---- near ---- */
   .sx-near {
@@ -1249,88 +1411,81 @@ const STYLE = `
   .sx-nr-c2 { right: 5%; top: 72%; }
 
   /* ---- crew ---- */
-  .sx-crew { background: var(--acc); color: var(--acc-ink); --p: 0; }
-  .sx-cr-c1 { left: 5%; top: 14%; }
-  .sx-crew { pointer-events: auto; touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: none; overflow: hidden; }
+  .sx-crew { background: var(--acc); color: var(--acc-ink); --p: 0; overflow: hidden; }
+  .sx-cr-c1 { left: 3%; top: 8.5%; }
   .sx-crew .sx-tok { background: #FFFFFF; }
   .sx-crew .sx-tok b { color: #0E0E0D; }
-  .sx-grain { position: absolute; inset: 0 0 -50% 0; }
-  .sx-grain i { position: absolute; top: 0; bottom: 0; width: var(--w); background: #0E0E0D; opacity: var(--o); border-radius: 4px; }
-  .sx-agent {
-    left: var(--x); top: var(--y);
-    width: min(19rem, 40vw); translate: -50% -50%; overflow: visible;
-    display: grid; gap: 0.7rem;
-    padding: clamp(0.8rem, 1.5vw, 1.15rem);
-    background: #FFFFFF; color: #0E0E0D;
-    box-shadow: 0 0 0 2px #0E0E0D, var(--ao-3);
-    transition: box-shadow 0.4s;
-  }
-  .sx-agent header { display: flex; align-items: baseline; gap: 0.55rem; }
-  .sx-agent .num { font-size: var(--step--1); font-weight: 600; color: #91918B; }
-  .sx-agent strong { font-size: clamp(1.2rem, 2.2vw, 1.9rem); letter-spacing: -0.045em; line-height: 1; }
-  .sx-agent > p { margin: 0; font-size: var(--step--1); line-height: 1.4; color: #5C5C58; }
-  .sx-agent-ok { margin-left: auto; font-size: 1.4rem; opacity: 0; scale: 0.4; transition: opacity 0.3s, scale 0.5s var(--ease-out); }
-  .sx-agent.is-on .sx-agent-ok { opacity: 1; scale: 1; }
-  .sx-agent.is-on { box-shadow: 0 0 0 2px #0E0E0D, 0 0 0 7px var(--acc), 0 0 0 9px #0E0E0D, var(--ao-3); }
-  .sx-agent-tag {
-    position: absolute; right: 0.9rem; top: -0.85rem;
-    padding: 0.2rem 0.6rem; border-radius: var(--r-pill);
-    background: #0E0E0D; color: #FFFFFF; font-size: 0.72rem; font-weight: 650;
-    opacity: 0; translate: 0 6px; transition: opacity 0.3s, translate 0.4s var(--ease-out);
-  }
-  .sx-agent.is-next .sx-agent-tag { opacity: 1; translate: 0 0; }
-  .sx-agent.is-next { animation: sx-next 1.4s var(--ease-in-out) infinite; }
-  @keyframes sx-next { 50% { box-shadow: 0 0 0 2px #0E0E0D, 0 0 0 9px rgb(14 14 13 / 0.18), var(--ao-3); } }
-
-  /* What each agent is doing, running in its panel. */
-  .sx-mini { position: relative; height: clamp(4.6rem, 11vh, 6.4rem); border-radius: var(--r-s); background: #F3F3EF; box-shadow: var(--ao-in); overflow: hidden; padding: 0.6rem 0.75rem; display: grid; align-content: center; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.72rem; }
-  .sx-mini p { margin: 0; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
-  .sx-mini b { position: relative; display: inline-grid; font-weight: 600; }
-  .sx-mini b > em { grid-area: 1 / 1; font-style: normal; padding: 0.1rem 0.45rem; border-radius: var(--r-pill); }
-  .sx-mini .is-pass { padding: 0.1rem 0.45rem; border-radius: var(--r-pill); background: var(--acc); }
+  .sx-cr-p0 { left: 3%; top: 17%; width: 30%; height: 39%; }
+  .sx-cr-p1 { left: 35.5%; top: 14%; width: 28%; height: 42%; }
+  .sx-cr-p2 { left: 66%; top: 17%; width: 31%; height: 39%; }
+  .sx-cr-p3 { left: 3%; top: 60%; width: 44%; height: 33%; }
+  .sx-cr-p4 { left: 50%; top: 60%; width: 47%; height: 33%; background: #0E0E0D; color: #FFFFFF; box-shadow: 0 0 0 3px #0E0E0D, 7px 7px 0 rgb(14 14 13 / 0.6); }
+  .sx-cr-p4 .sx-cp-lab { background: #FFFFFF; color: #0E0E0D; }
+  .sx-act { position: absolute; left: 34%; right: 5%; top: 2.6rem; bottom: 28%; display: grid; align-items: center; }
+  .sx-cr-say { position: absolute; left: 5%; right: 5%; bottom: 0.8rem; margin: 0; font-size: var(--step--1); font-weight: 600; line-height: 1.35; }
+  .sx-cr-ok { position: absolute; right: 0.7rem; top: 0.6rem; font-size: 1.5rem; opacity: 0; scale: 0.3; rotate: -20deg; transition: opacity 0.3s, scale 0.5s var(--ease-out), rotate 0.5s var(--ease-out); }
+  .sx-cr-p.is-on .sx-cr-ok { opacity: 1; scale: 1; rotate: 0deg; }
+  .sx-cr-who { position: absolute; left: 16%; top: 2.6rem; bottom: 28%; display: grid; place-items: end center; }
+  .sx-cr-who .sx-walker { position: relative; font-size: clamp(56px, 10vh, 96px); }
+  .sx-cr-p .sx-tok { background: var(--acc); }
+  .sx-cr-p.is-run .sx-legs i { animation: sx-stride 0.36s ease-in-out infinite alternate; }
+  .sx-cr-p.is-run .sx-legs i:last-child { animation-delay: -0.36s; }
+  .sx-cr-p.is-run .sx-tok { animation: sx-bob 0.36s ease-in-out infinite alternate; }
+  .sx-cr-who { translate: -50% 0; }
+  .sx-cr-p:not(.is-run) .sx-act *, .sx-cr-p:not(.is-run) .sx-act *::after { animation-play-state: paused !important; }
+  .sx-cr-p.is-run { box-shadow: 0 0 0 3px #0E0E0D, 7px 7px 0 #0E0E0D, 0 0 0 9px #FFFFFF; }
+  .sx-sheet { position: relative; display: grid; gap: 0.35rem; padding: 0.6rem 0.7rem; border-radius: 3px; box-shadow: inset 0 0 0 2px #0E0E0D; font-family: var(--font-mono); font-size: 0.68rem; }
+  .sx-sheet p { margin: 0; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem; }
+  .sx-sheet b { position: relative; display: inline-grid; font-weight: 600; }
+  .sx-sheet b > em { grid-area: 1 / 1; font-style: normal; padding: 0.05rem 0.4rem; border-radius: 3px; }
+  .sx-sheet .is-pass { padding: 0.05rem 0.4rem; border-radius: 3px; background: var(--acc); }
+  .sx-mag { position: absolute; left: 0; top: 0; width: 2.2rem; height: 2.2rem; border-radius: 50%; box-shadow: 0 0 0 3px #0E0E0D; background: rgb(255 255 255 / 0.3); animation: sx-mag 3.2s var(--ease-in-out) infinite; }
+  .sx-mag i { position: absolute; left: 85%; top: 85%; width: 0.9rem; height: 0.3rem; border-radius: 2px; background: #0E0E0D; rotate: 45deg; transform-origin: 0 50%; }
+  @keyframes sx-mag { 0%, 100% { translate: 10% 5%; } 33% { translate: 260% 60%; } 66% { translate: 120% 130%; } }
   .is-flip em:first-child, .sx-flip em:first-child { background: #0E0E0D; color: #FFFFFF; animation: sx-out 3.2s infinite; }
   .is-flip em:last-child, .sx-flip em:last-child { background: var(--acc); animation: sx-in 3.2s infinite; }
-  .sx-mini p:nth-child(3) .is-flip em { animation-delay: 0.8s; }
+  .sx-sheet p:nth-child(3) .is-flip em { animation-delay: 0.8s; }
   @keyframes sx-out { 0%, 45% { opacity: 1; translate: 0 0; } 55%, 92% { opacity: 0; translate: 0 -60%; } 100% { opacity: 1; translate: 0 0; } }
   @keyframes sx-in { 0%, 45% { opacity: 0; translate: 0 60%; } 55%, 92% { opacity: 1; translate: 0 0; } 100% { opacity: 0; translate: 0 60%; } }
-  .sx-mini--1 i { display: block; height: 0.42rem; border-radius: 4px; margin-left: var(--x); width: var(--w); background: #0E0E0D; opacity: 0.75; transform-origin: 0 50%; animation: sx-type 3.4s var(--d) infinite both; }
-  .sx-mini--1 i:nth-child(2n) { background: var(--acc); opacity: 1; }
+  .sx-sand { position: relative; height: 100%; }
+  .sx-sand-scr { position: absolute; left: 0; right: 0; top: 0; height: 52%; display: grid; align-content: center; gap: 0.35rem; padding: 0.5rem 0.6rem; border-radius: 4px; background: #0E0E0D; }
+  .sx-sand-scr i { display: block; height: 0.38rem; width: var(--w); border-radius: 2px; background: var(--acc); transform-origin: 0 50%; animation: sx-type 3.2s var(--d) infinite both; }
   @keyframes sx-type { 0% { transform: scaleX(0); } 30%, 85% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
-  .sx-mini--2 { justify-items: center; }
-  .sx-flip { font-size: 1.15rem; }
-  .sx-mini--2 > span { color: #91918B; }
-  .sx-mini--3 p { justify-content: flex-start; }
-  .sx-mini--3 p i { display: block; height: 0.42rem; border-radius: 4px; }
-  .sx-mini--3 .is-del i { background: #0E0E0D; opacity: 0.22; }
-  .sx-mini--3 .is-add i { background: var(--acc); }
-  .sx-mini .sx-stamp { position: absolute; right: 0.7rem; bottom: 0.55rem; padding: 0.15rem 0.5rem; border-radius: var(--r-pill); background: #0E0E0D; color: #FFFFFF; rotate: -8deg; animation: sx-stamp 3.6s var(--ease-out) infinite; }
-  @keyframes sx-stamp { 0%, 40% { opacity: 0; scale: 1.8; } 50%, 90% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 1; } }
-
-  .sx-crew-disc {
-    position: absolute; left: 0; top: 0; z-index: 9;
-    width: 5.4rem; height: 5.4rem; margin: -2.7rem 0 0 -2.7rem;
-    display: grid; place-items: center; text-align: center;
-    border-radius: 50%; background: #FFFFFF; color: #0E0E0D;
-    box-shadow: 0 0 0 2px #0E0E0D, var(--ao-2);
-    font-weight: 750; font-size: 0.78rem; line-height: 1.1; letter-spacing: 0.02em; text-transform: uppercase;
-    transition: background 0.25s;
+  .sx-sand-box { position: absolute; left: 6%; right: 6%; bottom: 0; height: 34%; border: 3px solid #0E0E0D; border-top: 0; border-radius: 0 0 6px 6px; overflow: hidden; }
+  .sx-sand-tag { position: absolute; right: 0; bottom: 38%; padding: 0.15rem 0.45rem; border-radius: 3px; background: #FFFFFF; box-shadow: 0 0 0 2px #0E0E0D; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em; rotate: 6deg; }
+  .sx-lamps { display: grid; gap: 0.7rem; }
+  .sx-lamps p { margin: 0; display: grid; grid-template-columns: auto 1fr auto; gap: 0.55rem; align-items: center; font-size: 0.74rem; font-weight: 600; }
+  .sx-lamps i { width: 1.5rem; aspect-ratio: 1; border-radius: 50%; box-shadow: 0 0 0 3px #0E0E0D; }
+  .sx-lamps .is-a { background: #0E0E0D; }
+  .sx-lamps .is-b { background: #FFFFFF; animation: sx-lamp 1.6s steps(1) infinite; }
+  @keyframes sx-lamp { 50% { background: var(--acc); } }
+  .sx-lamps b { font-family: var(--font-mono); font-size: 0.66rem; padding: 0.05rem 0.4rem; border-radius: 3px; background: #0E0E0D; color: #FFFFFF; }
+  .sx-lamps p + p b { background: var(--acc); color: var(--acc-ink); }
+  .sx-diff { position: relative; display: grid; gap: 0.45rem; padding: 0.6rem 0.7rem; border-radius: 3px; box-shadow: inset 0 0 0 2px #0E0E0D; }
+  .sx-diff p { margin: 0; display: flex; gap: 0.5rem; align-items: center; font-family: var(--font-mono); font-size: 0.7rem; }
+  .sx-diff p i { display: block; height: 0.42rem; border-radius: 2px; }
+  .sx-diff .is-del i { background: #0E0E0D; opacity: 0.25; }
+  .sx-diff .is-add i { background: var(--acc); }
+  .sx-diff-stamp { position: absolute; right: 0.8rem; bottom: 0.4rem; padding: 0.25rem 0.6rem; border: 3px solid #0E0E0D; border-radius: 4px; background: #FFFFFF; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; rotate: -10deg; animation: sx-stamp 3s var(--ease-out) infinite; }
+  @keyframes sx-stamp { 0%, 35% { opacity: 0; scale: 2.2; } 45%, 90% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 1; } }
+  .sx-cr-p.is-on:not(.is-run) .sx-diff-stamp { animation: none; opacity: 1; }
+  .sx-door { position: absolute; left: 44%; right: 8%; top: 2.4rem; bottom: 28%; border: 3px solid #FFFFFF; border-bottom: 0; border-radius: 6px 6px 0 0; }
+  .sx-door-sign { position: absolute; left: 50%; top: 18%; translate: -50% 0; padding: 0.2rem 0.6rem; border-radius: 3px; background: #FFFFFF; color: #0E0E0D; font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .sx-door-lock { position: absolute; left: 50%; top: 50%; translate: -50% -50%; font-size: 1.8rem; }
+  .sx-door-knob { position: absolute; right: 10%; top: 58%; width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #FFFFFF; }
+  .sx-cr-p4 .sx-cr-say { right: 8%; }
+  .sx-ticket { position: absolute; left: 0; top: 0; z-index: 8; width: 0; height: 0; }
+  .sx-slip {
+    position: absolute; left: 0; top: 0; translate: -10% -50%; z-index: 2; white-space: nowrap;
+    padding: 0.35rem 0.7rem; border-radius: 3px;
+    background: #FFFFFF; color: #0E0E0D; box-shadow: 0 0 0 2px #0E0E0D, 4px 4px 0 #0E0E0D;
+    font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; rotate: -8deg;
   }
-  .sx-crew-disc span { white-space: pre-line; max-width: 4.6rem; }
-  .sx-crew-disc.is-held { background: #0E0E0D; color: #FFFFFF; }
-  .sx-crew-end {
-    position: absolute; left: 50%; bottom: clamp(1.6rem, 6vh, 3.4rem); translate: -50% 12px;
-    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.8rem 1rem;
-    width: max-content; max-width: 92vw; z-index: 10;
-    padding: 0.6rem 0.6rem 0.6rem 1.3rem; border-radius: var(--r-pill);
-    background: #FFFFFF; color: #0E0E0D; box-shadow: 0 0 0 2px #0E0E0D, var(--ao-3);
-    opacity: 0; transition: opacity 0.5s, translate 0.7s var(--ease-out);
-  }
-  .sx-crew-end.is-on { opacity: 1; translate: -50% 0; }
-  .sx-crew-end p { margin: 0; font-weight: 650; font-size: var(--step-0); text-align: center; }
-  .sx-merge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.1rem; border-radius: var(--r-pill); background: rgb(14 14 13 / 0.12); box-shadow: var(--ao-in); font-weight: 650; color: rgb(14 14 13 / 0.55); }
-  .sx-merge .glyph { font-size: 1.2rem; }
-  .sx-crew-hand { position: absolute; left: 0; top: 0; z-index: 8; }
-  .sx-crew-hand .sx-walker { position: relative; font-size: clamp(64px, 10vh, 96px); translate: -0.5em -0.5em; }
+  .sx-ticket.is-walk .sx-slip { animation: sx-flap 0.3s ease-in-out infinite alternate; }
+  @keyframes sx-flap { to { rotate: 6deg; } }
+  .sx-crew-now { left: auto; right: 3%; top: 9%; max-width: min(24rem, 44vw); --paper: #0E0E0D; --ink: #FFFFFF; box-shadow: 0 0 0 2px #0E0E0D, 5px 5px 0 rgb(14 14 13 / 0.35); }
+  .sx-crew .sx-hold { left: 48.5%; top: 76.5%; bottom: auto; translate: -50% -50%; z-index: 9; width: clamp(5rem, 10vh, 6.4rem); }
+  .sx-cr-p4 .sx-cr-say { left: 10%; }
 
   /* Hold buttons: a disc of ink with its progress drawn round the rim. */
   .sx-hold {
@@ -1431,73 +1586,101 @@ const STYLE = `
 
   /* ---- hall ---- */
   .sx-hall-bg { background: var(--paper); }
-  .sx-col {
-    position: absolute; left: 50%; top: 50%;
-    width: 180px; height: 2600px; margin: -1300px 0 0 -90px;
-    border-radius: 90px;
+  .sx-ha-p1 { left: 3%; top: 13%; width: 58%; height: 80%; }
+  .sx-ha-floor { position: absolute; left: 0; right: 0; bottom: 9%; height: 3px; background: #0E0E0D; }
+  .sx-chest { position: absolute; left: 5%; bottom: 9%; width: 30%; height: 70%; }
+  .sx-chest-side { position: absolute; inset: -3% -4% 0 -4%; z-index: 2; border-radius: 6px 6px 0 0; background: #0E0E0D; overflow: hidden; }
+  .sx-chest-side .sx-hatch { inset: 0; background-color: #FFFFFF; opacity: 0.16; }
+  .sx-drawer {
+    position: absolute; left: 0; width: 100%; height: 19%;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    border: 3px solid #0E0E0D; border-top: 0; border-radius: 0 0 4px 4px;
     background: var(--acc);
-    box-shadow: inset -26px 0 0 rgb(0 0 0 / 0.22);
-    display: grid; place-items: center;
   }
-  .sx-col span {
-    writing-mode: vertical-rl; rotate: 180deg;
-    font-family: var(--font-display); font-weight: 750; font-size: 54px; letter-spacing: -0.03em;
-    color: var(--acc-ink); white-space: nowrap;
+  .sx-drawer:nth-child(1) { top: 0.5%; }
+  .sx-drawer:nth-child(2) { top: 20.5%; }
+  .sx-drawer:nth-child(3) { top: 40.5%; }
+  .sx-drawer:nth-child(4) { top: 60.5%; }
+  .sx-drawer:nth-child(5) { top: 80.5%; }
+  .sx-drawer { justify-content: space-between; padding: 0.35rem 0.4rem 0.3rem; }
+  .sx-drawer ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  .sx-drawer li { padding: 0.1rem 0.4rem; border-radius: 3px; background: #FFFFFF; box-shadow: 0 0 0 2px #0E0E0D; font-size: clamp(0.56rem, 0.9vw, 0.72rem); font-weight: 700; color: #0E0E0D; }
+  .sx-drawer-n { position: relative; z-index: 1; align-self: flex-end; margin: 0; padding: 0.15rem 0.45rem; border-radius: 3px; background: #0E0E0D; color: #FFFFFF; font-size: clamp(0.56rem, 0.9vw, 0.72rem); font-weight: 700; white-space: nowrap; }
+  .sx-drawer::after { content: ''; position: absolute; right: -0.9rem; top: 35%; width: 0.7rem; height: 30%; border-radius: 0 4px 4px 0; background: #0E0E0D; }
+  .sx-ha-tok { position: absolute; left: 0; top: 0; z-index: 4; }
+  .sx-ha-tok .sx-walker { position: relative; font-size: clamp(48px, 8vh, 80px); translate: -50% -1.14em; }
+  .sx-ha-p2 { left: 64%; top: 13%; width: 33%; height: 29%; padding: 2.8rem 1.3rem 1.2rem; display: grid; align-content: start; gap: 0.6rem; }
+  .sx-ha-p2 strong { font-size: clamp(1.8rem, 3.6vw, 3.4rem); letter-spacing: -0.05em; line-height: 0.95; }
+  .sx-ha-p2 p { margin: 0; font-weight: 650; font-size: var(--step-0); color: #5C5C58; }
+  .sx-ha-p2.is-flash strong, .sx-ha-p2.is-flash p { animation: sx-flash 0.5s var(--ease-out); }
+  @keyframes sx-flash { from { opacity: 0; translate: 0 0.4em; } }
+  .sx-ha-p3 { left: 64%; top: 47%; width: 33%; height: 46%; padding: 2.6rem 0.9rem 0.9rem; }
+  .sx-builds { display: grid; grid-auto-rows: 1fr; gap: 0.45rem; height: 100%; }
+  .sx-build {
+    display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 0.7rem; align-items: center;
+    padding: 0.5rem 0.7rem; border-radius: 4px; box-shadow: inset 0 0 0 2px #0E0E0D;
+    opacity: 0; translate: 2rem 0; transition: opacity 0.4s, translate 0.6s var(--ease-out), background 0.3s;
   }
-  .sx-plinth { position: absolute; left: 50%; top: 50%; translate: -50% -100%; transform-origin: 50% 100%; }
-  .sx-caps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.2em; padding: 0 3em; align-items: end; }
-  .sx-capsule {
-    position: relative; display: grid; gap: 0.6em; justify-items: center; align-content: start;
-    min-height: 24em; padding: 2.4em 1.2em 1.6em;
-    border-radius: 999px 999px 2em 2em;
-    background: #FFFFFF; color: #0E0E0D;
-    box-shadow: inset -1.4em 0 0 rgb(14 14 13 / 0.08), var(--ao-2);
-    text-align: center;
-    transition: translate 0.6s var(--ease-out);
-  }
-  .sx-plinth:not(.is-near) .sx-capsule { pointer-events: none; }
-  .sx-capsule .glyph { font-size: 3.4em; }
-  .sx-capsule strong { font-size: 2.4em; letter-spacing: -0.045em; }
-  .sx-capsule ul { list-style: none; margin: 0.4em 0 0; padding: 0; display: grid; gap: 0.35em; font-size: 1.15em; font-weight: 550; color: #5C5C58; }
-  .sx-capsule:hover { translate: 0 -1.2em; }
-  .sx-plinth-top { height: 3.2em; margin-top: -0.6em; border-radius: 1.2em; background: var(--paper-3); box-shadow: var(--ao-2); }
-  .sx-strip {
-    left: 50%; top: 50%;
-    width: min(70rem, 94vw); height: min(15rem, 26vh);
-    margin: calc(min(15rem, 26vh) / -2) 0 0 calc(min(70rem, 94vw) / -2);
-    background: #FFFFFF; color: #0E0E0D;
-    box-shadow: 0 0 0 2px #FFFFFF, var(--ao-3);
-    display: flex; align-items: center;
-  }
-  .sx-strip-t { white-space: nowrap; font-size: min(22vh, 13rem); font-weight: 800; letter-spacing: -0.06em; line-height: 1; padding-left: 4%; }
-  .sx-hall-walk { position: absolute; left: 6%; bottom: -6%; }
-  .sx-hall-walk .sx-walker { position: relative; font-size: min(40vh, 22rem); }
-  .sx-ha-c1 { left: 5%; top: 14%; }
-  .sx-ha-c2 { right: 5%; top: 14%; }
+  .sx-build.is-on { opacity: 1; translate: 0 0; }
+  .sx-build:hover { background: var(--acc); }
+  .sx-build .glyph { grid-row: 1 / 3; font-size: 1.5rem; }
+  .sx-build strong { font-size: clamp(0.95rem, 1.5vw, 1.25rem); letter-spacing: -0.04em; line-height: 1; }
+  .sx-build span { font-size: 0.7rem; font-weight: 550; color: #5C5C58; }
+  .sx-ha-c1 { left: 2%; top: 9%; }
+  .sx-ha-c2 { left: 60%; top: 39%; max-width: min(20rem, 78vw); }
 
   /* ---- lift ---- */
   .sx-lift { background: var(--paper); --p: 0; }
-  .sx-lift-lines { position: absolute; left: 50%; top: 46%; width: 0; height: 0; }
-  .sx-lift-lines i {
-    position: absolute; left: 0; top: 0;
-    width: max(var(--l), 5rem); height: 3px; border-radius: 3px;
-    background: var(--ink); opacity: calc(0.25 + var(--p) * 0.5);
-    transform: rotate(var(--a)) translateX(min(var(--r), 48vh));
-    transform-origin: 0 50%;
+  .sx-lf-p1 { left: 3%; top: 12%; width: 37%; height: 82%; }
+  .sx-tower { position: absolute; left: 0; right: 0; top: 2.3rem; bottom: 0; display: grid; grid-template-columns: 1fr 26%; grid-template-rows: repeat(5, 1fr); }
+  .sx-floor {
+    grid-column: 1; position: relative;
+    display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 0.8rem; align-content: center;
+    padding: 0.4rem 1rem; border-top: 3px solid #0E0E0D; border-right: 3px solid #0E0E0D;
   }
-  .sx-orbit { position: absolute; left: 50%; top: 46%; width: 0; height: 0; }
-  .sx-orb {
-    position: absolute; left: 0; top: 0; translate: -50% -50%;
-    padding: 0.45em 0.85em; border-radius: var(--r-pill);
-    background: var(--paper-3); color: var(--ink);
-    box-shadow: var(--ao-1);
-    font-weight: 650; font-size: clamp(0.8rem, 1.5vw, 1.15rem); white-space: nowrap;
-  }
-  .sx-lift-walk { position: absolute; left: 0; top: 0; z-index: 2; }
-  .sx-lift-walk .sx-walker { translate: -0.5em -0.5em; font-size: clamp(80px, 14vh, 140px); }
-  .sx-lift-walk .sx-walker { position: relative; }
-  .sx-lf-c1 { left: 5%; top: 14%; }
-  .sx-lf-c2 { right: 5%; top: 64%; }
+  .sx-floor .num { grid-row: 1 / 3; align-self: center; font-family: var(--font-display); font-weight: 800; font-size: clamp(1.4rem, 2.6vw, 2.2rem); color: #C9C9C3; }
+  .sx-floor strong { font-size: clamp(1rem, 1.8vw, 1.5rem); letter-spacing: -0.04em; line-height: 1.05; }
+  .sx-floor em { font-style: normal; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #91918B; }
+  .sx-floor.is-on .num { color: #0E0E0D; }
+  .sx-floor.is-here { background: var(--acc); color: var(--acc-ink); }
+  .sx-floor.is-here em, .sx-floor.is-here .num { color: inherit; }
+  .sx-shaft { grid-column: 2; grid-row: 1 / -1; position: relative; border-top: 3px solid #0E0E0D; overflow: hidden; }
+  .sx-shaft .sx-hatch { opacity: 0.15; }
+  .sx-cable { position: absolute; left: 50%; top: 0; width: 3px; height: 100%; margin-left: -1.5px; background: #0E0E0D; transform-origin: 50% 0; }
+  .sx-car { position: absolute; left: 50%; top: 0; width: 0; height: 0; }
+  .sx-car::before { content: ''; position: absolute; left: 50%; top: 50%; width: clamp(62px, 10vh, 96px); height: clamp(70px, 12vh, 110px); translate: -50% -55%; border-radius: 4px; background: #FFFFFF; box-shadow: 0 0 0 3px #0E0E0D; }
+  .sx-car .sx-walker { position: absolute; left: 0; top: 0; font-size: clamp(40px, 6.5vh, 62px); translate: -50% -0.72em; }
+  .sx-lf-p2 { left: 44%; top: 12%; width: 52%; height: 23%; padding: 2.6rem 1.4rem 1rem; display: grid; align-content: center; }
+  .sx-lf-q { margin: 0; font-size: clamp(1.8rem, 4vw, 3.4rem); font-weight: 800; letter-spacing: -0.05em; line-height: 1; }
+  .sx-lf-p3 { left: 44%; top: 40%; width: 24%; height: 28%; display: grid; place-items: center; padding-top: 1.6rem; }
+  .sx-dial { width: 84%; overflow: visible; }
+  .sx-dial path { fill: none; stroke: #0E0E0D; stroke-width: 6; stroke-linecap: round; }
+  .sx-dial line { stroke: #0E0E0D; stroke-width: 5; stroke-linecap: round; }
+  .sx-dial g { transform-origin: 100px 105px; }
+  .sx-dial g line { stroke: var(--acc); stroke-width: 6; }
+  .sx-dial g circle { fill: #0E0E0D; }
+  .sx-lf-p3 b { position: absolute; right: 0.8rem; bottom: 0.4rem; font-size: clamp(2rem, 4vw, 3.2rem); letter-spacing: -0.05em; }
+  .sx-lf-p4 { left: 71%; top: 40%; width: 25%; height: 28%; padding: 2.6rem 1.1rem 1rem; display: grid; align-content: start; gap: 0.4rem; }
+  .sx-lf-p4 .sx-cp-lab { background: var(--acc); color: var(--acc-ink); }
+  .sx-lf-p4 strong { font-size: clamp(1.4rem, 2.6vw, 2.2rem); letter-spacing: -0.045em; line-height: 1; }
+  .sx-lf-p4 p { margin: 0; font-weight: 600; font-size: var(--step--1); color: #5C5C58; line-height: 1.35; }
+  .sx-lf-p5 { left: 44%; top: 73%; width: 52%; height: 21%; display: grid; align-content: center; padding: 2.2rem 1.4rem 0.8rem; }
+  .sx-lf-p5 p { grid-area: 1 / 1; margin: 0; transition: opacity 0.35s, translate 0.45s var(--ease-out); }
+  .sx-lf-idle { font-weight: 650; color: #5C5C58; }
+  .sx-lf-dots { display: flex; gap: 0.4rem; opacity: 0; }
+  .sx-lf-dots i { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #0E0E0D; animation: sx-dots 1s ease-in-out infinite; }
+  .sx-lf-dots i:nth-child(2) { animation-delay: 0.15s; }
+  .sx-lf-dots i:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes sx-dots { 50% { translate: 0 -0.4rem; } }
+  .sx-lf-a { opacity: 0; translate: 0 0.5em; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.8rem; }
+  .sx-lf-a strong { font-size: clamp(1.6rem, 3.4vw, 2.8rem); letter-spacing: -0.05em; }
+  .sx-lf-a span { font-weight: 650; padding: 0.15rem 0.5rem; border-radius: 3px; background: var(--acc); color: var(--acc-ink); }
+  .sx-lf-p5.is-wait .sx-lf-idle, .sx-lf-p5.is-done .sx-lf-idle { opacity: 0; }
+  .sx-lf-p5.is-wait .sx-lf-dots { opacity: 1; }
+  .sx-lf-p5.is-done .sx-lf-a { opacity: 1; translate: 0 0; }
+  .sx-lf-c1 { left: 2%; top: 7.5%; max-width: min(22rem, 78vw); }
+  .sx-lf-c2 { left: 41%; top: 67.5%; max-width: min(24rem, 78vw); }
+  .sx-lift .sx-hold { left: 42%; top: 87%; bottom: auto; translate: -50% -50%; width: clamp(5rem, 10vh, 6.4rem); }
 
   /* ---- record ---- */
   .sx-rec-ground { background: var(--paper); }
@@ -1686,14 +1869,67 @@ const STYLE = `
     .sx-town { gap: 2.5%; height: 30%; }
     .sx-bld-win { gap: 3px; }
     .sx-bld-n { display: none; }
-    .sx-step { padding: 0.4rem 0.3rem; }
-    .sx-step strong { font-size: 0.62rem; letter-spacing: -0.02em; }
-    .sx-cl-c1 { top: 10%; }
-    .sx-cl-c2 { bottom: 6%; }
-    .sx-agent { left: var(--mx); top: var(--my); width: 44vw; padding: 0.6rem; gap: 0.45rem; }
-    .sx-agent > p { display: none; }
-    .sx-mini { height: 3.6rem; font-size: 0.6rem; padding: 0.4rem; }
-    .sx-crew-disc { width: 4.4rem; height: 4.4rem; margin: -2.2rem 0 0 -2.2rem; font-size: 0.66rem; }
+    .sx-cl-p1 { left: 4%; top: 15%; width: 92%; height: 44%; }
+    .sx-cl-p2 { left: 4%; top: 63%; width: 44%; height: 28%; padding: 2.2rem 0.7rem 0.6rem; }
+    .sx-chk-sql { display: none; }
+    .sx-cl-p3 { left: 52%; top: 63%; width: 44%; height: 28%; }
+    .sx-cl-c1 { left: 4%; right: 4%; top: 7%; max-width: none; }
+    .sx-cl-c2 { left: 4%; right: 4%; top: auto; bottom: 2%; max-width: none; }
+    .sx-cr-c1 { left: 4%; right: 4%; top: 7%; max-width: none; }
+    .sx-crew-now { left: 4%; right: 4%; top: 77%; max-width: none; }
+    .sx-cr-p0 { left: 4%; top: 16%; width: 44%; height: 21%; }
+    .sx-cr-p1 { left: 52%; top: 16%; width: 44%; height: 21%; }
+    .sx-cr-p2 { left: 4%; top: 40%; width: 44%; height: 21%; }
+    .sx-cr-p3 { left: 52%; top: 40%; width: 44%; height: 21%; }
+    .sx-cr-p4 { left: 4%; top: 64%; width: 92%; height: 10%; }
+    .sx-crew .sx-hold { left: 50%; top: auto; bottom: 2%; translate: -50% 0; }
+    .sx-cr-say { display: none; }
+    .sx-act { left: 40%; right: 4%; top: 2.1rem; bottom: 0.5rem; }
+    .sx-cp-lab { font-size: 0.56rem; padding: 0.25rem 0.5rem; }
+    .sx-sheet, .sx-diff { padding: 0.3rem; font-size: 0.5rem; gap: 0.15rem; }
+    .sx-mag { width: 1.4rem; height: 1.4rem; }
+    .sx-lamps p { grid-template-columns: auto auto; font-size: 0.56rem; gap: 0.3rem; }
+    .sx-lamps span { display: none; }
+    .sx-lamps i { width: 1rem; }
+    .sx-diff-stamp { font-size: 0.56rem; }
+    .sx-sand-tag { display: none; }
+    .sx-door { left: 50%; top: 1.6rem; bottom: 0; }
+    .sx-door-sign { font-size: 0.56rem; top: 8%; }
+    .sx-door-lock { font-size: 1.1rem; top: 62%; }
+    .sx-slip { font-size: 0.56rem; }
+    .sx-cr-who { left: 20%; bottom: 0.5rem; }
+    .sx-cr-who .sx-walker { font-size: 34px; }
+    .sx-ha-p1 { left: 4%; top: 15%; width: 92%; height: 50%; }
+    .sx-chest { width: 32%; }
+    .sx-drawer ul { display: none; }
+    .sx-ha-p2 { left: 4%; top: 69%; width: 44%; height: 26%; padding: 2.2rem 0.7rem 0.6rem; }
+    .sx-ha-p2 strong { font-size: 1.3rem; }
+    .sx-ha-p2 p { font-size: 0.7rem; }
+    .sx-ha-p3 { left: 52%; top: 69%; width: 44%; height: 26%; padding: 2rem 0.5rem 0.5rem; }
+    .sx-build { padding: 0.25rem 0.4rem; column-gap: 0.4rem; }
+    .sx-build span { display: none; }
+    .sx-build .glyph { font-size: 1rem; grid-row: auto; }
+    .sx-build strong { font-size: 0.8rem; }
+    .sx-ha-c1, .sx-ha-c2 { left: 4%; right: 4%; top: 7%; max-width: none; }
+    .sx-lf-p1 { left: 4%; top: 15%; width: 50%; height: 70%; }
+    .sx-floor { padding: 0.3rem 0.5rem; column-gap: 0.4rem; }
+    .sx-floor em { display: none; }
+    .sx-floor strong { font-size: 0.8rem; }
+    .sx-floor .num { font-size: 1.1rem; }
+    .sx-lf-p2 { left: 58%; top: 15%; width: 38%; height: 18%; padding: 2rem 0.6rem 0.5rem; }
+    .sx-lf-q { font-size: 1.15rem; }
+    .sx-lf-p3 { left: 58%; top: 36%; width: 38%; height: 20%; }
+    .sx-lf-p4 { display: none; }
+    .sx-lf-p5 { left: 58%; top: 59%; width: 38%; height: 26%; padding: 2rem 0.6rem 0.5rem; }
+    .sx-lf-a strong { font-size: 1.3rem; }
+    .sx-lf-a span, .sx-lf-idle { font-size: 0.7rem; }
+    .sx-lf-c1, .sx-lf-c2 { left: 4%; right: 4%; top: 7%; max-width: none; }
+    .sx-lift .sx-hold { left: 50%; top: auto; bottom: 2%; translate: -50% 0; }
+    .sx-typist { left: 24%; }
+    .sx-typist .sx-walker { font-size: 64px; }
+    .sx-clock { width: 12%; top: 62%; }
+    .sx-car::before { width: 40px; height: 46px; }
+    .sx-car .sx-walker { font-size: 28px; }    .sx-lift .sx-hold { left: 50%; bottom: 3%; }
     .sx-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .sx-shelf-card:nth-child(n+7) { display: none; }
     .sx-rg-main { top: 45%; }
@@ -1707,10 +1943,6 @@ const STYLE = `
     .sx-rec header span + span { display: none; }
     .sx-rec--ieee strong { display: none; }
     .sx-paper b { font-size: var(--step--1); }
-    .sx-caps { gap: 1em; padding: 0 0.6em; }
-    .sx-capsule { min-height: 30em; padding: 2em 0.6em 1.4em; }
-    .sx-capsule strong { font-size: 2.6em; }
-    .sx-capsule ul { font-size: 1.5em; }
     .sx-side, .sx-reel-side { display: none; }
     .sx-end .sx-side { display: none; }
     .sx-rail { display: none; }
