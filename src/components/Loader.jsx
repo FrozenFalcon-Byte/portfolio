@@ -1,26 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap, EASE, reduced } from '../lib/motion';
-import Mark from './Mark';
 import PageLoader, { loaderKind } from './PageLoader';
 import { getPrefs } from '../lib/prefs';
 
 /* ------------------------------------------------------------------
-   The loader — "a." stands for "ajinkya."
+   The loader: a wall of moving type.
 
-   One continuous story told with the logo itself:
+   Six bands fill the screen, each running one line of the story in
+   huge type, alternate bands running opposite ways. They slide in one
+   after another, in ink, paper and the visit's one colour. In the
+   middle sits a black badge: the count, a ring that fills with the
+   real loading, and the name turning round its edge.
 
-   1. The mark writes itself, large, on a white page: the bowl draws
-      round, the stem drops, the full stop bounces in.
-   2. The full stop is shoved to the right as the rest of the name types
-      in behind the a. Each letter lands in the visit's accent and then
-      settles to ink.
-   3. Nothing lifts or wipes. The letters "jinkya" each fly to the very
-      letter of the hero's name they become, the "a." flies to the nav
-      as the logo, and the loader's ground — the same paper as the page
-      — is simply gone. The hero's capital A rises where the mark left,
-      and the rest of the page builds around the name.
+   When the page is in, the bands pull away like blinds, alternately
+   left and right, and the hero is standing underneath; the badge
+   flies up and becomes the logo in the nav.
    ------------------------------------------------------------------ */
-const TAIL = 'jinkya'.split('');
 /* The loader runs in one colour, drawn at random for each visit and
    never the previous visit's — the site itself keeps its own accents. */
 const POPS = ['#E61A66', '#FFD400', '#3860BE', '#A68AFF', '#C8F55C', '#0E7C86'];
@@ -33,312 +28,172 @@ const pickPop = () => {
   return pick;
 };
 
+const BANDS = [
+  { t: 'Ajinkya Chavan', k: 'acc' },
+  { t: 'Agents in production', k: 'ink' },
+  { t: 'Retrieval that cites its sources', k: 'paper' },
+  { t: 'LangGraph · FastAPI · React · Azure', k: 'acc' },
+  { t: 'Shipping at Emerson', k: 'ink' },
+  { t: 'AI / ML engineer · Pune', k: 'paper' },
+];
+const RING = 'Loading the portfolio of Ajinkya Chavan · AI / ML engineer · ';
+const R = 44; const C = 2 * Math.PI * R;
+
 const HomeLoader = () => {
   const rootRef = useRef(null);
-  const veilRef = useRef(null);
-  const wordRef = useRef(null);
-  const markRef = useRef(null);
-  const dotRef = useRef(null);
-  const tailRef = useRef(null);
-  const footRef = useRef(null);
-  const fillRef = useRef(null);
+  const badgeRef = useRef(null);
+  const arcRef = useRef(null);
   const [count, setCount] = useState(0);
 
   useEffect(() => {
+    const root = rootRef.current;
     const done = () => {
       window.loaderIsDone = true;
       window.dispatchEvent(new Event('loader-complete'));
       window.lenis?.start();
       document.documentElement.classList.remove('is-loading');
-      gsap.set(rootRef.current, { autoAlpha: 0, pointerEvents: 'none' });
     };
-
-    if (reduced()) { setCount(100); done(); return undefined; }
+    if (reduced()) { setCount(100); done(); gsap.set(root, { autoAlpha: 0 }); return undefined; }
 
     window.lenis?.stop();
     document.documentElement.classList.add('is-loading');
+    root.style.setProperty('--acc', pickPop());
+    gsap.set('.nav-logo, .nav-links, .nav-right', { opacity: 0, y: -10 });
 
-    const mark = markRef.current;
-    const bowl = mark.querySelector('.mark-bowl');
-    const stem = mark.querySelector('.mark-stem');
-    const dot = dotRef.current;
-    const boxes = Array.from(tailRef.current.children);
-    const letters = boxes.map((b) => b.firstElementChild);
-    const widths = boxes.map((b) => b.firstElementChild.getBoundingClientRect().width);
+    const bands = Array.from(root.querySelectorAll('.ld-band'));
+    const badge = badgeRef.current;
+    const ready = Promise.race([
+      Promise.all([
+        document.fonts?.ready ?? Promise.resolve(),
+        document.readyState === 'complete'
+          ? Promise.resolve()
+          : new Promise((r) => window.addEventListener('load', r, { once: true })),
+      ]),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
+
     const meter = { v: 0 };
-    // Colour tweens need a real value, not a var() — read it once here.
-    const pop = pickPop();
-    rootRef.current.style.setProperty('--acc', pop);
-    const ink = getComputedStyle(rootRef.current).getPropertyValue('--lw-ink').trim() || '#0E0E0D';
-    const row = document.querySelector('.hero-row--a');
-    // Letters are drawn in the hero name's own weight, so the shapes
-    // that fly are the shapes that land.
-    if (row) tailRef.current.style.fontWeight = getComputedStyle(row).fontWeight;
+    const paint = () => {
+      arcRef.current.style.strokeDashoffset = (C * (1 - meter.v / 100)).toFixed(2);
+      setCount(Math.round(meter.v));
+    };
+    paint();
 
-    gsap.set([bowl, stem], { strokeDasharray: 1, strokeDashoffset: 1 });
-    gsap.set(dot, { y: '-3em', scale: 0 });
-    gsap.set(boxes, { width: 0 });
-    gsap.set(letters, { yPercent: 110 });
-    gsap.set(footRef.current, { opacity: 0, y: 16 });
-    gsap.set('.nav-logo', { opacity: 0 });
-    gsap.set('.nav-links, .nav-right', { opacity: 0, y: -10 });
+    gsap.set(bands, { xPercent: (i) => (i % 2 ? 101 : -101) });
+    gsap.set(badge, { scale: 0, rotate: -90 });
 
-    const tl = gsap.timeline();
+    let alive = true;
+    const intro = gsap.timeline()
+      .to(bands, { xPercent: 0, duration: 0.75, stagger: 0.07, ease: 'expo.out' }, 0)
+      .to(badge, { scale: 1, rotate: 0, duration: 0.9, ease: 'back.out(1.7)' }, 0.35)
+      .to(meter, { v: 88, duration: 1.8, ease: 'power1.inOut', onUpdate: paint }, 0.45);
 
-    tl
-      // 1 — the mark writes itself.
-      .to(bowl, { strokeDashoffset: 0, duration: 0.8, ease: EASE.glide }, 0.1)
-      .to(stem, { strokeDashoffset: 0, duration: 0.4, ease: EASE.swift }, 0.65)
-      .to(dot, { scale: 1, duration: 0.15, ease: 'power2.out' }, 0.85)
-      .to(dot, { y: 0, duration: 0.7, ease: 'bounce.out' }, 0.85)
-      .to(footRef.current, { opacity: 1, y: 0, duration: 0.6, ease: EASE.swift }, 0.5)
-      .to(meter, {
-        v: 100,
-        duration: 2.4,
-        ease: 'power1.inOut',
-        onUpdate: () => setCount(Math.round(meter.v)),
-      }, 0.5)
-      .to(fillRef.current, { scaleX: 1, duration: 2.4, ease: 'power1.inOut' }, 0.5);
-
-    // 2 — the name types in, shoving the dot along.
-    boxes.forEach((b, i) => {
-      const at = 1.5 + i * 0.11;
-      tl.to(b, { width: widths[i], duration: 0.38, ease: EASE.swift }, at)
-        .fromTo(letters[i],
-          { yPercent: 110, color: pop },
-          { yPercent: 0, duration: 0.42, ease: 'back.out(2)' }, at)
-        .to(letters[i], { color: ink, duration: 0.5, ease: 'power1.out' }, at + 0.35);
+    let out;
+    Promise.all([ready, new Promise((r) => intro.eventCallback('onComplete', r))]).then(() => {
+      if (!alive) return;
+      const logo = document.querySelector('.nav-logo')?.getBoundingClientRect();
+      const b = badge.getBoundingClientRect();
+      out = gsap.timeline()
+        .to(meter, { v: 100, duration: 0.5, ease: 'power2.out', onUpdate: paint })
+        .to(badge, { scale: 1.12, duration: 0.18, ease: 'power2.out', yoyo: true, repeat: 1 }, 0.5)
+        .add(done, 0.85)
+        .to(bands, {
+          xPercent: (i) => (i % 2 ? -101 : 101),
+          duration: 0.9, stagger: { each: 0.05, from: 'center' }, ease: 'expo.inOut',
+        }, 0.75);
+      if (logo && logo.width) {
+        out.to(badge, {
+          x: logo.left + logo.width / 2 - (b.left + b.width / 2),
+          y: logo.top + logo.height / 2 - (b.top + b.height / 2),
+          scale: logo.width / b.width, rotate: 180,
+          duration: 0.95, ease: 'expo.inOut',
+        }, 0.8)
+          .set('.nav-logo', { opacity: 1, y: 0 }, 1.7)
+          .to(badge, { opacity: 0, duration: 0.2 }, 1.7);
+      } else {
+        out.to(badge, { scale: 0, duration: 0.6, ease: 'expo.in' }, 0.8);
+      }
+      out.to('.nav-links, .nav-right', { opacity: 1, y: 0, duration: 0.7, stagger: 0.06, ease: EASE.swift }, 1.3)
+        .set(root, { autoAlpha: 0, pointerEvents: 'none' }, 1.95);
     });
 
-    /* Character boxes from text ranges: the content area of a glyph
-       scales exactly with font size, whatever line-height its element
-       has, so two of them can be lined up centre to centre. */
-    const charRects = (el) => {
-      const out = [];
-      const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
-        acceptNode: (n) => (n.parentElement.closest('.glyph') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
-      });
-      const r = document.createRange();
-      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
-        for (let k = 0; k < n.length; k += 1) {
-          if (/\s/.test(n.data[k])) continue;
-          r.setStart(n, k); r.setEnd(n, k + 1);
-          out.push({ ch: n.data[k], box: r.getBoundingClientRect(), node: n.parentElement });
-        }
-      }
-      return out;
-    };
-
-    const FLY = 2.85;
-    const LAND = FLY + 1.15;
-
-    tl
-      .to(footRef.current, { opacity: 0, y: -12, duration: 0.4, ease: EASE.swift }, 2.6)
-
-      // 3 — the letters become the hero's letters; the mark becomes the logo.
-      .add(() => {
-        const fly = (el, to, origin) => {
-          const from = el.getBoundingClientRect();
-          return { x: (to.left + to.width / 2) - (from.left + from.width / 2), y: (to.top + to.height / 2) - (from.top + from.height / 2), s: to.width / from.width, origin };
-        };
-
-        const navSvg = document.querySelector('.nav-logo .mark');
-        const navDot = document.querySelector('.nav-logo .mark-dot');
-        if (navSvg && navDot) {
-          const m = fly(mark, navSvg.getBoundingClientRect());
-          gsap.to(mark, { x: m.x, y: m.y, scale: m.s, transformOrigin: '50% 50%', duration: 1.1, ease: EASE.swift });
-          const d = fly(dot, navDot.getBoundingClientRect());
-          gsap.to(dot, {
-            x: d.x, y: d.y, scale: d.s, transformOrigin: '50% 50%',
-            backgroundColor: getComputedStyle(navDot).fill,
-            duration: 1.1, ease: EASE.swift, delay: 0.06,
-          });
-        }
-
-        if (!row) { gsap.to(boxes, { opacity: 0, duration: 0.5 }); return; }
-        // The hero's line is put in its resting place under the veil so
-        // its letters can be measured where they will finally sit.
-        gsap.set(row, { yPercent: 0, rotate: 0, x: 0, xPercent: 0 });
-        const targets = charRects(row);
-        const sources = charRects(tailRef.current);
-        const scale = parseFloat(getComputedStyle(row).fontSize) / parseFloat(getComputedStyle(boxes[0]).fontSize);
-        gsap.set(boxes, { overflow: 'visible' });
-        sources.forEach((src, k) => {
-          const to = targets[k + 1]; // targets[0] is the capital A
-          if (!to) return;
-          const el = letters[k];
-          const own = el.getBoundingClientRect();
-          gsap.to(el, {
-            x: (to.box.left + to.box.width / 2) - (src.box.left + src.box.width / 2),
-            y: (to.box.top + to.box.height / 2) - (src.box.top + src.box.height / 2),
-            scale,
-            transformOrigin: `${src.box.left + src.box.width / 2 - own.left}px ${src.box.top + src.box.height / 2 - own.top}px`,
-            duration: 1.1,
-            delay: k * 0.025,
-            ease: EASE.glide,
-          });
-        });
-      }, FLY)
-
-      // Hand over in a single frame: the veil and the hero share a
-      // ground, so removing it shows nothing new except what landed.
-      .set('.nav-logo', { opacity: 1 }, LAND)
-      .set([veilRef.current, wordRef.current], { autoAlpha: 0 }, LAND)
-      .add(() => {
-        const a = row?.querySelector('.sc-ch');
-        if (a) gsap.fromTo(a, { yPercent: 110 }, { yPercent: 0, duration: 0.8, ease: EASE.swift });
-        gsap.to('.nav-links, .nav-right', { opacity: 1, y: 0, duration: 0.8, stagger: 0.08, ease: EASE.swift });
-      }, LAND)
-      .add(done, LAND);
-
-    if (import.meta.env.DEV) window.__loader = tl;
-
-    return () => tl.kill();
+    if (import.meta.env.DEV) window.__loader = intro;
+    return () => { alive = false; intro.kill(); out?.kill(); };
   }, []);
 
   return (
-    <div ref={rootRef} className="loader" aria-hidden="true">
-      <div className="loader-veil" ref={veilRef} />
-
-      <div className="loader-center">
-        <div className="loader-word" ref={wordRef}>
-          <Mark className="loader-mark" dot={false} ref={markRef} />
-          <span className="loader-tail" ref={tailRef}>
-            {TAIL.map((c, i) => (
-              <span className="lw-box" key={i}><span className="lw-ch">{c}</span></span>
-            ))}
-          </span>
-          <span className="loader-dot" ref={dotRef} />
-        </div>
+    <div ref={rootRef} className="loader ld" aria-hidden="true">
+      <div className="ld-bands">
+        {BANDS.map((b, i) => (
+          <div key={b.t} className={`ld-band ld-band--${b.k}`}>
+            <div className={`ld-run${i % 2 ? ' is-rev' : ''}`} style={{ animationDuration: `${16 + i * 2.5}s` }}>
+              {[0, 1].map((h) => (
+                <span key={h} className="ld-half">
+                  {[0, 1, 2].map((n) => <span key={n} className="ld-w display">{b.t}<i /></span>)}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="loader-foot shell" ref={footRef}>
-        <span className="loader-who">Ajinkya Chavan</span>
-        <span className="loader-pill">
-          <span className="loader-fill" ref={fillRef} />
-          <span className="num loader-count">{String(count).padStart(3, '0')}%</span>
-        </span>
-        <span className="mono loader-role">AI / ML Engineer · Portfolio ’26</span>
+      <div className="ld-badge" ref={badgeRef}>
+        <svg viewBox="0 0 100 100" className="ld-ring">
+          <defs><path id="ld-circ" d="M50 50 m-36 0 a36 36 0 1 1 72 0 a36 36 0 1 1 -72 0" /></defs>
+          <circle cx="50" cy="50" r="49" className="ld-disc" />
+          <circle cx="50" cy="50" r={R} className="ld-track" />
+          <circle cx="50" cy="50" r={R} className="ld-arc" ref={arcRef} style={{ strokeDasharray: C }} />
+          <g className="ld-spin">
+            <text><textPath href="#ld-circ" textLength={2 * Math.PI * 36 - 2}>{RING}</textPath></text>
+          </g>
+        </svg>
+        <b className="ld-num display">{count}</b>
       </div>
 
       <style>{`
-        .loader {
-          --lw-ink: #0E0E0D;
-          --lw-size: clamp(4.2rem, 15vw, 13rem);
-          position: fixed; inset: 0; z-index: 9999;
-          color: var(--lw-ink);
+        .ld { position: fixed; inset: 0; z-index: 9999; overflow: hidden; --lh: calc(100svh / 6); }
+        .ld-bands { position: absolute; inset: 0; display: grid; grid-template-rows: repeat(6, 1fr); }
+        .ld-band { position: relative; overflow: hidden; display: flex; align-items: center; will-change: transform; }
+        .ld-band--acc { background: var(--acc); color: #0E0E0D; }
+        .ld-band--ink { background: #0E0E0D; color: #FFFFFF; }
+        .ld-band--paper { background: #FFFFFF; color: #0E0E0D; }
+        .ld-run { display: flex; width: max-content; animation: ld-run 18s linear infinite; }
+        .ld-run.is-rev { animation-direction: reverse; }
+        @keyframes ld-run { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .ld-half { display: flex; flex: none; }
+        .ld-w {
+          display: inline-flex; align-items: center; gap: 0.35em; padding-right: 0.35em;
+          font-size: min(calc(var(--lh) * 0.78), 16vw);
+          font-weight: 800; letter-spacing: -0.055em; line-height: 1; white-space: nowrap;
         }
-        [data-theme="dark"] .loader { --lw-ink: #FAFAF7; }
+        .ld-w i { flex: none; width: 0.2em; height: 0.2em; border-radius: 50%; background: currentColor; }
+        .ld-band--paper .ld-w i, .ld-band--ink .ld-w i { background: var(--acc); }
 
-        .loader-veil {
-          position: absolute;
-          inset: 0;
-          background: var(--paper);
-        }
-
-        .loader-center {
-          position: absolute;
-          inset: 0;
-          display: grid;
-          place-items: center;
-          pointer-events: none;
-        }
-        .loader-word {
-          display: flex;
-          align-items: flex-end;
-          height: var(--lw-size);
+        .ld-badge {
+          position: absolute; left: 50%; top: 50%;
+          width: clamp(10rem, 30vmin, 17rem); aspect-ratio: 1;
+          margin: calc(clamp(10rem, 30vmin, 17rem) / -2) 0 0 calc(clamp(10rem, 30vmin, 17rem) / -2);
+          display: grid; place-items: center;
           will-change: transform;
         }
-        /* The svg box is a square of --lw-size; its a sits in the
-           middle band of that square, so the letters are sized and
-           lifted to share its x-height and baseline. */
-        .loader-mark {
-          width: var(--lw-size);
-          height: var(--lw-size);
-          max-width: none;
-          flex: none;
-          color: var(--lw-ink);
-          overflow: visible;
-          margin-right: calc(var(--lw-size) * -0.36);
-        }
-        .loader-tail {
-          display: flex;
-          align-items: flex-end;
-          height: 100%;
-          padding-bottom: calc(var(--lw-size) * 0.215);
-        }
-        .lw-box {
-          display: inline-block;
-          overflow: hidden;
-          padding-bottom: 0.18em;
-          margin-bottom: -0.18em;
-          font-family: var(--font-display);
-          font-size: calc(var(--lw-size) * 1.02);
-          font-weight: 800;
-          line-height: 0.74;
-          letter-spacing: -0.05em;
-        }
-        .lw-ch { display: inline-block; padding-right: 0.02em; white-space: pre; will-change: transform; }
-
-        .loader-dot {
-          flex: none;
-          width: calc(var(--lw-size) * 0.17);
-          height: calc(var(--lw-size) * 0.17);
-          margin: 0 0 calc(var(--lw-size) * 0.195) calc(var(--lw-size) * 0.105);
-          border-radius: 999px;
-          background: var(--acc);
-        }
-
-        .loader-foot {
-          position: absolute;
-          left: 0; right: 0;
-          bottom: clamp(1.5rem, 5vh, 3rem);
-          display: grid;
-          grid-template-columns: 1fr auto 1fr;
-          align-items: center;
-          gap: 1rem;
-        }
-        .loader-who { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; }
-        .loader-role { justify-self: end; color: var(--ink-3); letter-spacing: -0.01em; font-size: var(--step--2); }
-        .loader-pill {
-          position: relative;
-          display: grid;
-          place-items: center;
-          width: clamp(9rem, 22vw, 15rem);
-          height: 2.6rem;
-          border-radius: var(--r-pill);
-          border: 1px solid var(--line);
-          overflow: hidden;
-        }
-        .loader-fill {
-          position: absolute;
-          inset: 0;
-          background: var(--acc);
-          transform: scaleX(0);
-          transform-origin: left;
-          border-radius: inherit;
-        }
-        .loader-count {
-          position: relative;
-          font-weight: 600;
-          font-size: 0.95rem;
-          color: var(--lw-ink);
-          mix-blend-mode: normal;
-        }
+        .ld-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+        .ld-disc { fill: #0E0E0D; stroke: #FFFFFF; stroke-width: 1.2; }
+        .ld-track { fill: none; stroke: rgb(255 255 255 / 0.14); stroke-width: 2.4; }
+        .ld-arc { fill: none; stroke: var(--acc); stroke-width: 2.4; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50px 50px; }
+        .ld-spin { transform-origin: 50px 50px; animation: ld-spin 9s linear infinite; }
+        @keyframes ld-spin { to { transform: rotate(360deg); } }
+        .ld-spin text { fill: #FFFFFF; font-family: var(--font-display); font-weight: 700; font-size: 6.2px; letter-spacing: 0.08em; text-transform: uppercase; }
+        .ld-num { position: relative; color: var(--acc); font-size: clamp(2.8rem, 9vmin, 5rem); font-weight: 800; letter-spacing: -0.06em; line-height: 1; }
+        .ld-num::after { content: '%'; font-size: 0.36em; margin-left: 0.06em; vertical-align: 1.3em; color: #FFFFFF; letter-spacing: 0; }
 
         html.is-loading { overflow: hidden; }
-
-        @media (max-width: 640px) {
-          .loader-foot { grid-template-columns: 1fr auto; }
-          .loader-role { display: none; }
-        }
-        @media (prefers-reduced-motion: reduce) { .loader { display: none; } }
+        @media (prefers-reduced-motion: reduce) { .ld { display: none; } }
       `}</style>
     </div>
   );
 };
 
-/* Home tells the name; every other page gets a loader told in its own
+/* Home runs the wall of type; every other page gets a loader told in its own
    idea. Decided once, by where the reload landed. */
 /* Settings can turn the loader off, or show it once per visit. Either
    way the page is told loading is done exactly as if it had played, so
